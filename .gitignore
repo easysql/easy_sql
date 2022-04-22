@@ -1,0 +1,14 @@
+tmp/
+.idea/
+__pycache__
+**/.DS_Store
+**/*.zip
+venv/
+.python-version
+spark-warehouse/
+build/*
+.ipynb_checkpoints/
+metastore_db/
+derby.log
+.coverage
+
