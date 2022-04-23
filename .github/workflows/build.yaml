@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ '3.7', '3.8', '3.9', '3.10' ]
+        python-version: ['3.7', '3.8']
     steps:
     - uses: actions/checkout@v2
       with:
@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ '3.7', '3.8', '3.9', '3.10' ]
+        python-version: ['3.7', '3.8']
         java-version: ['8', '11']
     steps:
     - uses: actions/checkout@v2
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ '3.7', '3.8', '3.9', '3.10']
+        python-version: [ '3.7', '3.8']
         java-version: ['8', '11']
     steps:
     - uses: actions/checkout@v2
@@ -81,7 +81,7 @@ jobs:
           - 5432:5432
     strategy:
       matrix:
-        python-version: [ '3.7', '3.8', '3.9', '3.10']
+        python-version: [ '3.7', '3.8']
         java-version: ['8']
     steps:
     - uses: actions/checkout@v2
@@ -110,7 +110,7 @@ jobs:
           - 9000:9000
     strategy:
       matrix:
-        python-version: [ '3.7', '3.8', '3.9', '3.10']
+        python-version: [ '3.7', '3.8']
         java-version: ['8']
     steps:
     - uses: actions/checkout@v2
