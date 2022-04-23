@@ -44,7 +44,7 @@ jobs:
     - run: make unit-test
     - run: make test-coverage
   
-  e2e-test-postgres:
+  e2e-test:
     runs-on: ubuntu-latest
     services:
       postgres:
