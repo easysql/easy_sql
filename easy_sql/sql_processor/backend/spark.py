@@ -189,7 +189,7 @@ class SparkBackend(Backend):
             temp_res = temp_res.select(*columns)
             fields = [f'{p.field}=\'{p.value}\'' if isinstance(p.value, str) else f'{p.field}={p.value}'
                       for p in target_table_meta.partitions]
-        partition_expr = f"partition ({','.join(fields)})"
+        partition_expr = f"partition ({','.join(fields)})" if fields else ''
 
         # to resolve issue: pyspark.sql.utils.AnalysisException: Cannot overwrite a path that is also being read from.
         # refer: https://stackoverflow.com/questions/38746773/read-from-a-hive-table-and-write-back-to-it-using-spark-sql

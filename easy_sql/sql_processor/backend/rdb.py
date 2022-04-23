@@ -796,7 +796,7 @@ class ChDbConfig(DbConfig):
 
     def create_pt_meta_table(self, db: str):
         # As clickhouse has create partition table in RdbBackend, no need to create again
-        return
+        return 'select 1'
 
 
 class RdbBackend(Backend):

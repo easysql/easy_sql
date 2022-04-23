@@ -2,8 +2,6 @@ import json
 from datetime import datetime
 from typing import Any
 
-import requests
-
 
 class EsService:
 
@@ -13,6 +11,8 @@ class EsService:
         self.data = None
 
     def post(self, url_path: str, data: str):
+        import requests
+
         if self.should_send:
             resp = requests.post(self.base_url + url_path, headers={'Content-Type': 'Application/json'}, data=data.encode('utf8'))
             if not resp.ok:
@@ -23,6 +23,8 @@ class EsService:
             print('will not send data')
 
     def put(self, url_path: str, data: str):
+        import requests
+
         if self.should_send:
             resp = requests.put(self.base_url + url_path, headers={'Content-Type': 'Application/json'}, data=data.encode('utf8'))
             if not resp.ok:
@@ -33,6 +35,8 @@ class EsService:
             print('will not send data')
 
     def delete_by_query(self, index: str, query: object):
+        import requests
+
         data = json.dumps({'query': query})
         url_path = f'/{index}/_delete_by_query'
         if self.should_send:
