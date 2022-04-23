@@ -59,7 +59,7 @@ jobs:
         ports:
           - 5432:5432
       clickhouse:
-        image: yandex/clickhouse-server:21.3.20.1
+        image: yandex/clickhouse-server:20.12.5.18
         ports:
           - 8123:8123
           - 9000:9000
@@ -88,4 +88,4 @@ jobs:
     - name: e2e test with clickhouse
       run: python3 -m easy_sql.data_process -f test/sample_etl.clickhouse.sql
       env:
-        CLICKHOUSE_URL: clickhouse://default:@localhost/default
+        CLICKHOUSE_URL: clickhouse+native://default@localhost:9000
