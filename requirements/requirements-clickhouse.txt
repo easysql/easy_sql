@@ -1,0 +1,4 @@
+pyspark==3.2.1
+SQLAlchemy==1.3.23
+clickhouse-driver==0.2.0
+clickhouse-sqlalchemy==0.1.6
