@@ -14,4 +14,4 @@ dist/
 metastore_db/
 derby.log
 .coverage
-
+readme.local.md

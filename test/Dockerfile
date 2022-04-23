@@ -6,7 +6,13 @@ RUN python3 -m pip install click==6.7 pyspark==3.2.1
 RUN pip3 install SQLAlchemy==1.3.23 psycopg2-binary==2.8.6
 RUN pip3 install clickhouse-driver==0.2.0 clickhouse-sqlalchemy==0.1.6
 
-ADD sample_etl.spark.sql sample_etl.postgres.sql sample_etl.clickhouse.sql
+WORKDIR /tmp
+
+ADD sample_etl.spark.sql /tmp
+ADD sample_etl.postgres.sql /tmp
+ADD sample_etl.clickhouse.sql /tmp
+
+RUN python3 -m pip install easy_sql-easy_sql
 
 ARG PG_URL=
 ARG CLICKHOUSE_URL=

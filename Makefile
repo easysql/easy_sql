@@ -10,6 +10,11 @@ unit-test:
 	export PYSPARK_PYTHON=python3 && export PYSPARK_DRIVER_PYTHON=python3 && \
  		python3 -m unittest discover -s easy_sql -t . -p '*_test.py'
 
+PG_URL=
+CLICKHOUSE_URL=
+e2e-test:
+	cd test && docker build . --build-arg PG_URL=${PG_URL} --build-arg CLICKHOUSE_URL=${CLICKHOUSE_URL}
+
 package-pip:
 	python3 -m pip install --upgrade build
 	python3 -m build
