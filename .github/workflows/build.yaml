@@ -44,3 +44,36 @@ jobs:
     - run: make unit-test
     - run: make test-coverage
   
+  e2e-test-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    strategy:
+      matrix:
+        python-version: [ '3.7']
+        java-version: ['8']
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - uses: actions/setup-java@v3
+      with:
+        distribution: 'adopt'
+        java-version: ${{ matrix.java-version }}
+    - run: pip install -r requirements/requirements.txt -r requirements/requirements-postgres.txt
+    - run: python3 -m easy_sql.data_process -f test/sample_etl.spark.sql -p
+      env:
+        PG_URL: postgresql+psycopg2://postgres:postgres@localhost/postgres
