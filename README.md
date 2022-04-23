@@ -8,6 +8,10 @@ Since this is SQL agnostic, any SQL engine could be plugged-in as a backend.
 There are built-in supported for several popular SQL engines, including SparkSQL, PostgreSQL, Clickhouse, Aliyun Maxcompute, Google BigQuery.
 More will be added in the near future.
 
+## Install Easy SQL
+
+Install Easy SQL using pip: `python3 -m pip install easy_sql`
+
 ## Building Easy SQL
 
 Easy SQL is developed in Python and could be built with the following make command:
@@ -16,8 +20,8 @@ Easy SQL is developed in Python and could be built with the following make comma
 make package-pip
 ```
 
-After the above command, there will be a file named `easy_sql*.whl` generated in the project folder.
-You can install it with command `pip install easy_sql*.whl`.
+After the above command, there will be a file named `easy_sql*.whl` generated in the `dist` folder.
+You can install it with command `pip install dist/easy_sql*.whl`.
 
 ## Dependencies
 
