@@ -10,7 +10,7 @@ More will be added in the near future.
 
 ## Install Easy SQL
 
-Install Easy SQL using pip: `python3 -m pip install easy_sql`
+Install Easy SQL using pip: `python3 -m pip install easy_sql-easy_sql`
 
 ## Building Easy SQL
 
