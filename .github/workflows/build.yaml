@@ -9,7 +9,7 @@ on:
   pull_request: {}
 
 jobs:
-  build:
+  package:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -22,4 +22,24 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - run: make package-pip
+  
+  build-spark:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ '3.7', '3.8' ]
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - uses: actions/setup-java@v3
+      with:
+        distribution: 'adopt' # See 'Supported distributions' for available options
+        java-version: '8'
+    - run: pip install -r requirements/requirements-spark.txt
+    - run: make unit-test
+    - run: make test-coverage
   
