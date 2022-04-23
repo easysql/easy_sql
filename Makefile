@@ -15,6 +15,15 @@ CLICKHOUSE_URL=
 e2e-test:
 	cd test && docker build . --build-arg PG_URL=${PG_URL} --build-arg CLICKHOUSE_URL=${CLICKHOUSE_URL}
 
+e2e-test-spark:
+	python3 -m easy_sql.data_process -f test/sample_etl.spark.sql
+
+e2e-test-postgres:
+	python3 -m easy_sql.data_process -f test/sample_etl.postgres.sql
+
+e2e-test-clickhouse:
+	python3 -m easy_sql.data_process -f test/sample_etl.clickhouse.sql
+
 package-pip:
 	python3 -m pip install --upgrade build
 	python3 -m build
