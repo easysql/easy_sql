@@ -100,16 +100,17 @@ jobs:
 
   e2e-test-clickhouse:
     runs-on: ubuntu-latest
-    services:
-      clickhouse:
-        image: yandex/clickhouse-server:20.12.5.18
-        ports:
-          - 8123:8123
-          - 9000:9000
     strategy:
       matrix:
         python-version: [ '3.7', '3.8']
         java-version: ['8', '11']
+        clickhouse-version: ['20.12', '21.8', '22.4']
+    services:
+      clickhouse:
+        image: yandex/clickhouse-server:${{ matrix.clickhouse-version }}
+        ports:
+          - 8123:8123
+          - 9000:9000
     steps:
     - uses: actions/checkout@v2
       with:
