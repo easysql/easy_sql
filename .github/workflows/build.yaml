@@ -58,6 +58,11 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+      clickhouse:
+        image: yandex/clickhouse-server:21.3.20.1
+        ports:
+          - 8123:8123
+          - 9000:9000
     strategy:
       matrix:
         python-version: [ '3.7']
@@ -74,6 +79,11 @@ jobs:
         distribution: 'adopt'
         java-version: ${{ matrix.java-version }}
     - run: pip install -r requirements/requirements.txt -r requirements/requirements-e2e.txt
-    - run: python3 -m easy_sql.data_process -f test/sample_etl.spark.sql -p
+    - name: e2e test with postgres
+      run: python3 -m easy_sql.data_process -f test/sample_etl.spark.sql -p
       env:
         PG_URL: postgresql+psycopg2://postgres:postgres@localhost/postgres
+    - name: e2e test with clickhouse
+      run: python3 -m easy_sql.data_process -f test/sample_etl.spark.sql -p
+      env:
+        PG_URL: clickhouse://default:@localhost/test
