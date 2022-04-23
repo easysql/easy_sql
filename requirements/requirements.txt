@@ -1,2 +1,2 @@
-numpy
-coverage
+numpy==1.21.6
+coverage==6.3.2
