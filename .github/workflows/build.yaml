@@ -81,8 +81,8 @@ jobs:
           - 5432:5432
     strategy:
       matrix:
-        python-version: [ '3.7', '3.8']
-        java-version: ['8']
+        python-version: ['3.7', '3.8']
+        java-version: ['8', '11']
     steps:
     - uses: actions/checkout@v2
       with:
@@ -111,7 +111,7 @@ jobs:
     strategy:
       matrix:
         python-version: [ '3.7', '3.8']
-        java-version: ['8']
+        java-version: ['8', '11']
     steps:
     - uses: actions/checkout@v2
       with:
