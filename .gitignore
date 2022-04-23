@@ -8,6 +8,9 @@ venv/
 spark-warehouse/
 build/*
 .ipynb_checkpoints/
+easy_sql-easy_sql*
+easy_sql_easy_sql.egg-info
+dist/
 metastore_db/
 derby.log
 .coverage
