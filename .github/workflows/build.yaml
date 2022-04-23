@@ -23,7 +23,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - run: make package-pip
   
-  build-spark:
+  unit-test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -44,7 +44,28 @@ jobs:
     - run: make unit-test
     - run: make test-coverage
   
-  e2e-test:
+  e2e-test-spark:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ '3.7', '3.8', '3.9', '3.10']
+        java-version: ['8', '11']
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - uses: actions/setup-java@v3
+      with:
+        distribution: 'adopt'
+        java-version: ${{ matrix.java-version }}
+    - run: pip install -r requirements/requirements.txt -r requirements/requirements-spark.txt
+    - name: e2e test with spark
+      run: python3 -m easy_sql.data_process -f test/sample_etl.spark.sql
+
+  e2e-test-postgres:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -58,14 +79,9 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-      clickhouse:
-        image: yandex/clickhouse-server:20.12.5.18
-        ports:
-          - 8123:8123
-          - 9000:9000
     strategy:
       matrix:
-        python-version: [ '3.7']
+        python-version: [ '3.7', '3.8', '3.9', '3.10']
         java-version: ['8']
     steps:
     - uses: actions/checkout@v2
@@ -78,13 +94,36 @@ jobs:
       with:
         distribution: 'adopt'
         java-version: ${{ matrix.java-version }}
-    - run: pip install -r requirements/requirements.txt -r requirements/requirements-e2e.txt
-    - name: e2e test with pyspark
-      run: python3 -m easy_sql.data_process -f test/sample_etl.spark.sql
+    - run: pip install -r requirements/requirements.txt -r requirements/requirements-postgres.txt
     - name: e2e test with postgres
       run: python3 -m easy_sql.data_process -f test/sample_etl.postgres.sql
       env:
         PG_URL: postgresql://postgres:postgres@localhost/postgres
+
+  e2e-test-clickhouse:
+    runs-on: ubuntu-latest
+    services:
+      clickhouse:
+        image: yandex/clickhouse-server:20.12.5.18
+        ports:
+          - 8123:8123
+          - 9000:9000
+    strategy:
+      matrix:
+        python-version: [ '3.7', '3.8', '3.9', '3.10']
+        java-version: ['8']
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - uses: actions/setup-java@v3
+      with:
+        distribution: 'adopt'
+        java-version: ${{ matrix.java-version }}
+    - run: pip install -r requirements/requirements.txt -r requirements/requirements-clickhouse.txt
     - name: e2e test with clickhouse
       run: python3 -m easy_sql.data_process -f test/sample_etl.clickhouse.sql
       env:
