@@ -46,6 +46,8 @@ pyodps==0.10.7.1
 
 ## First ETL with Easy SQL
 
+(You need to install click package (by command `python3 -m pip install click==6.7`) before run the command below.)
+
 ### For spark backend
 
 Create a file named `sample_etl.spark.sql` with content as below:
