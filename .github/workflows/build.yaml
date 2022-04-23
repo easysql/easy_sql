@@ -88,4 +88,4 @@ jobs:
     - name: e2e test with clickhouse
       run: python3 -m easy_sql.data_process -f test/sample_etl.clickhouse.sql
       env:
-        CLICKHOUSE_URL: clickhouse://default:@localhost/test
+        CLICKHOUSE_URL: clickhouse://default:@localhost/default
