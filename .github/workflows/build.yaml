@@ -79,11 +79,13 @@ jobs:
         distribution: 'adopt'
         java-version: ${{ matrix.java-version }}
     - run: pip install -r requirements/requirements.txt -r requirements/requirements-e2e.txt
+    - name: e2e test with pyspark
+      run: python3 -m easy_sql.data_process -f test/sample_etl.spark.sql
     - name: e2e test with postgres
-      run: python3 -m easy_sql.data_process -f test/sample_etl.spark.sql -p
+      run: python3 -m easy_sql.data_process -f test/sample_etl.postgres.sql
       env:
-        PG_URL: postgresql+psycopg2://postgres:postgres@localhost/postgres
+        PG_URL: postgresql://postgres:postgres@localhost/postgres
     - name: e2e test with clickhouse
-      run: python3 -m easy_sql.data_process -f test/sample_etl.spark.sql -p
+      run: python3 -m easy_sql.data_process -f test/sample_etl.clickhouse.sql
       env:
-        PG_URL: clickhouse://default:@localhost/test
+        CLICKHOUSE_URL: clickhouse://default:@localhost/test
