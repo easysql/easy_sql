@@ -28,6 +28,7 @@ jobs:
     strategy:
       matrix:
         python-version: [ '3.7', '3.8' ]
+        java-version: ['8', '11']
     steps:
     - uses: actions/checkout@v2
       with:
@@ -38,7 +39,7 @@ jobs:
     - uses: actions/setup-java@v3
       with:
         distribution: 'adopt'
-        java-version: '8'
+        java-version: ${{ matrix.java-version }}
     - run: pip install -r requirements/requirements.txt -r requirements/requirements-spark.txt
     - run: make unit-test
     - run: make test-coverage
