@@ -23,7 +23,8 @@ class PartitionFuncs(PartitionFuncsBase):
         return partition_values
 
     def _get_clickhouse_partition_values(self, table_name):
-        sql = f"SELECT partition FROM {self.backend.partitions_table_name} where table = {table_name};"
+        db, table = self.__parse_table_name(table_name)
+        sql = f"SELECT partition_value FROM {self.backend.partitions_table_name} where db_name = '{db}' and table_name = '{table}';"
         partition_values = [str(v[0]) for v in self.backend.exec_sql(sql).collect()]
         partition_values.sort()
         return partition_values

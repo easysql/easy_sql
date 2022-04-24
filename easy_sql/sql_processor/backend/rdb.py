@@ -784,15 +784,15 @@ class ChDbConfig(DbConfig):
         if len(partitions) != 0:
             if len(partitions) > 1:
                 raise Exception("for now clickhouse backend only support table with single field partition")
-            db = table_name.split('.')[0]
-            insert_pt_metadata = f"insert into {self.partitions_table_name} values({db}, {table_name}, {partitions[0].value}, now());"
+            db, pure_table_name = tuple(table_name.split('.'))
+            insert_pt_metadata = f"insert into {self.partitions_table_name} values('{db}', '{pure_table_name}', '{partitions[0].value}', now());"
             return [insert_date_sql, insert_pt_metadata]
         return [insert_date_sql]
 
     def drop_table_sql(self, table: str):
         drop_table_sql = f'drop table if exists {table}'
-        db = table.split('.')[0]
-        drop_pt_metadata = f"delete {self.partitions_table_name} where db_name = {db} and table_name = {table}"
+        db, pure_table_name = tuple(table.split('.'))
+        drop_pt_metadata = f"alter table {self.partitions_table_name} delete where db_name = '{db}' and table_name = '{pure_table_name}'"
         return [drop_table_sql, drop_pt_metadata]
 
     def support_static_partition(self):
