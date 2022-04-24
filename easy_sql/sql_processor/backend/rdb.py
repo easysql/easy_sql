@@ -773,7 +773,8 @@ class ChDbConfig(DbConfig):
             partition_expr = f'partition by {partitions[0].field}'
         else:
             partition_expr = f'partition by tuple({", ".join([pt.field for pt in partitions])})'
-        return f'create table if not exists {table_name} (\n{cols_expr}\n)\nengine=MergeTree\n{partition_expr}\norder by tuple()'
+        return f'create table if not exists ' \
+               f'{table_name} (\n{cols_expr}\n)\nengine=MergeTree\n{partition_expr}\norder by tuple() settings allow_nullable_key=1;'
 
     def create_partition_automatically(self):
         return True
