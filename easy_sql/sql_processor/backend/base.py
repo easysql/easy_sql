@@ -5,8 +5,6 @@ __all__ = [
     'Backend', 'Table', 'Row', 'TableMeta', 'Partition', 'SaveMode'
 ]
 
-from pyspark.sql.types import StructType
-
 
 class Col:
 
@@ -86,10 +84,10 @@ class Backend:
     def clean(self):
         raise NotImplementedError()
 
-    def create_table_with_data(self, full_table_name: str, values: List[List[Any]], schema: Union[StructType, List[Col]], partitions: List['Partition']):
+    def create_table_with_data(self, full_table_name: str, values: List[List[Any]], schema: Union['StructType', List[Col]], partitions: List['Partition']):
         raise NotImplementedError()
 
-    def create_temp_table_with_data(self, table_name: str, values: List[List[Any]], schema: Union[StructType, List[Col]]):
+    def create_temp_table_with_data(self, table_name: str, values: List[List[Any]], schema: Union['StructType', List[Col]]):
         raise NotImplementedError()
 
 
