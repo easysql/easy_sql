@@ -530,13 +530,14 @@ class BqDbConfig(DbConfig):
     def insert_data_sql(self, table_name: str, col_names_expr: str, select_sql: str, partitions: List[Partition]):
         if not self.contain_db(table_name):
             raise Exception("BigQuery table must be qualified with a dataset.")
-        else:
-            db, pure_table_name = tuple(table_name.split('.'))
+        db, pure_table_name = tuple(table_name.split('.'))
         insert_date_sql = f"insert into {table_name}({col_names_expr}) {select_sql};"
-        # the format of pt_col may be :{pt_col}, which is transferred by method create_table_with_data
-        pt_value = partitions[0].value if str(partitions[0].value).startswith(":") else f'{partitions[0].value}'
-        insert_pt_metadata = f"insert into {db}.__table_partitions__ values('{pure_table_name}', {pt_value}, CURRENT_TIMESTAMP());" \
-            if len(partitions) != 0 else ''
+        if len(partitions) == 0:
+            insert_pt_metadata = ''
+        else:
+            # the format of pt_col may be :{pt_col}, which is transferred by method create_table_with_data
+            pt_value = partitions[0].value if str(partitions[0].value).startswith(":") else f"'{partitions[0].value}'"
+            insert_pt_metadata = f"insert into {db}.__table_partitions__ values('{pure_table_name}', {pt_value}, CURRENT_TIMESTAMP());"
         return self.transaction(f'{insert_date_sql}\n{insert_pt_metadata}')
 
     def drop_table_sql(self, table: str):

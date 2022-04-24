@@ -58,7 +58,7 @@ class RdbTest(unittest.TestCase):
         import os
         backend = RdbBackend('bigquery://',
                              credentials=f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-test.json",
-                             sql_expr=bq_sql_expr)
+                             sql_expr=sql_expr)
         from sqlalchemy import inspect
         from sqlalchemy.engine.reflection import Inspector
         insp: Inspector = inspect(backend.engine)
@@ -93,7 +93,7 @@ class RdbTest(unittest.TestCase):
         import os
         backend = RdbBackend('bigquery://',
                              credentials=f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-test.json",
-                             sql_expr=bq_sql_expr)
+                             sql_expr=sql_expr)
         _exec_sql(backend.conn, 'drop schema if exists t cascade')
         _exec_sql(backend.conn, 'create schema if not exists t')
         _exec_sql(backend.conn, 'drop table if exists t.test')
@@ -131,14 +131,11 @@ class RdbTest(unittest.TestCase):
         import os
         backend = RdbBackend('bigquery://',
                              credentials=f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-test.json",
-                             sql_expr=bq_sql_expr)
+                             sql_expr=sql_expr)
         _exec_sql(backend.conn, 'drop schema if exists t cascade')
         _exec_sql(backend.conn, 'create schema if not exists t')
         _exec_sql(backend.conn, 'create table if not exists t.test(id int, val string)')
         _exec_sql(backend.conn, "insert into t.test values(1, '1'), (2, '2'), (3, '3')")
-
-        from datetime import timedelta, timezone
-        tz = timezone(timedelta(hours=0))
         self.run_test_backend(backend)
 
     def run_test_table(self, backend: RdbBackend, timezone=None):
