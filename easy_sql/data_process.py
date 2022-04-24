@@ -3,7 +3,7 @@ import re
 import urllib.parse
 from datetime import datetime
 from os import path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 import click
 
@@ -45,13 +45,18 @@ def read_sql(sql_file: str):
 @click.option('--dry-run', type=str, required=False, help='if dry run, one of [true, 1, false, 0]')
 @click.option('--print-command', '-p', is_flag=True)
 def data_process(sql_file: str, vars: str, dry_run: str, print_command: bool):
+    _data_process(sql_file, vars, dry_run, print_command)
+
+
+def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], print_command: bool):
     if not sql_file.endswith('.sql'):
         raise Exception(f'sql_file must ends with .sql, found `{sql_file}`')
     dry_run = dry_run if dry_run is not None else '0'
 
     if print_command:
-        print(shell_command(sql_file=sql_file, vars=vars, dry_run=dry_run))
-        return
+        command = shell_command(sql_file=sql_file, vars=vars, dry_run=dry_run)
+        print(command)
+        return command
 
     dry_run = dry_run in ['true', '1']
     config = EasySqlConfig.from_sql(sql_file)
