@@ -124,8 +124,8 @@ jobs:
         python-version: ['3.8']
         java-version: ['8']
     services:
-      clickhouse: yandex/clickhouse-server:20
-        image:
+      clickhouse:
+        image: yandex/clickhouse-server:20
         ports:
           - 8123:8123
           - 9000:9000
