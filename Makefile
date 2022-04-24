@@ -22,6 +22,12 @@ e2e-test-postgres:
 e2e-test-clickhouse:
 	python3 -m easy_sql.data_process -f test/sample_etl.clickhouse.sql
 
+test-coverage-all:
+	export PYSPARK_PYTHON=python3 && export PYSPARK_DRIVER_PYTHON=python3 && \
+ 		python3 -m coverage run -m unittest discover -s easy_sql -t . -p '*test.py'
+	python3 -m coverage report -m
+	python3 -m coverage xml
+
 package-pip:
 	python3 -m pip install --upgrade build
 	python3 -m build

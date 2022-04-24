@@ -13,5 +13,6 @@ easy_sql_easy_sql.egg-info
 dist/
 metastore_db/
 derby.log
+coverage.xml
 .coverage
 readme.local.md
