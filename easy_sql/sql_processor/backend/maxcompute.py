@@ -1,5 +1,4 @@
 import time
-import numpy
 from enum import Enum
 from random import random
 from typing import Dict, Callable, List, Any, Tuple, Optional
@@ -97,6 +96,7 @@ class MaxComputeTable(Table):
         return self.schema.types
 
     def first(self) -> 'MaxComputeRow':
+        import numpy
         row = [x.values for x in self.df.head(1)]
         value = row[0] if row else None
         value = [bool(v) if isinstance(v, numpy.bool_) else v for v in value]
