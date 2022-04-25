@@ -790,6 +790,9 @@ class ChDbConfig(DbConfig):
     def insert_data_sql(self, table_name: str, col_names_expr: str, select_sql: str, partitions: List[Partition]) -> List[str]:
         insert_date_sql = f"insert into {table_name}({col_names_expr}) {select_sql};"
 
+        if any([pt.value is None for pt in partitions]):
+            raise Exception(f"cannot insert data when partition value is None, partitions: {partitions}")
+
         if len(partitions) != 0:
             if len(partitions) > 1:
                 raise Exception("for now clickhouse backend only support table with single field partition")
