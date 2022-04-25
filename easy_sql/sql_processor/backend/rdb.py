@@ -34,7 +34,7 @@ class TimeLog:
         logger.info(self.end_log_tpl.format(time_took=time_took))
 
 
-def _exec_sql(conn, sql: Union[str, List[str]], *args, **kwargs):
+def _exec_sql(conn, sql: Union[str, 'TextClause', List[str]], *args, **kwargs):
     from sqlalchemy.engine.base import Connection
     from sqlalchemy.sql.elements import TextClause
     conn: Connection = conn
@@ -435,6 +435,9 @@ class DbConfig:
     def create_pt_meta_table(self, db: str):
         raise NotImplementedError()
 
+    def insert_pt_meta_data(self, table_name: str, partitions: List[Partition]):
+        raise NotImplementedError()
+
 
 class BqDbConfig(DbConfig):
 
@@ -485,9 +488,8 @@ class BqDbConfig(DbConfig):
     def delete_partition_sql(self, table_name, partitions: List[Partition]) -> str:
         if not self.contain_db(table_name):
             raise Exception("BigQuery table must be qualified with a dataset.")
-        else:
-            db, pure_table_name = tuple(table_name.split('.'))
 
+        db, pure_table_name = tuple(table_name.split('.'))
         if not partitions or len(partitions) == 0:
             raise Exception(
                 f'cannot delete partition when partitions not specified: table_name={table_name}, partitions={partitions}')
@@ -532,19 +534,14 @@ class BqDbConfig(DbConfig):
             raise Exception("BigQuery table must be qualified with a dataset.")
         db, pure_table_name = tuple(table_name.split('.'))
         insert_date_sql = f"insert into {table_name}({col_names_expr}) {select_sql};"
-        if len(partitions) == 0:
-            insert_pt_metadata = ''
-        else:
-            # the format of pt_col may be :{pt_col}, which is transferred by method create_table_with_data
-            pt_value = partitions[0].value if str(partitions[0].value).startswith(":") else f"'{partitions[0].value}'"
-            insert_pt_metadata = f"insert into {db}.__table_partitions__ values('{pure_table_name}', {pt_value}, CURRENT_TIMESTAMP());"
+        insert_pt_metadata = f"insert into {db}.__table_partitions__ values('{pure_table_name}', '{partitions[0].value}', CURRENT_TIMESTAMP());" \
+            if len(partitions) != 0 else ''
         return self.transaction(f'{insert_date_sql}\n{insert_pt_metadata}')
 
     def drop_table_sql(self, table: str):
         if not self.contain_db(table):
             raise Exception("BigQuery table must be qualified with a dataset.")
-        else:
-            db, pure_table_name = tuple(table.split('.'))
+        db, pure_table_name = tuple(table.split('.'))
         drop_table_sql = f"drop table if exists {db}.{pure_table_name};"
         drop_pt_metadata = f"delete {db}.__table_partitions__ where table_name = '{pure_table_name}';"
         return f'{drop_table_sql}\n{drop_pt_metadata}'
@@ -556,6 +553,17 @@ class BqDbConfig(DbConfig):
         return f"""create table if not exists {db}.__table_partitions__(
         table_name string, partition_value string, last_modified_time timestamp)
         cluster by table_name;"""
+
+    def insert_pt_meta_data(self, table_name: str, partitions: List[Partition]):
+        if len(partitions) == 0:
+            return ''
+        elif len(partitions) > 1:
+            raise Exception('BigQuery only supports single-column partitioning.')
+        else:
+            if not self.contain_db(table_name):
+                raise Exception("BigQuery table must be qualified with a dataset.")
+            db, pure_table_name = tuple(table_name.split('.'))
+            return f"insert into {db}.__table_partitions__ values ('{pure_table_name}', '{partitions[0].value}', CURRENT_TIMESTAMP())"
 
     @staticmethod
     def transaction(statement: str):
@@ -1038,28 +1046,25 @@ class RdbBackend(Backend):
         db, table = full_table_name[:full_table_name.index('.')], full_table_name[full_table_name.index('.') + 1:]
         if self.is_bq:
             _exec_sql(self.conn, self.db_config.drop_db_sql(db))
-            _exec_sql(self.conn, self.db_config.create_db_sql(db))
-            _exec_sql(self.conn, self.db_config.create_pt_meta_table(db))
-        else:
-            _exec_sql(self.conn, self.db_config.create_db_sql(db))
+        _exec_sql(self.conn, self.db_config.create_db_sql(db))
         _exec_sql(self.conn, self.db_config.create_table_with_partitions_sql(full_table_name, [col.as_dict() for col in schema], partitions))
         cols = [col.name for col in schema]
         pt_cols = [p.field for p in partitions]
-
+        pt_values_list = [[row[cols.index(p)] for p in pt_cols] for row in values]
+        partitions = set([tuple([Partition(field, value) for field, value in zip(pt_cols, pt_values)]) for pt_values in pt_values_list])
         if partitions and not self.db_config.create_partition_automatically():
-            pt_values_list = [[row[cols.index(p)] for p in pt_cols] for row in values]
-            partitions = set([tuple([Partition(field, value) for field, value in zip(pt_cols, pt_values)]) for pt_values in pt_values_list])
             for partition in partitions:
                 _exec_sql(self.conn, self.db_config.create_partition_sql(full_table_name, list(partition)))
-
-        converted_col_names = ", ".join(self.db_config.convert_col([f":{col}" for col in cols], pt_cols))
-        for partition in partitions:
-            partition.value = f':{partition.field}'
-
         from sqlalchemy.sql import text
-        stmt = text(self.db_config.insert_data_sql(full_table_name, ", ".join(cols), f"VALUES ({converted_col_names})", partitions))
+        converted_col_names = ", ".join(self.db_config.convert_col([f":{col}" for col in cols], pt_cols))
+        stmt = text(f'insert into {full_table_name} ({", ".join(cols)}) VALUES ({converted_col_names})')
         for v in values:
             _exec_sql(self.conn, stmt, **dict([(col, _v) for _v, col in zip(v, cols)]))
+
+        if partitions and not self.db_config.support_static_partition():
+            _exec_sql(self.conn, self.db_config.create_pt_meta_table(db))
+            for partition in partitions:
+                _exec_sql(self.conn, self.db_config.insert_pt_meta_data(full_table_name, list(partition)))
 
     def create_temp_table_with_data(self, table_name: str, values: List[List[Any]], schema: List[Col]):
         _exec_sql(self.conn, self.db_config.create_table_with_partitions_sql(table_name, [col.as_dict() for col in schema], []))
