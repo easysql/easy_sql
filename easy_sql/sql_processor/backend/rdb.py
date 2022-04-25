@@ -379,7 +379,7 @@ class DbConfig:
     def use_db_sql(self, db: str) -> str:
         raise NotImplementedError()
 
-    def drop_db_sql(self, db: str) -> str:
+    def drop_db_sql(self, db: str) -> Union[str, List[str]]:
         raise NotImplementedError()
 
     def rename_table_sql(self, from_table: str, to_table: str) -> str:
@@ -730,8 +730,11 @@ class ChDbConfig(DbConfig):
     def use_db_sql(self, db: str):
         return f'use {db}'
 
-    def drop_db_sql(self, db: str):
-        return f'drop database if exists {db}'
+    def drop_db_sql(self, db: str) -> List[str]:
+        drop_db = f'drop database if exists {db}'
+        drop_pt_metadata = f"alter table {self.partitions_table_name} delete " \
+                           f"where db_name = '{db}'"
+        return [drop_db, drop_pt_metadata]
 
     def rename_table_sql(self, from_table: str, to_table: str) -> str:
         return f'rename table {from_table} to {to_table}'
