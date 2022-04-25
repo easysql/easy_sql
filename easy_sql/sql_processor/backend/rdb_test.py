@@ -6,7 +6,8 @@ from datetime import datetime
 from easy_sql import base_test
 from easy_sql.base_test import dt, date
 from easy_sql.sql_processor.backend import TableMeta, SaveMode, Partition
-from easy_sql.sql_processor.backend.rdb import RdbBackend, RdbRow, _exec_sql, TimeLog, SqlExpr
+from easy_sql.sql_processor.backend.rdb import RdbBackend, RdbRow, _exec_sql, TimeLog, SqlExpr, ChDbConfig
+
 
 partition_col_converter = lambda col: \
     f"PARSE_DATE('%Y-%m', {col}) as {col}" if col in ['data_month', ":data_month"] else f"CAST({col} as DATE)"
@@ -124,6 +125,12 @@ class RdbTest(unittest.TestCase):
         _exec_sql(backend.conn, 'create table t.test(id int, val String) engine=MergeTree order by tuple()')
         _exec_sql(backend.conn, "insert into t.test values(1, '1'), (2, '2'), (3, '3')")
         self.run_test_backend(backend)
+
+    def test_ch_config(self):
+        ch_config = ChDbConfig(SqlExpr(), 'dataplat.__table_partitions__')
+        sql = ch_config.delete_partition_sql("test.test", [Partition('dt', '20210101')])
+        self.assertEqual(sql, "alter table dataplat.__table_partitions__ delete "
+                              "where db_name = 'test' and table_name = 'test' and partition_value = '20210101'")
 
     def test_bq_backend(self):
         if not base_test.should_run_integration_test('bq'):

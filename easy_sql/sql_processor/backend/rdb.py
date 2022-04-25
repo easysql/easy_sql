@@ -48,6 +48,12 @@ def _exec_sql(conn, sql: Union[str, 'TextClause', List[str]], *args, **kwargs):
             return execute_result
 
 
+def split_table_name(table_name: str) -> Tuple[str, ...]:
+    if len(table_name.split(".")) != 2:
+        raise Exception(f"cannot split table name: {table_name}")
+    return tuple(table_name.split("."))
+
+
 _quote_str = lambda x: f"'{x}'" if isinstance(x, str) else f'{x}'
 
 
@@ -752,11 +758,14 @@ class ChDbConfig(DbConfig):
         return True
 
     def delete_partition_sql(self, table_name, partitions: List[Partition]) -> str:
-        if not partitions or len(partitions) == 0:
-            raise Exception(
-                f'cannot delete partition when partitions not specified: table_name={table_name}, partitions={partitions}')
-        pt_expr = f'tuple({", ".join([self.sql_expr.for_value(pt.value) for pt in partitions])})'
-        return f'alter table {table_name} drop partition {pt_expr}'
+        if len(partitions) > 1:
+            raise Exception(f'Only support exactly one partition column, found: {[str(p) for p in partitions]}')
+        db, pure_table_name = split_table_name(table_name)
+
+        drop_pt_metadata = f"alter table {self.partitions_table_name} delete " \
+                           f"where db_name = '{db}' and table_name = '{pure_table_name}' " \
+                           f"and partition_value = '{partitions[0].value}'"
+        return drop_pt_metadata
 
     def native_partitions(self, table_name: str) -> Tuple[str, Callable]:
         return f'show create table {table_name}', self.extract_partition_cols
@@ -796,14 +805,14 @@ class ChDbConfig(DbConfig):
         if len(partitions) != 0:
             if len(partitions) > 1:
                 raise Exception("for now clickhouse backend only support table with single field partition")
-            db, pure_table_name = tuple(table_name.split('.'))
+            db, pure_table_name = split_table_name(table_name)
             insert_pt_metadata = f"insert into {self.partitions_table_name} values('{db}', '{pure_table_name}', '{partitions[0].value}', now());"
             return [insert_date_sql, insert_pt_metadata]
         return [insert_date_sql]
 
-    def drop_table_sql(self, table: str):
+    def drop_table_sql(self, table: str) -> List[str]:
         drop_table_sql = f'drop table if exists {table}'
-        db, pure_table_name = tuple(table.split('.'))
+        db, pure_table_name = split_table_name(table)
         drop_pt_metadata = f"alter table {self.partitions_table_name} delete where db_name = '{db}' and table_name = '{pure_table_name}'"
         return [drop_table_sql, drop_pt_metadata]
 
