@@ -998,7 +998,7 @@ class RdbBackend(Backend):
             _exec_sql(self.conn, self.db_config.drop_table_sql(temp_table_name))
             RdbTable.from_table_meta(self, source_table).save_to_table(target_table.clone_with_name(temp_table_name))
             if original_source_table.has_partitions():
-                if any([pt.value is None for pt in original_source_table.partitions]):  # dynamic partitions (partition retrieved from real table)
+                if original_source_table.has_dynamic_partition():  # dynamic partitions (partition retrieved from real table)
                     pt_cols = [pt.field for pt in original_source_table.partitions]
                     pt_values_list = _exec_sql(self.conn, f'select distinct {", ".join(pt_cols)} '
                                                           f'from {source_table.get_full_table_name(self.temp_schema)}').fetchall()

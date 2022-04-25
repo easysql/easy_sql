@@ -143,6 +143,9 @@ class TableMeta:
     def has_partitions(self):
         return len(self.partitions) > 0
 
+    def has_dynamic_partition(self):
+        return any([pt.value is None for pt in self.partitions])
+
     def get_full_table_name(self, temp_db: str = None):
         return f'{self.dbname or temp_db}.{self.pure_table_name}'
 
