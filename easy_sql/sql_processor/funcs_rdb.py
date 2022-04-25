@@ -18,13 +18,13 @@ class PartitionFuncs(PartitionFuncsBase):
 
     def _get_bigquery_partition_values(self, table_name):
         db, table = self.__parse_table_name(table_name)
-        sql = f"select partition_value from {db}.__table_partitions__ where table_name = '{table}' order by partition_value"
+        sql = f"select distinct partition_value from {db}.__table_partitions__ where table_name = '{table}' order by partition_value"
         partition_values = [str(v[0]) for v in self.backend.exec_sql(sql).collect()]
         return partition_values
 
     def _get_clickhouse_partition_values(self, table_name):
         db, table = self.__parse_table_name(table_name)
-        sql = f"SELECT partition_value FROM {self.backend.partitions_table_name} where db_name = '{db}' and table_name = '{table}';"
+        sql = f"SELECT distinct partition_value FROM {self.backend.partitions_table_name} where db_name = '{db}' and table_name = '{table}';"
         partition_values = [str(v[0]) for v in self.backend.exec_sql(sql).collect()]
         partition_values.sort()
         return partition_values
