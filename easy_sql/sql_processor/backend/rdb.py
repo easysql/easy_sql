@@ -313,12 +313,11 @@ class RdbTable(Table):
         self._exec_sql(self.db_config.create_table_with_partitions_sql(target_table.table_name, cols, target_table.partitions))
 
         target_table_name = target_table.get_full_table_name(self.backend.temp_schema)
+        partitions_to_save = []
         if target_table.partitions:
             partition_values = self.backend.exec_sql(f'select distinct {", ".join([p.field for p in target_table.partitions])} '
                                                      f'from {self.backend.temp_schema}.{temp_table_name}').collect()
             partitions_to_save = [[Partition(p.field, v[i]) for i, p in enumerate(target_table.partitions)] for v in partition_values]
-        else:
-            partitions_to_save = []
 
         if not self.db_config.create_partition_automatically():
             source_table_name = f'{self.backend.temp_schema}.{temp_table_name}'
@@ -329,6 +328,10 @@ class RdbTable(Table):
             cols = [col['name'] for col in cols]
             col_names = ', '.join(cols)
             converted_col_names = ", ".join(self.db_config.convert_col(cols, [pt.field for pt in target_table.partitions]))
+            if not partitions_to_save:
+                self._exec_sql(self.db_config.insert_data_sql(target_table_name, col_names,
+                                                              f'select {converted_col_names} from {self.backend.temp_schema}.{temp_table_name}',
+                                                              []))
             for partitions in partitions_to_save:
                 self._exec_sql(self.db_config.insert_data_sql(target_table_name, col_names,
                                                               f'select {converted_col_names} from {self.backend.temp_schema}.{temp_table_name}',
