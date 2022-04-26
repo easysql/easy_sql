@@ -313,15 +313,13 @@ class RdbTable(Table):
         self._exec_sql(self.db_config.create_table_with_partitions_sql(target_table.table_name, cols, target_table.partitions))
 
         target_table_name = target_table.get_full_table_name(self.backend.temp_schema)
-        partitions_to_save = []
-        if target_table.partitions:
-            partition_values = self.backend.exec_sql(f'select distinct {", ".join([p.field for p in target_table.partitions])} '
-                                                     f'from {self.backend.temp_schema}.{temp_table_name}').collect()
-            partitions_to_save = [[Partition(p.field, v[i]) for i, p in enumerate(target_table.partitions)] for v in partition_values]
+
+        partitions_to_save = self._get_save_partitions(target_table, temp_table_name)
 
         if not self.db_config.create_partition_automatically():
             source_table_name = f'{self.backend.temp_schema}.{temp_table_name}'
-            sqls = self.db_config.create_partitions_with_data_sqls(source_table_name, target_table_name, [col['name'] for col in cols], partitions_to_save)
+            sqls = self.db_config.create_partitions_with_data_sqls(source_table_name, target_table_name, [col['name'] for col in cols],
+                                                                   partitions_to_save)
             for sql in sqls:
                 self._exec_sql(sql)
         else:
@@ -336,6 +334,14 @@ class RdbTable(Table):
                 self._exec_sql(self.db_config.insert_data_sql(target_table_name, col_names,
                                                               f'select {converted_col_names} from {self.backend.temp_schema}.{temp_table_name}',
                                                               partitions))
+
+    def _get_save_partitions(self, target_table, temp_table_name):
+        partitions_to_save = [target_table.partitions] if target_table.partitions else []
+        if target_table.has_dynamic_partition():
+            partition_values = self.backend.exec_sql(f'select distinct {", ".join([p.field for p in target_table.partitions])} '
+                                                     f'from {self.backend.temp_schema}.{temp_table_name}').collect()
+            partitions_to_save = [[Partition(p.field, v[i]) for i, p in enumerate(target_table.partitions)] for v in partition_values]
+        return partitions_to_save
 
 
 class RdbRow(Row):
@@ -420,7 +426,8 @@ class DbConfig:
     def create_table_with_partitions_sql(self, table_name: str, cols: List[Dict], partitions: List[Partition]):
         raise NotImplementedError()
 
-    def create_partitions_with_data_sqls(self, source_table_name: str, target_table_name: str, col_names: List[str], partitions: List[List[Partition]]):
+    def create_partitions_with_data_sqls(self, source_table_name: str, target_table_name: str, col_names: List[str],
+                                         partitions: List[List[Partition]]):
         raise NotImplementedError()
 
     def create_partition_sql(self, target_table_name: str, partitions: List[Partition], if_not_exists: bool = False) -> str:
@@ -691,7 +698,8 @@ class PgDbConfig(DbConfig):
         return f'create table {if_not_exists} {partition_table_name} partition of {target_table_name} ' \
                f'for values from ({partition.value_expr}) to ({partition.value_next_expr})'
 
-    def create_partitions_with_data_sqls(self, source_table_name: str, target_table_name: str, col_names: List[str], partitions: List[List[Partition]]):
+    def create_partitions_with_data_sqls(self, source_table_name: str, target_table_name: str, col_names: List[str],
+                                         partitions: List[List[Partition]]):
         col_names_expr = ', '.join(col_names)
         if not partitions:
             return [f'insert into {target_table_name}({col_names_expr}) select {col_names_expr} from {source_table_name}']
@@ -994,8 +1002,9 @@ class RdbBackend(Backend):
             table.update_partitions([Partition(col) for col in pt_cols])
         # no need to do anything, if the db does not support partition
 
-    def _get_save_partitions_list(self, original_source_table, source_table, target_table):
-        # if dynamic partitions will have multi partitions, but for static will be only one partitions which is target_table.partitions
+    def _get_save_partitions(self, original_source_table, source_table, target_table):
+        # if original_source_table has dynamic partitions , it will generate multi partitions
+        # if original_source_table has static partitions, it will generate only one partition which is target_table.partitions
         save_partitions_list = []
         if original_source_table.has_dynamic_partition():  # dynamic partitions (partition retrieved from real table)
             pt_cols = [pt.field for pt in original_source_table.partitions]
@@ -1040,14 +1049,14 @@ class RdbBackend(Backend):
             _exec_sql(self.conn, self.db_config.drop_table_sql(temp_table_name))
             RdbTable.from_table_meta(self, source_table).save_to_table(target_table.clone_with_name(temp_table_name))
             if original_source_table.has_partitions():
-                save_partitions_list = self._get_save_partitions_list(original_source_table, source_table, target_table)
-                for save_partitions in save_partitions_list:
-                    _exec_sql(self.conn, self.db_config.delete_partition_sql(target_table.table_name, save_partitions))
+                save_partitions = self._get_save_partitions(original_source_table, source_table, target_table)
+                for save_partition in save_partitions:
+                    _exec_sql(self.conn, self.db_config.delete_partition_sql(target_table.table_name, save_partition))
                     if not self.db_config.create_partition_automatically():
-                        _exec_sql(self.conn, self.db_config.create_partition_sql(full_target_table_name, save_partitions))
+                        _exec_sql(self.conn, self.db_config.create_partition_sql(full_target_table_name, save_partition))
 
                     _exec_sql(self.conn, self.db_config.insert_data_sql(full_target_table_name, col_names,
-                                                                        f'select {col_names} from {temp_table_name}', save_partitions))
+                                                                        f'select {col_names} from {temp_table_name}', save_partition))
                 _exec_sql(self.conn, self.db_config.drop_table_sql(temp_table_name))
             else:
                 _exec_sql(self.conn, self.db_config.drop_table_sql(full_target_table_name))
@@ -1055,17 +1064,18 @@ class RdbBackend(Backend):
 
         elif save_mode == SaveMode.append:
             if original_source_table.has_partitions():
-                save_partitions_list = self._get_save_partitions_list(original_source_table, source_table, target_table)
-                for save_partitions in save_partitions_list:
+                save_partitions = self._get_save_partitions(original_source_table, source_table, target_table)
+                for save_partition in save_partitions:
                     if not self.db_config.create_partition_automatically():
-                        _exec_sql(self.conn, self.db_config.create_partition_sql(full_target_table_name, save_partitions, True))
+                        _exec_sql(self.conn, self.db_config.create_partition_sql(full_target_table_name, save_partition, True))
                     _exec_sql(self.conn, self.db_config.insert_data_sql(full_target_table_name, col_names,
                                                                         f'select {col_names} from {source_table.get_full_table_name(self.temp_schema)}',
-                                                                        save_partitions))
+                                                                        save_partition))
             else:
                 _exec_sql(self.conn, self.db_config.insert_data_sql(full_target_table_name, col_names,
                                                                     f'select {col_names} from {source_table.get_full_table_name(self.temp_schema)}',
                                                                     []))
+
         else:
             raise Exception(f'unknown save mode {save_mode}')
 
