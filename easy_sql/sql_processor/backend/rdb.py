@@ -313,24 +313,26 @@ class RdbTable(Table):
         self._exec_sql(self.db_config.create_table_with_partitions_sql(target_table.table_name, cols, target_table.partitions))
 
         target_table_name = target_table.get_full_table_name(self.backend.temp_schema)
+        if target_table.partitions:
+            partition_values = self.backend.exec_sql(f'select distinct {", ".join([p.field for p in target_table.partitions])} '
+                                                     f'from {self.backend.temp_schema}.{temp_table_name}').collect()
+            partitions_to_save = [[Partition(p.field, v[i]) for i, p in enumerate(target_table.partitions)] for v in partition_values]
+        else:
+            partitions_to_save = []
+
         if not self.db_config.create_partition_automatically():
-            if target_table.partitions:
-                partition_values = self.backend.exec_sql(f'select distinct {", ".join([p.field for p in target_table.partitions])} '
-                                                         f'from {self.backend.temp_schema}.{temp_table_name}').collect()
-                partitions_to_save = [[Partition(p.field, v[i]) for i, p in enumerate(target_table.partitions)] for v in partition_values]
-            else:
-                partitions_to_save = []
             source_table_name = f'{self.backend.temp_schema}.{temp_table_name}'
-            sqls = self.db_config.create_partitions_sqls(source_table_name, target_table_name, [col['name'] for col in cols], partitions_to_save)
+            sqls = self.db_config.create_partitions_with_data_sqls(source_table_name, target_table_name, [col['name'] for col in cols], partitions_to_save)
             for sql in sqls:
                 self._exec_sql(sql)
         else:
             cols = [col['name'] for col in cols]
             col_names = ', '.join(cols)
             converted_col_names = ", ".join(self.db_config.convert_col(cols, [pt.field for pt in target_table.partitions]))
-            self._exec_sql(self.db_config.insert_data_sql(target_table_name, col_names,
-                                                          f'select {converted_col_names} from {self.backend.temp_schema}.{temp_table_name}',
-                                                          target_table.partitions))
+            for partitions in partitions_to_save:
+                self._exec_sql(self.db_config.insert_data_sql(target_table_name, col_names,
+                                                              f'select {converted_col_names} from {self.backend.temp_schema}.{temp_table_name}',
+                                                              partitions))
 
 
 class RdbRow(Row):
@@ -415,7 +417,7 @@ class DbConfig:
     def create_table_with_partitions_sql(self, table_name: str, cols: List[Dict], partitions: List[Partition]):
         raise NotImplementedError()
 
-    def create_partitions_sqls(self, source_table_name: str, target_table_name: str, col_names: List[str], partitions: List[List[Partition]]):
+    def create_partitions_with_data_sqls(self, source_table_name: str, target_table_name: str, col_names: List[str], partitions: List[List[Partition]]):
         raise NotImplementedError()
 
     def create_partition_sql(self, target_table_name: str, partitions: List[Partition], if_not_exists: bool = False) -> str:
@@ -686,7 +688,7 @@ class PgDbConfig(DbConfig):
         return f'create table {if_not_exists} {partition_table_name} partition of {target_table_name} ' \
                f'for values from ({partition.value_expr}) to ({partition.value_next_expr})'
 
-    def create_partitions_sqls(self, source_table_name: str, target_table_name: str, col_names: List[str], partitions: List[List[Partition]]):
+    def create_partitions_with_data_sqls(self, source_table_name: str, target_table_name: str, col_names: List[str], partitions: List[List[Partition]]):
         col_names_expr = ', '.join(col_names)
         if not partitions:
             return [f'insert into {target_table_name}({col_names_expr}) select {col_names_expr} from {source_table_name}']
@@ -989,6 +991,19 @@ class RdbBackend(Backend):
             table.update_partitions([Partition(col) for col in pt_cols])
         # no need to do anything, if the db does not support partition
 
+    def _get_save_partitions_list(self, original_source_table, source_table, target_table):
+        # if dynamic partitions will have multi partitions, but for static will be only one partitions which is target_table.partitions
+        save_partitions_list = []
+        if original_source_table.has_dynamic_partition():  # dynamic partitions (partition retrieved from real table)
+            pt_cols = [pt.field for pt in original_source_table.partitions]
+            pt_values_list = _exec_sql(self.conn, f'select distinct {", ".join(pt_cols)} '
+                                                  f'from {source_table.get_full_table_name(self.temp_schema)}').fetchall()
+            for pt_values in pt_values_list:
+                save_partitions_list.append([Partition(field, value) for field, value in zip(pt_cols, pt_values)])
+        else:  # static partitions (partition specified in sql file)
+            save_partitions_list.append(target_table.partitions)
+        return save_partitions_list
+
     def save_table(self, source_table: 'TableMeta', target_table: 'TableMeta', save_mode: 'SaveMode',
                    create_target_table: bool):
         logger.info(f'save table with: source_table={source_table}, target_table={target_table}, '
@@ -1015,46 +1030,39 @@ class RdbBackend(Backend):
         self._ensure_contain_target_cols(source_cols, target_cols)
 
         full_target_table_name = target_table.get_full_table_name(self.temp_schema)
+        col_names = ', '.join([col['name'] for col in target_cols])
         if save_mode == SaveMode.overwrite:
             # write data to temp table to support the case when read from and write to the same table
             temp_table_name = f'{full_target_table_name}__temp'
             _exec_sql(self.conn, self.db_config.drop_table_sql(temp_table_name))
             RdbTable.from_table_meta(self, source_table).save_to_table(target_table.clone_with_name(temp_table_name))
             if original_source_table.has_partitions():
-                if original_source_table.has_dynamic_partition():  # dynamic partitions (partition retrieved from real table)
-                    pt_cols = [pt.field for pt in original_source_table.partitions]
-                    pt_values_list = _exec_sql(self.conn, f'select distinct {", ".join(pt_cols)} '
-                                                          f'from {source_table.get_full_table_name(self.temp_schema)}').fetchall()
-                    for pt_values in pt_values_list:
-                        partitions = [Partition(field, value) for field, value in zip(pt_cols, pt_values)]
-                        _exec_sql(self.conn, self.db_config.delete_partition_sql(target_table.table_name, partitions))
-                        if not self.db_config.create_partition_automatically():
-                            _exec_sql(self.conn, self.db_config.create_partition_sql(full_target_table_name, partitions))
-                else:  # static partitions (partition specified in sql file)
-                    _exec_sql(self.conn, self.db_config.delete_partition_sql(target_table.table_name, original_source_table.partitions))
+                save_partitions_list = self._get_save_partitions_list(original_source_table, source_table, target_table)
+                for save_partitions in save_partitions_list:
+                    _exec_sql(self.conn, self.db_config.delete_partition_sql(target_table.table_name, save_partitions))
                     if not self.db_config.create_partition_automatically():
-                        _exec_sql(self.conn, self.db_config.create_partition_sql(full_target_table_name, original_source_table.partitions))
-                col_names = ', '.join([col['name'] for col in target_cols])
-                _exec_sql(self.conn, self.db_config.insert_data_sql(full_target_table_name, col_names,
-                                                                    f'select {col_names} from {temp_table_name}', target_table.partitions))
+                        _exec_sql(self.conn, self.db_config.create_partition_sql(full_target_table_name, save_partitions))
+
+                    _exec_sql(self.conn, self.db_config.insert_data_sql(full_target_table_name, col_names,
+                                                                        f'select {col_names} from {temp_table_name}', save_partitions))
                 _exec_sql(self.conn, self.db_config.drop_table_sql(temp_table_name))
             else:
                 _exec_sql(self.conn, self.db_config.drop_table_sql(full_target_table_name))
                 _exec_sql(self.conn, self.db_config.rename_table_sql(temp_table_name, full_target_table_name))
+
         elif save_mode == SaveMode.append:
-            col_names = ', '.join([col['name'] for col in target_cols])
-            if not self.db_config.create_partition_automatically():
-                if original_source_table.has_partitions():
-                    pt_cols = [pt.field for pt in original_source_table.partitions]
-                    pt_values_list = _exec_sql(self.conn, f'select distinct {", ".join(pt_cols)} '
-                                                          f'from {source_table.get_full_table_name(self.temp_schema)}').fetchall()
-                    for pt_values in pt_values_list:
-                        partitions = [Partition(field, value) for field, value in zip(pt_cols, pt_values)]
-                        if not self.db_config.create_partition_automatically():
-                            _exec_sql(self.conn, self.db_config.create_partition_sql(full_target_table_name, partitions, True))
-            _exec_sql(self.conn, self.db_config.insert_data_sql(full_target_table_name, col_names,
-                                                                f'select {col_names} from {source_table.get_full_table_name(self.temp_schema)}',
-                                                                target_table.partitions))
+            if original_source_table.has_partitions():
+                save_partitions_list = self._get_save_partitions_list(original_source_table, source_table, target_table)
+                for save_partitions in save_partitions_list:
+                    if not self.db_config.create_partition_automatically():
+                        _exec_sql(self.conn, self.db_config.create_partition_sql(full_target_table_name, save_partitions, True))
+                    _exec_sql(self.conn, self.db_config.insert_data_sql(full_target_table_name, col_names,
+                                                                        f'select {col_names} from {source_table.get_full_table_name(self.temp_schema)}',
+                                                                        save_partitions))
+            else:
+                _exec_sql(self.conn, self.db_config.insert_data_sql(full_target_table_name, col_names,
+                                                                    f'select {col_names} from {source_table.get_full_table_name(self.temp_schema)}',
+                                                                    []))
         else:
             raise Exception(f'unknown save mode {save_mode}')
 
