@@ -1056,8 +1056,6 @@ class RdbBackend(Backend):
 
     def create_table_with_data(self, full_table_name: str, values: List[List[Any]], schema: List[Col], partitions: List['Partition']):
         db, table = full_table_name[:full_table_name.index('.')], full_table_name[full_table_name.index('.') + 1:]
-        if self.is_bq:
-            _exec_sql(self.conn, self.db_config.drop_db_sql(db))
         _exec_sql(self.conn, self.db_config.create_db_sql(db))
         _exec_sql(self.conn, self.db_config.create_table_with_partitions_sql(full_table_name, [col.as_dict() for col in schema], partitions))
         cols = [col.name for col in schema]
