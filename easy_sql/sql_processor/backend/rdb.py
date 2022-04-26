@@ -540,9 +540,10 @@ class BqDbConfig(DbConfig):
             raise Exception("BigQuery table must be qualified with a dataset.")
         db, pure_table_name = tuple(table_name.split('.'))
         insert_date_sql = f"insert into {table_name}({col_names_expr}) {select_sql};"
+        delete_pt_metadata_if_exist = f"delete {db}.__table_partitions__ where table_name = '{pure_table_name}' and partition_value = '{partitions[0].value}';"
         insert_pt_metadata = f"insert into {db}.__table_partitions__ values('{pure_table_name}', '{partitions[0].value}', CURRENT_TIMESTAMP());" \
             if len(partitions) != 0 else ''
-        return self.transaction(f'{insert_date_sql}\n{insert_pt_metadata}')
+        return self.transaction(f'{insert_date_sql}\n{delete_pt_metadata_if_exist}\n{insert_pt_metadata}')
 
     def drop_table_sql(self, table: str):
         if not self.contain_db(table):
@@ -807,14 +808,17 @@ class ChDbConfig(DbConfig):
         insert_date_sql = f"insert into {table_name}({col_names_expr}) {select_sql};"
 
         if any([pt.value is None for pt in partitions]):
-            raise Exception(f"cannot insert data when partition value is None, partitions: {partitions}")
+            raise Exception(f"cannot insert data when partition value is None, partitions: {partitions}, there maybe some bug, please check")
 
         if len(partitions) != 0:
             if len(partitions) > 1:
                 raise Exception("for now clickhouse backend only support table with single field partition")
             db, pure_table_name = split_table_name(table_name)
+            drop_pt_metadata_if_exist = f"alter table {self.partitions_table_name} delete " \
+                                        f"where db_name = '{db}' and table_name = '{pure_table_name}' " \
+                                        f"and partition_value = '{partitions[0].value}'"
             insert_pt_metadata = f"insert into {self.partitions_table_name} values('{db}', '{pure_table_name}', '{partitions[0].value}', now());"
-            return [insert_date_sql, insert_pt_metadata]
+            return [insert_date_sql, drop_pt_metadata_if_exist, insert_pt_metadata]
         return [insert_date_sql]
 
     def drop_table_sql(self, table: str) -> List[str]:
