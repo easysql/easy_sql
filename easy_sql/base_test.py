@@ -1,3 +1,4 @@
+import os
 import uuid
 from datetime import datetime
 from typing import Dict, List
@@ -13,6 +14,9 @@ def should_run_integration_test(key: str = None):
         return False
     return False
 
+
+TEST_PG_URL = os.environ.get('PG_URL', 'postgresql://postgres:123456@testpg:15432/postgres')
+TEST_CH_URL = os.environ.get('CLICKHOUSE_URL', 'clickhouse+native://default@testch:30123')
 
 dt = lambda dt_s: datetime.strptime(dt_s, '%Y-%m-%d %H:%M:%S')
 

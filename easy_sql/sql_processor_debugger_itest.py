@@ -1,8 +1,8 @@
 import unittest
 
+from .base_test import TEST_PG_URL, TEST_CH_URL
 from .sql_processor.backend import Backend, SparkBackend
 from .sql_processor_debugger import *
-from . import base_test
 
 
 class SqlProcessorDebuggerTest(unittest.TestCase):
@@ -24,11 +24,9 @@ class SqlProcessorDebuggerTest(unittest.TestCase):
         self.run_test_process_sql_debugger(SparkBackend(spark))
 
     def test_process_sql_debugger_pg(self):
-        if not base_test.should_run_integration_test('pg'):
-            return
         from easy_sql.sql_processor.backend.postgres import PostgresBackend
         from easy_sql.sql_processor.backend.postgres import _exec_sql
-        pg = PostgresBackend('postgresql://postgres:123456@testpg:15432/postgres')
+        pg = PostgresBackend(TEST_PG_URL)
         _exec_sql(pg.conn, 'drop schema if exists t cascade')
         _exec_sql(pg.conn, 'create schema t')
         _exec_sql(pg.conn, 'create table t.target(id int, type varchar(100))')
@@ -37,10 +35,8 @@ class SqlProcessorDebuggerTest(unittest.TestCase):
         self.run_test_process_sql_debugger(pg)
 
     def test_process_sql_debugger_ch(self):
-        if not base_test.should_run_integration_test('ch'):
-            return
         from easy_sql.sql_processor.backend.rdb import RdbBackend, _exec_sql
-        backend = RdbBackend('clickhouse+native://default@testch:30123')
+        backend = RdbBackend(TEST_CH_URL)
         _exec_sql(backend.conn, 'drop database if exists t')
         _exec_sql(backend.conn, 'create database t')
         _exec_sql(backend.conn, 'create table t.target(id int, type String) engine=MergeTree order by tuple()')
