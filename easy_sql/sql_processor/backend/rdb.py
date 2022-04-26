@@ -406,7 +406,7 @@ class DbConfig:
     def support_native_partition(self) -> bool:
         raise NotImplementedError()
 
-    def delete_partition_sql(self, table_name, partitions: List[Partition]) -> str:
+    def delete_partition_sql(self, table_name, partitions: List[Partition]) -> Union[str, List[str]]:
         raise NotImplementedError()
 
     def native_partitions(self, table_name: str) -> Tuple[str, Callable]:
@@ -760,7 +760,7 @@ class ChDbConfig(DbConfig):
     def support_native_partition(self) -> bool:
         return True
 
-    def delete_partition_sql(self, table_name, partitions: List[Partition]) -> str:
+    def delete_partition_sql(self, table_name, partitions: List[Partition]) -> List[str]:
         if len(partitions) > 1:
             raise Exception(f'Only support exactly one partition column, found: {[str(p) for p in partitions]}')
         db, pure_table_name = split_table_name(table_name)
@@ -768,7 +768,11 @@ class ChDbConfig(DbConfig):
         drop_pt_metadata = f"alter table {self.partitions_table_name} delete " \
                            f"where db_name = '{db}' and table_name = '{pure_table_name}' " \
                            f"and partition_value = '{partitions[0].value}'"
-        return drop_pt_metadata
+
+        pt_expr = f'tuple({", ".join([self.sql_expr.for_value(pt.value) for pt in partitions])})'
+        drop_pt = f'alter table {table_name} drop partition {pt_expr}'
+
+        return [drop_pt, drop_pt_metadata]
 
     def native_partitions(self, table_name: str) -> Tuple[str, Callable]:
         return f'show create table {table_name}', self.extract_partition_cols
