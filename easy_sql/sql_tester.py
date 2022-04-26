@@ -557,6 +557,7 @@ class TestCaseRunner:
         sql = case.read_sql_content()
 
         backend = self.backend_creator(case)
+        self.clean_previous_input(case, backend)
         self.create_inputs(case, backend)
 
         sql_processor = self.create_sql_processor(backend, case, sql)
@@ -631,6 +632,22 @@ class TestCaseRunner:
             else:
                 print(f'creating temp table: {input.name}')
                 backend.create_temp_table_with_data(input.name, input.values, schema)
+
+    def clean_previous_input(self, case, backend):
+        for input in case.inputs:
+            if '.' in input.name:
+                db = input.name.split(".")[0]
+                if backend.is_bigquery_backend:
+                    try:
+                        backend.exec_native_sql(f"drop schema if exists {db} cascade")
+                    except Exception as e:
+                        # BigQuery will throw an exception when deleting a nonexistent dataset even if using [IF EXISTS]
+                        import re
+                        if re.match(r"[\s\S]*Permission bigquery.datasets.delete denied on dataset[\s\S]*(or it may not exist)[\s\S]*",
+                                    str(e.args[0])):
+                            return []
+                        else:
+                            raise e
 
 
 class SqlTester:
