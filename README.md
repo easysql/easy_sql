@@ -188,7 +188,7 @@ def create_debugger(sql_file_path: str, vars: Dict[str, Any] = None, funcs: Dict
 
 5. Start debugging like below:
 
-![ETL Debugging](debugger-usage.gif)
+![ETL Debugging](https://raw.githubusercontent.com/easysql/easy_sql/main/debugger-usage.gif)
 
 ## Contributing
 

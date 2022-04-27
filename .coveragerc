@@ -5,6 +5,7 @@ source =
 omit =
     */sql_tester.py
     */*_test.py
+    */*_itest.py
 
 [report]
 # Regexes for lines to exclude from consideration
