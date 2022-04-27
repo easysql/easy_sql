@@ -8,6 +8,8 @@ Since this is SQL agnostic, any SQL engine could be plugged-in as a backend.
 There are built-in supported for several popular SQL engines, including SparkSQL, PostgreSQL, Clickhouse, Aliyun Maxcompute, Google BigQuery.
 More will be added in the near future.
 
+<https://easy-sql.readthedocs.io/>
+
 [![GitHub Action Build](https://github.com/easysql/easy_sql/actions/workflows/build.yaml/badge.svg?branch=main&event=push)](https://github.com/easysql/easy_sql/actions/workflows/build.yaml?query=branch%3Amain+event%3Apush)
 [![EasySQL Coverage](https://codecov.io/gh/easysql/easy_sql/branch/main/graph/badge.svg)](https://codecov.io/gh/easysql/easy_sql)
 
