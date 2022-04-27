@@ -25,7 +25,7 @@ Contents
    easy_sql/build_install.md
    easy_sql/quick_start.md
    easy_sql/syntax.md
-   easy_sal/debug.md
+   easy_sql/debug.md
 
 
 
