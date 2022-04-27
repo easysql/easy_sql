@@ -331,8 +331,9 @@ class RdbTable(Table):
                                                               f'select {converted_col_names} from {self.backend.temp_schema}.{temp_table_name}',
                                                               []))
             for partitions in partitions_to_save:
+                filter_expr = "and".join([f"{pt.field} = {self.backend.sql_expr.for_value(pt.value)}" for pt in partitions])
                 self._exec_sql(self.db_config.insert_data_sql(target_table_name, col_names,
-                                                              f'select {converted_col_names} from {self.backend.temp_schema}.{temp_table_name}',
+                                                              f'select {converted_col_names} from {self.backend.temp_schema}.{temp_table_name} where {filter_expr}',
                                                               partitions))
 
     def _get_save_partitions(self, target_table, temp_table_name):
@@ -529,7 +530,7 @@ class BqDbConfig(DbConfig):
         pt_cols = []
         for line in create_table_sql_lines:
             if line.startswith('PARTITION BY '):
-                pt_cols = [line[len('PARTITION BY '):].strip()]
+                pt_cols = [line[len('PARTITION BY '):-1].strip()]
                 break
         return pt_cols
 
@@ -552,7 +553,14 @@ class BqDbConfig(DbConfig):
             raise Exception("BigQuery table must be qualified with a dataset.")
         db, pure_table_name = tuple(table_name.split('.'))
         insert_date_sql = f"insert into {table_name}({col_names_expr}) {select_sql};"
-        delete_pt_metadata_if_exist = f"delete {db}.__table_partitions__ where table_name = '{pure_table_name}' and partition_value = '{partitions[0].value}';"
+
+        if any([pt.value is None for pt in partitions]):
+            raise Exception(f"cannot insert data when partition value is None, partitions: {partitions}, there maybe some bug, please check")
+        if len(partitions) > 1:
+            raise Exception("for now clickhouse backend only support table with single field partition")
+
+        delete_pt_metadata_if_exist = f"delete {db}.__table_partitions__ where table_name = '{pure_table_name}' and partition_value = '{partitions[0].value}';" \
+            if len(partitions) != 0 else ''
         insert_pt_metadata = f"insert into {db}.__table_partitions__ values('{pure_table_name}', '{partitions[0].value}', CURRENT_TIMESTAMP());" \
             if len(partitions) != 0 else ''
         return self.transaction(f'{insert_date_sql}\n{delete_pt_metadata_if_exist}\n{insert_pt_metadata}')
@@ -1055,8 +1063,10 @@ class RdbBackend(Backend):
                     if not self.db_config.create_partition_automatically():
                         _exec_sql(self.conn, self.db_config.create_partition_sql(full_target_table_name, save_partition))
 
+                    filter_expr = "and".join([f"{pt.field} = {self.sql_expr.for_value(pt.value)}" for pt in save_partition])
                     _exec_sql(self.conn, self.db_config.insert_data_sql(full_target_table_name, col_names,
-                                                                        f'select {col_names} from {temp_table_name}', save_partition))
+                                                                        f'select {col_names} from {temp_table_name} where {filter_expr}',
+                                                                        save_partition))
                 _exec_sql(self.conn, self.db_config.drop_table_sql(temp_table_name))
             else:
                 _exec_sql(self.conn, self.db_config.drop_table_sql(full_target_table_name))
