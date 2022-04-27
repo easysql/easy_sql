@@ -557,7 +557,7 @@ class TestCaseRunner:
         sql = case.read_sql_content()
 
         backend = self.backend_creator(case)
-        self.clean_previous_data(case, backend)
+        self.clean(case, backend)
         self.create_inputs(case, backend)
 
         sql_processor = self.create_sql_processor(backend, case, sql)
@@ -633,7 +633,7 @@ class TestCaseRunner:
                 print(f'creating temp table: {input.name}')
                 backend.create_temp_table_with_data(input.name, input.values, schema)
 
-    def clean_previous_data(self, case, backend):
+    def clean(self, case, backend):
         databases = set()
         table_names = set.union(set(input.name for input in case.inputs), set(output.name for output in case.outputs))
         for table_name in table_names:
