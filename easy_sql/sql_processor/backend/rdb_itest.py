@@ -4,21 +4,10 @@ import unittest
 from datetime import datetime
 
 from easy_sql import base_test
-from easy_sql.base_test import dt, date, TEST_PG_URL, TEST_CH_URL
+from easy_sql.base_test import dt, date, TEST_PG_URL, TEST_CH_URL, TEST_BQ_URL, sql_expr
 from easy_sql.sql_processor.backend import TableMeta, SaveMode, Partition
-from easy_sql.sql_processor.backend.rdb import RdbBackend, RdbRow, _exec_sql, TimeLog, SqlExpr
+from easy_sql.sql_processor.backend.rdb import RdbBackend, RdbRow, _exec_sql, TimeLog
 
-partition_col_converter = lambda col: \
-    f"PARSE_DATE('%Y-%m', {col}) as {col}" if col in ['data_month', ":data_month"] else f"CAST({col} as DATE)"
-partition_value_converter = lambda col, value: \
-    datetime.strptime(value, '%Y-%m').date() if col == 'data_month' else datetime.strptime(value, '%Y-%m-%d').date()
-column_sql_type_converter = lambda backend_type, col_name, col_type: \
-    'DATE' if col_name in ['di', 'dt', 'data_date', 'data_month'] else None
-partition_expr = lambda backend_type, partition_col: \
-    f'DATE_TRUNC({partition_col}, MONTH)' if backend_type == 'bigqiery' and partition_col == 'data_month' else partition_col
-sql_expr = SqlExpr(column_sql_type_converter=column_sql_type_converter,
-                   partition_col_converter=partition_col_converter, partition_value_converter=partition_value_converter,
-                   partition_expr=partition_expr)
 
 
 class RdbTest(unittest.TestCase):
@@ -51,7 +40,7 @@ class RdbTest(unittest.TestCase):
         if not base_test.should_run_integration_test('bq'):
             return
         import os
-        backend = RdbBackend('bigquery://',
+        backend = RdbBackend(TEST_BQ_URL,
                              credentials=f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-test.json",
                              sql_expr=sql_expr)
         from sqlalchemy import inspect
@@ -82,7 +71,7 @@ class RdbTest(unittest.TestCase):
         if not base_test.should_run_integration_test('bq'):
             return
         import os
-        backend = RdbBackend('bigquery://',
+        backend = RdbBackend(TEST_BQ_URL,
                              credentials=f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-test.json",
                              sql_expr=sql_expr)
         _exec_sql(backend.conn, 'drop schema if exists t cascade')
@@ -116,7 +105,7 @@ class RdbTest(unittest.TestCase):
         if not base_test.should_run_integration_test('bq'):
             return
         import os
-        backend = RdbBackend('bigquery://',
+        backend = RdbBackend(TEST_BQ_URL,
                              credentials=f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-test.json",
                              sql_expr=sql_expr)
         _exec_sql(backend.conn, 'drop schema if exists t cascade')

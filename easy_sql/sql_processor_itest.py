@@ -1,6 +1,7 @@
 import unittest
 
-from easy_sql.base_test import dt, TEST_PG_URL, TEST_CH_URL
+from easy_sql import base_test
+from easy_sql.base_test import dt, TEST_PG_URL, TEST_CH_URL, TEST_BQ_URL, sql_expr, date
 
 
 class SqlProcessorTest(unittest.TestCase):
@@ -24,42 +25,83 @@ class SqlProcessorTest(unittest.TestCase):
         backend = RdbBackend(TEST_CH_URL)
         _exec_sql(backend.conn, 'drop database if exists t')
         _exec_sql(backend.conn, 'create database t')
-        self.run_sql_for_dynamic_partitions(backend)
+        self.run_sql_for_multi_dynamic_partitions(backend)
 
     def test_should_run_sql_for_pg_backend_for_dynamic_partitions(self):
         from easy_sql.sql_processor.backend.rdb import RdbBackend, _exec_sql
         backend = RdbBackend(TEST_PG_URL)
         _exec_sql(backend.conn, 'drop schema if exists t cascade')
         _exec_sql(backend.conn, 'create schema t')
-        self.run_sql_for_dynamic_partitions(backend)
+        self.run_sql_for_multi_dynamic_partitions(backend)
 
-    def run_sql_for_dynamic_partitions(self, backend):
+    def test_should_run_sql_for_bq_backend_for_dynamic_partitions(self):
+        if not base_test.should_run_integration_test('bq'):
+            return
+        import os
+        from easy_sql.sql_processor.backend.rdb import RdbBackend, _exec_sql
+        backend = RdbBackend(TEST_BQ_URL, credentials=f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-test.json",
+                             sql_expr=sql_expr)
+        _exec_sql(backend.conn, 'drop schema if exists t cascade')
+        _exec_sql(backend.conn, 'create schema t')
+        self.run_sql_for_multi_dynamic_partitions(backend)
+
+    def run_sql_for_multi_dynamic_partitions(self, backend):
         from easy_sql.sql_processor import SqlProcessor
-        sql = '''
--- target=variables
-select '2021-01-01'       as __partition__data_date
--- target=temp.result
-select 1 as a
--- target=output.t.result
-select *, 2 as b from result
-                '''
-        processor = SqlProcessor(backend, sql, variables={'__create_output_table__': True})
+        if backend.is_bigquery_backend:
+            sql = '''
+            -- target=variables
+            select '2021-01-01'       as __partition__data_date
+            -- target=temp.result
+            select 1 as a
+            -- target=output.t.result
+            select *, 2 as b from ${temp_db}.result
+            '''
+        else:
+            sql = '''
+            -- target=variables
+            select '2021-01-01'       as __partition__data_date
+            -- target=temp.result
+            select 1 as a
+            -- target=output.t.result
+            select *, 2 as b from result
+            '''
+        processor = SqlProcessor(backend, sql,
+                                 variables={'__create_output_table__': True,
+                                            'temp_db': backend.temp_schema if backend.is_bigquery_backend else None})
         processor.func_runner.register_funcs({'t': lambda a, b: int(a) + int(b)})
         processor.run(dry_run=False)
-        sql = '''
--- target=temp.result1
-select 1 as a
--- target=output.t.result
-select *, 3 as b, '2021-01-01' as data_date from result1 union all
-select *, 3 as b, '2021-01-02' as data_date from result1
--- target=output.t.result
-select *, 3 as b, '2021-01-03' as data_date from result1
-                    '''
-        processor = SqlProcessor(backend, sql)
+        if backend.is_bigquery_backend:
+            sql = '''
+            -- target=temp.result1
+            select 1 as a
+            -- target=output.t.result
+            select *, 3 as b, '2021-01-01' as data_date from ${temp_db}.result1 union all
+            select *, 3 as b, '2021-01-02' as data_date from ${temp_db}.result1
+            -- target=output.t.result
+            select *, 3 as b, '2021-01-03' as data_date from ${temp_db}.result1
+            '''
+        else:
+            sql = '''
+            -- target=temp.result1
+            select 1 as a
+            -- target=output.t.result
+            select *, 3 as b, '2021-01-01' as data_date from result1 union all
+            select *, 3 as b, '2021-01-02' as data_date from result1
+            -- target=output.t.result
+            select *, 3 as b, '2021-01-03' as data_date from result1
+            '''
+
+        processor = SqlProcessor(backend, sql,
+                                 variables={'temp_db': backend.temp_schema if backend.is_bigquery_backend else None})
         processor.func_runner.register_funcs({'t': lambda a, b: int(a) + int(b)})
         processor.run(dry_run=False)
+
+        if backend.is_bigquery_backend:
+            mock_dt_1, mock_dt_2, mock_dt_3 = date('2021-01-01'), date('2021-01-02'), date('2021-01-03')
+        else:
+            mock_dt_1, mock_dt_2, mock_dt_3 = '2021-01-01', '2021-01-02', '2021-01-03'
         self.assertEqual(backend.exec_sql('select * from t.result order by data_date').collect(), [
-            (1, 3, '2021-01-01'), (1, 3, '2021-01-02'), (1, 3, '2021-01-03')
+            (1, 3, mock_dt_1), (1, 3, mock_dt_2), (1, 3, mock_dt_3)
         ])
 
     def run_sql_for_pg_backend(self, backend):

@@ -5,6 +5,7 @@ from typing import Dict, List
 
 from pyspark.sql import SparkSession
 
+from easy_sql.sql_processor.backend.rdb import SqlExpr
 from easy_sql.sql_processor import SqlProcessor
 from .local_spark import LocalSpark
 
@@ -17,6 +18,19 @@ def should_run_integration_test(key: str = None):
 
 TEST_PG_URL = os.environ.get('PG_URL', 'postgresql://postgres:123456@testpg:15432/postgres')
 TEST_CH_URL = os.environ.get('CLICKHOUSE_URL', 'clickhouse+native://default@testch:30123')
+TEST_BQ_URL = os.environ.get('BQ_URL', 'bigquery://')
+
+partition_col_converter = lambda col: \
+    f"PARSE_DATE('%Y-%m', {col}) as {col}" if col in ['data_month', ":data_month"] else f"CAST({col} as DATE)"
+partition_value_converter = lambda col, value: \
+    datetime.strptime(value, '%Y-%m').date() if col == 'data_month' else datetime.strptime(value, '%Y-%m-%d').date()
+column_sql_type_converter = lambda backend_type, col_name, col_type: \
+    'DATE' if col_name in ['di', 'dt', 'data_date', 'data_month'] else None
+partition_expr = lambda backend_type, partition_col: \
+    f'DATE_TRUNC({partition_col}, MONTH)' if backend_type == 'bigqiery' and partition_col == 'data_month' else partition_col
+sql_expr = SqlExpr(column_sql_type_converter=column_sql_type_converter,
+                   partition_col_converter=partition_col_converter, partition_value_converter=partition_value_converter,
+                   partition_expr=partition_expr)
 
 dt = lambda dt_s: datetime.strptime(dt_s, '%Y-%m-%d %H:%M:%S')
 
