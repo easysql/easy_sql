@@ -24,9 +24,18 @@ class SqlProcessorTest(unittest.TestCase):
         backend = RdbBackend(TEST_CH_URL)
         _exec_sql(backend.conn, 'drop database if exists t')
         _exec_sql(backend.conn, 'create database t')
+        self.run_sql_for_dynamic_partitions(backend)
+
+    def test_should_run_sql_for_pg_backend_for_dynamic_partitions(self):
+        from easy_sql.sql_processor.backend.rdb import RdbBackend, _exec_sql
+        backend = RdbBackend(TEST_PG_URL)
+        _exec_sql(backend.conn, 'drop schema if exists t cascade')
+        _exec_sql(backend.conn, 'create schema t')
+        self.run_sql_for_dynamic_partitions(backend)
+
+    def run_sql_for_dynamic_partitions(self, backend):
         from easy_sql.sql_processor import SqlProcessor
         sql = '''
--- backend: clickhouse
 -- target=variables
 select '2021-01-01'       as __partition__data_date
 -- target=temp.result
@@ -38,7 +47,6 @@ select *, 2 as b from result
         processor.func_runner.register_funcs({'t': lambda a, b: int(a) + int(b)})
         processor.run(dry_run=False)
         sql = '''
--- backend: clickhouse
 -- target=temp.result1
 select 1 as a
 -- target=output.t.result
