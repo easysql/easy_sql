@@ -492,7 +492,8 @@ class BqDbConfig(DbConfig):
         return f'select table_name from {db}.INFORMATION_SCHEMA.TABLES'
 
     def create_table_sql(self, table_name: str, select_sql: str) -> str:
-        return f'create table if not exists {self.db}.{table_name} as {select_sql}'
+        full_table_name = table_name if self.contain_db(table_name) else f'{self.db}.{table_name}'
+        return f'create table if not exists {full_table_name} as {select_sql}'
 
     # Cannot rename view directly in BigQuery
     def rename_view_sql(self, from_table: str, to_table: str) -> str:

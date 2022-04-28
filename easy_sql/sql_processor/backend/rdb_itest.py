@@ -1,7 +1,6 @@
 import re
 import time
 import unittest
-from datetime import datetime
 
 from easy_sql import base_test
 from easy_sql.base_test import dt, date, TEST_PG_URL, TEST_CH_URL, TEST_BQ_URL, sql_expr
@@ -134,13 +133,14 @@ class RdbTest(unittest.TestCase):
         self.assertListEqual(table.field_names(), ['id', 'val', 'a'])
         self.assertEqual(table.limit(2).count(), 2)
 
-        table = backend.exec_sql('select * from t.test1 order by id').with_column('a', backend.sql_expr.for_value('1'))
+        _exec_sql(backend.conn, backend.db_config.create_table_sql("t.test2", "select * from t.test1"))
+        table = backend.exec_sql('select * from t.test2 order by id').with_column('a', backend.sql_expr.for_value('1'))
         self.assertEqual(table.first(), RdbRow(['id', 'val', 'a'], (1, '1', '1')))
 
-        table = backend.exec_sql('select * from t.test1 order by id').with_column('a', backend.sql_expr.for_value(1.1))
+        table = backend.exec_sql('select * from t.test2 order by id').with_column('a', backend.sql_expr.for_value(1.1))
         self.assertEqual(table.first(), RdbRow(['id', 'val', 'a'], (1, '1', 1.1)))
 
-        table = backend.exec_sql('select * from t.test1 order by id').with_column('a', backend.sql_expr.for_value(dt('2020-01-01 11:11:11')))
+        table = backend.exec_sql('select * from t.test2 order by id').with_column('a', backend.sql_expr.for_value(dt('2020-01-01 11:11:11')))
         self.assertEqual(table.first(),
                          RdbRow(['id', 'val', 'a'], (1, '1', base_test.dt_zone('2020-01-01 11:11:11', timezone=timezone))))
 
