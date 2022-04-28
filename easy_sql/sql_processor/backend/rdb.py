@@ -331,7 +331,7 @@ class RdbTable(Table):
                                                               f'select {converted_col_names} from {self.backend.temp_schema}.{temp_table_name}',
                                                               []))
             for partitions in partitions_to_save:
-                filter_expr = "and".join([f"{pt.field} = {self.backend.sql_expr.for_value(pt.value)}" for pt in partitions])
+                filter_expr = " and ".join([f"{pt.field} = {self.backend.sql_expr.for_value(pt.value)}" for pt in partitions])
                 self._exec_sql(self.db_config.insert_data_sql(target_table_name, col_names,
                                                               f'select {converted_col_names} from {self.backend.temp_schema}.{temp_table_name} where {filter_expr}',
                                                               partitions))
@@ -1063,7 +1063,7 @@ class RdbBackend(Backend):
                     if not self.db_config.create_partition_automatically():
                         _exec_sql(self.conn, self.db_config.create_partition_sql(full_target_table_name, save_partition))
 
-                    filter_expr = "and".join([f"{pt.field} = {self.sql_expr.for_value(pt.value)}" for pt in save_partition])
+                    filter_expr = " and ".join([f"{pt.field} = {self.sql_expr.for_value(pt.value)}" for pt in save_partition])
                     _exec_sql(self.conn, self.db_config.insert_data_sql(full_target_table_name, col_names,
                                                                         f'select {col_names} from {temp_table_name} where {filter_expr}',
                                                                         save_partition))
