@@ -42,15 +42,16 @@ select *, 2 as b from result
 -- target=temp.result1
 select 1 as a
 -- target=output.t.result
-select *, 3 as b, '2021-01-01' as data_date from result1
--- target=output.t.result
+select *, 3 as b, '2021-01-01' as data_date from result1 union all
 select *, 3 as b, '2021-01-02' as data_date from result1
+-- target=output.t.result
+select *, 3 as b, '2021-01-03' as data_date from result1
                     '''
         processor = SqlProcessor(backend, sql)
         processor.func_runner.register_funcs({'t': lambda a, b: int(a) + int(b)})
         processor.run(dry_run=False)
         self.assertEqual(backend.exec_sql('select * from t.result order by data_date').collect(), [
-            (1, 3, '2021-01-01'), (1, 3, '2021-01-02')
+            (1, 3, '2021-01-01'), (1, 3, '2021-01-02'), (1, 3, '2021-01-03')
         ])
 
     def run_sql_for_pg_backend(self, backend):
