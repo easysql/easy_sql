@@ -110,6 +110,8 @@ class TableColumnTypes:
             if col_name in self.partition_col_types:
                 return self.partition_col_types[col_name]
             raise Exception(f'column {col_name} not found for table {table_name}, known columns:: {list(self.table_col_types[table_name].keys())}')
+        if self.backend == 'clickhouse':
+            return self.table_col_types[table_name][col_name].strip()
         return self.table_col_types[table_name][col_name].lower().strip()
 
     def column_types_to_schema(self, backend: Backend, columns: List[str], types: List[str]) -> Union[StructType, List[Col]]:
@@ -161,6 +163,7 @@ class TableColumnTypes:
 
     def cast_as_type(self, table_name: str, col_name: str, col_value: Any, date_converter: Callable = None, col_type: str = None) -> Tuple[str, Any]:
         col_type = self.get_col_type(table_name, col_name) if col_type is None else col_type
+        lower_col_type = col_type.lower()
 
         if col_value is None or (isinstance(col_value, str) and col_value.strip() == 'null'):
             return col_type, None
@@ -181,39 +184,39 @@ class TableColumnTypes:
                 else:
                     try:
                         # try convert partition column to int to remove possible float values
-                        return col_type, str(int(col_value)) if col_type == 'string' else int(col_value)
+                        return col_type, str(int(col_value)) if lower_col_type == 'string' else int(col_value)
                     except ValueError as e:
-                        if col_type == 'string':
+                        if lower_col_type == 'string':
                             return col_type, str(col_value)
                         else:
                             raise e
 
-            if col_type.replace(' ', '').startswith('map<'):
+            if lower_col_type.replace(' ', '').startswith('map<'):
                 raise Exception(f'map type not supported right now when parsing value `{col_value}` for column: {table_name}.{col_name}')
-            if col_type.startswith('decimal(') or col_type == 'double':
+            if lower_col_type.startswith('decimal(') or col_type == 'double':
                 return col_type, float(col_value)
-            if col_type in ['bigint', 'int', 'tinyint']:
+            if lower_col_type in ['bigint', 'int', 'tinyint', 'int32', 'int64', 'uint32', 'uint64']:
                 return col_type, int(col_value)
-            if col_type in ['boolean']:
+            if lower_col_type in ['boolean']:
                 if str(col_value).lower() == 'true':
                     return col_type, True
                 elif str(col_value).lower() == 'false':
                     return col_type, False
                 return col_type, bool(col_value)
-            if col_type in ['string', 'text']:
+            if lower_col_type.lower() in ['string', 'text']:
                 return col_type, str(col_value).strip()
-            if col_type.replace(' ', '') in ['array<string>', 'text[]']:
+            if lower_col_type.replace(' ', '') in ['array<string>', 'text[]', 'array(string)']:
                 return col_type, [s.strip() for s in str(col_value).strip().split('|') if s.strip()]
-            if col_type.replace(' ', '') in ['array<int>', 'int[]']:
+            if lower_col_type.replace(' ', '') in ['array<int>', 'int[]', 'array(int)']:
                 return col_type, [int(s.strip()) for s in str(col_value).strip().split('|') if s.strip()]
-            if col_type.replace(' ', '') == 'struct<latest_value:string,first_show_time:timestamp>':
+            if lower_col_type.replace(' ', '') == 'struct<latest_value:string,first_show_time:timestamp>':
                 vals = str(col_value).strip().split('|')
                 if len(vals) < 2:
                     raise Exception(f'must provide all the values of type {col_type} for {table_name}.{col_name}. Incomplete value `{col_value}`')
                 latest_value = str(vals[0]).strip()
                 first_show_time = str(vals[1]).strip() if not date_converter else date_converter(vals[1])
                 return col_type, (latest_value, first_show_time)
-            if col_type in ['date', 'timestamp']:
+            if lower_col_type in ['date', 'timestamp', 'datetime']:
                 if not date_converter:
                     return col_type, str(col_value).strip()
                 else:
