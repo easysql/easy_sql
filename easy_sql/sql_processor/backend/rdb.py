@@ -454,7 +454,10 @@ class DbConfig:
     def create_pt_meta_table(self, db: str):
         raise NotImplementedError()
 
-    def insert_pt_meta_data(self, table_name: str, partitions: List[Partition]):
+    def insert_pt_metadata(self, table_name: str, partitions: List[Partition]):
+        raise NotImplementedError()
+
+    def delete_pt_metadata(self, table_name: str, partitions: List[Partition]):
         raise NotImplementedError()
 
 
@@ -477,7 +480,7 @@ class BqDbConfig(DbConfig):
 
     def rename_table_sql(self, from_table: str, to_table: str) -> str:
         from_full_table_name = from_table if self.contain_db(from_table) else f'{self.db}.{from_table}'
-        to_pure_table_name = to_table.split(".")[1] if self.contain_db(to_table) else {to_table}
+        to_pure_table_name = to_table.split(".")[1] if self.contain_db(to_table) else to_table
         return f'alter table if exists {from_full_table_name} rename to {to_pure_table_name}'
 
     # There's no statement that could change the dataset directly
@@ -551,18 +554,12 @@ class BqDbConfig(DbConfig):
     def insert_data_sql(self, table_name: str, col_names_expr: str, select_sql: str, partitions: List[Partition]):
         if not self.contain_db(table_name):
             raise Exception("BigQuery table must be qualified with a dataset.")
-        db, pure_table_name = tuple(table_name.split('.'))
-        insert_date_sql = f"insert into {table_name}({col_names_expr}) {select_sql};"
-
         if any([pt.value is None for pt in partitions]):
             raise Exception(f"cannot insert data when partition value is None, partitions: {partitions}, there maybe some bug, please check")
-        if len(partitions) > 1:
-            raise Exception("for now clickhouse backend only support table with single field partition")
 
-        delete_pt_metadata_if_exist = f"delete {db}.__table_partitions__ where table_name = '{pure_table_name}' and partition_value = '{partitions[0].value}';" \
-            if len(partitions) != 0 else ''
-        insert_pt_metadata = f"insert into {db}.__table_partitions__ values('{pure_table_name}', '{partitions[0].value}', CURRENT_TIMESTAMP());" \
-            if len(partitions) != 0 else ''
+        insert_date_sql = f"insert into {table_name}({col_names_expr}) {select_sql};"
+        delete_pt_metadata_if_exist = self.delete_pt_metadata(table_name, partitions)
+        insert_pt_metadata = self.insert_pt_metadata(table_name, partitions)
         return self.transaction(f'{insert_date_sql}\n{delete_pt_metadata_if_exist}\n{insert_pt_metadata}')
 
     def drop_table_sql(self, table: str):
@@ -581,7 +578,7 @@ class BqDbConfig(DbConfig):
         table_name string, partition_value string, last_modified_time timestamp)
         cluster by table_name;"""
 
-    def insert_pt_meta_data(self, table_name: str, partitions: List[Partition]):
+    def insert_pt_metadata(self, table_name: str, partitions: List[Partition]):
         if len(partitions) == 0:
             return ''
         elif len(partitions) > 1:
@@ -590,7 +587,18 @@ class BqDbConfig(DbConfig):
             if not self.contain_db(table_name):
                 raise Exception("BigQuery table must be qualified with a dataset.")
             db, pure_table_name = tuple(table_name.split('.'))
-            return f"insert into {db}.__table_partitions__ values ('{pure_table_name}', '{partitions[0].value}', CURRENT_TIMESTAMP())"
+            return f"insert into {db}.__table_partitions__ values ('{pure_table_name}', '{partitions[0].value}', CURRENT_TIMESTAMP());"
+
+    def delete_pt_metadata(self, table_name: str, partitions: List[Partition]):
+        if len(partitions) == 0:
+            return ''
+        elif len(partitions) > 1:
+            raise Exception('BigQuery only supports single-column partitioning.')
+        else:
+            if not self.contain_db(table_name):
+                raise Exception("BigQuery table must be qualified with a dataset.")
+            db, pure_table_name = tuple(table_name.split('.'))
+            return f"delete {db}.__table_partitions__ where table_name = '{pure_table_name}' and partition_value = '{partitions[0].value}';"
 
     @staticmethod
     def transaction(statement: str):
@@ -1116,7 +1124,7 @@ class RdbBackend(Backend):
         if partitions and not self.db_config.support_static_partition():
             _exec_sql(self.conn, self.db_config.create_pt_meta_table(db))
             for partition in partitions:
-                _exec_sql(self.conn, self.db_config.insert_pt_meta_data(full_table_name, list(partition)))
+                _exec_sql(self.conn, self.db_config.insert_pt_metadata(full_table_name, list(partition)))
 
     def create_temp_table_with_data(self, table_name: str, values: List[List[Any]], schema: List[Col]):
         _exec_sql(self.conn, self.db_config.create_table_with_partitions_sql(table_name, [col.as_dict() for col in schema], []))
