@@ -864,6 +864,16 @@ class ChDbConfig(DbConfig):
         # As clickhouse has create partition table in RdbBackend, no need to create again
         return 'select 1'
 
+    def insert_pt_metadata(self, table_name: str, partitions: List[Partition]):
+        if len(partitions) == 0:
+            return ''
+        elif len(partitions) > 1:
+            raise Exception('clickhouse only supports single-column partitioning.')
+        else:
+            db, pure_table_name = tuple(table_name.split('.'))
+            insert_pt_metadata = f"insert into {self.partitions_table_name} values('{db}', '{pure_table_name}', '{partitions[0].value}', now());"
+            return insert_pt_metadata
+
 
 class RdbBackend(Backend):
     """table_partitions_table_name; means the table name which save the static partition info for all partition tables in data warehouse,
