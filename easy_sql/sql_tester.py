@@ -228,7 +228,7 @@ class TableColumnTypes:
 
 
 class TestCase:
-    def __init__(self, sql_file_path: str = None, sql_file_content: str = None):
+    def __init__(self, sql_file_path: str = None, sql_file_content: str = None, default_col_type='string'):
         self.name, self.vars = None, {}
         self.includes = {}
         self.inputs: List[TableData] = []
@@ -238,6 +238,7 @@ class TestCase:
         self.sql_file_content = sql_file_content
         self.udf_file_paths: List[str] = []
         self.func_file_paths: List[str] = []
+        self.default_col_type = default_col_type
 
     def as_dict(self):
         data = dict([(attr, getattr(self, attr)) for attr in dir(self) if not attr.startswith('_') and not callable(getattr(self, attr))])
@@ -360,7 +361,7 @@ class TestCase:
                     column_types.append(column_name[column_name.index(':') + 1:])
                 else:
                     columns.append(column_name)
-                    column_types.append('string')  # if no type specified, use string as default
+                    column_types.append(self.default_col_type)  # if no type specified, use string as default
             else:
                 columns.append(column_name)
                 if '.' in table_name:
@@ -372,7 +373,8 @@ class TestCase:
             has_values = any([value_cells[i].value not in [None, ''] for i in range(len(columns))])
             if cells[1].value and str(cells[1].value).strip():
                 value_descriptions.append(str(cells[1].value).strip())
-                values.append(self._parse_table_row_values(wb, table_name, columns, row_idx, row_start_idx, value_cells, column_types, table_column_types))
+                values.append(
+                    self._parse_table_row_values(wb, table_name, columns, row_idx, row_start_idx, value_cells, column_types, table_column_types))
             elif label == 'INPUT':
                 # If no description mentioned for this row, just ignore it.
                 # This ensures we must add description for a row, to clarify how the data comes.
@@ -381,7 +383,8 @@ class TestCase:
             elif label == 'OUTPUT':
                 has_values = any([value_cells[i].value not in [None, ''] for i in range(len(columns))])
                 if has_values:
-                    values.append(self._parse_table_row_values(wb, table_name, columns, row_idx, row_start_idx, value_cells, column_types, table_column_types))
+                    values.append(
+                        self._parse_table_row_values(wb, table_name, columns, row_idx, row_start_idx, value_cells, column_types, table_column_types))
 
         log_debug(f'find {label.lower()} table at row {row_start_idx + 1}: {table_name}{{{", ".join(columns)}}}, data length is {len(values)}')
         print(f'table data for `{table_name}`: ')
@@ -441,10 +444,11 @@ class TestCase:
 
 class TestDataFile:
 
-    def __init__(self, test_data_file: str, sql_reader: 'SqlReader'):
+    def __init__(self, test_data_file: str, sql_reader: 'SqlReader', backend: str='spark'):
         self.test_data_file = test_data_file
         self.sql_reader = sql_reader
         self.wb = open_workbook(self.test_data_file)
+        self.backend = backend
 
     def parse_test_cases(self, table_column_types: TableColumnTypes) -> List[TestCase]:
         wb = self.wb
@@ -476,8 +480,12 @@ class TestDataFile:
         return cases
 
     def parse_test_case(self, case_start_idx: int, case_rows: List[List[Cell]], table_column_types: TableColumnTypes) -> TestCase:
+        if self.backend == 'clickhouse':
+            default_col_type = 'String'
+        else:
+            default_col_type = 'string'
         if self.sql_reader.read_as_content(self.test_data_file):
-            case = TestCase(sql_file_content=self.sql_reader.read_sql(self.test_data_file))
+            case = TestCase(sql_file_content=self.sql_reader.read_sql(self.test_data_file), default_col_type='String')
         else:
             case = TestCase(self.sql_reader.find_file_path(self.test_data_file[:self.test_data_file.rindex('.')] + '.sql'))
         last_label, last_label_idx = None, -1
@@ -486,7 +494,8 @@ class TestDataFile:
             label = cells[0].value and cells[0].value.strip()
             if label in ['CASE', 'VARS', 'INCLUDES', 'INPUT', 'OUTPUT', 'UDFS', 'FUNCS']:
                 if last_label is not None:
-                    case.parse_test_case_of_label(self.wb, last_label, case_start_idx + last_label_idx, case_rows[last_label_idx:i], table_column_types)
+                    case.parse_test_case_of_label(self.wb, last_label, case_start_idx + last_label_idx, case_rows[last_label_idx:i],
+                                                  table_column_types)
                 last_label, last_label_idx = label, i
         if last_label:
             case.parse_test_case_of_label(self.wb, last_label, case_start_idx + last_label_idx, case_rows[last_label_idx:], table_column_types)
@@ -674,6 +683,7 @@ class SqlTester:
             return SqlProcessor(backend, sql, [], variables=vars, scala_udf_initializer=scala_udf_initializer, includes=case.includes)
 
         self.sql_processor_creator = sql_processor_creator or create_sql_processor
+        self.backend = backend
         self.table_column_types = table_column_types or TableColumnTypes({}, {}, backend)
         self.unit_test_case = unit_test_case
         self.dry_run = dry_run
@@ -709,7 +719,7 @@ class SqlTester:
 
     def parse_test_cases(self, test_data_file, table_column_types: TableColumnTypes):
         if test_data_file.endswith('.xlsx'):
-            cases = TestDataFile(test_data_file, sql_reader=self.sql_reader).parse_test_cases(table_column_types)
+            cases = TestDataFile(test_data_file, sql_reader=self.sql_reader, backend=self.backend).parse_test_cases(table_column_types)
         elif test_data_file.endswith('.json'):
             with open(test_data_file, 'r') as f:
                 cases = json.loads(f.read(), object_hook=json_util.object_hook)
