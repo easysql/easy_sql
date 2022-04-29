@@ -48,7 +48,7 @@ To prepare a test in Easy SQL is easy. The first thing to do is to create a spre
 
 The template looks like below:
 
-![Test case template] (https://raw.githubusercontent.com/easysql/easy_sql/main/docs/easy_sql/img/test_case.png)
+![Test case template](https://raw.githubusercontent.com/easysql/easy_sql/main/docs/easy_sql/img/test_case.png)
 
 There are two concepts which are popular in testing domain. Easy SQL also adopted them:
 
@@ -177,3 +177,23 @@ python3 -m easy_sql.sql_test run-test -f {YOUR_XLSX_FILE_PATH} -b {BACKEND}
 The test file could be a JSON test file as well. And the backend could be one of the supported backend.
 
 For details of the command line usage, please run `python3 -m easy_sql.sql_test --help`.
+
+## Run test programmatically
+
+Easy SQL also provides an interface to run ETL programmatically. This way, you can easily integrate tests in Easy SQL with your favorite testing framework. 
+
+To run a test in your code, write code below:
+
+```python
+import os
+from easy_sql.sql_tester import SqlTester
+from easy_sql.sql_processor.backend import SparkBackend
+from pyspark.sql import SparkSession
+
+SqlTester(env='test', 
+          backend_creator=lambda case: SparkBackend(SparkSession.builder.enableHiveSupport().getOrCreate()), 
+          work_dir=os.path.abspath(os.curdir))\
+    .run_tests('path/to/your/test/file')
+```
+
+For a concrete example, please refer to code [here](https://github.com/easysql/easy_sql/blob/main/easy_sql/sql_test.py).
