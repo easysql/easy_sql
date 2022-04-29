@@ -1,4 +1,4 @@
-# Debugging ETL
+# Debug ETL
 
 There is a debugger interface implemented in Easy SQL.
 
