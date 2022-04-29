@@ -137,16 +137,16 @@ class Step:
         self.select_sql = context.replace_templates(self.select_sql)
         self.select_sql = context.replace_variables(self.select_sql)
 
-    def write(self, backend: Backend, df: Optional[BackendTable], context: ProcessorContext, dry_run: bool = False):
+    def write(self, backend: Backend, table: Optional[BackendTable], context: ProcessorContext, dry_run: bool = False):
         variables: dict = context.vars_context.vars
 
-        if not df:
+        if not table:
             return
 
         if StepType.VARIABLES == self.target_config.step_type:
-            if not df.is_empty():
-                field_names = df.field_names()
-                row = df.first()
+            if not table.is_empty():
+                field_names = table.field_names()
+                row = table.first()
                 for field_name in field_names:
                     index = field_names.index(field_name)
                     field_value = "null"
@@ -155,8 +155,8 @@ class Step:
                     context.add_vars({field_name: field_value})
 
         if StepType.LIST_VARIABLES == self.target_config.step_type:
-            field_names = df.field_names()
-            rows = df.collect()
+            field_names = table.field_names()
+            rows = table.collect()
             list_vars = {}
             for field_name in field_names:
                 index = field_names.index(field_name)
@@ -167,21 +167,21 @@ class Step:
             context.add_templates({self.target_config.name: self.select_sql})
 
         elif StepType.TEMP == self.target_config.step_type:
-            backend.create_temp_table(df, self.target_config.name)
+            backend.create_temp_table(table, self.target_config.name)
 
         elif StepType.CACHE == self.target_config.step_type:
             if '__no_cache__' in variables and variables['__no_cache__'] in ['TRUE', True, 1, 'True', 'true']:
-                backend.create_temp_table(df, self.target_config.name)
+                backend.create_temp_table(table, self.target_config.name)
             else:
-                backend.create_cache_table(df, self.target_config.name)
+                backend.create_cache_table(table, self.target_config.name)
 
         elif StepType.BROADCAST == self.target_config.step_type:
-            backend.broadcast_table(df, self.target_config.name)
+            backend.broadcast_table(table, self.target_config.name)
 
         elif StepType.LOG == self.target_config.step_type:
             if '__no_log__' in variables and variables['__no_log__'] in ['TRUE', True, 1, 'True', 'true']:
                 return
-            self._write_for_log_step(df)
+            self._write_for_log_step(table)
 
         elif StepType.FUNC == self.target_config.step_type:
             self.func_runner.run_func(self.target_config.name, context.vars_context)
@@ -189,15 +189,15 @@ class Step:
         elif StepType.CHECK == self.target_config.step_type:
             if self._should_skip_check(variables):
                 return
-            self._write_for_check_step(df, context)
+            self._write_for_check_step(table, context)
 
         elif self.target_config.step_type in [StepType.HIVE, StepType.OUTPUT]:
-            self._write_for_output_step(backend, df, context, dry_run)
+            self._write_for_output_step(backend, table, context, dry_run)
 
     def _should_skip_check(self, variables):
         return '__no_check__' in variables and variables['__no_check__'] in ['TRUE', True, 1, 'True', 'true']
 
-    def _write_for_output_step(self, backend: Backend, df: BackendTable, context: ProcessorContext, dry_run: bool):
+    def _write_for_output_step(self, backend: Backend, table: BackendTable, context: ProcessorContext, dry_run: bool):
         extra_cols, variables = context.extra_cols, context.vars
         if '.' not in self.target_config.name:
             message = f'table name for hive or output must be a full name, it should be of format DB.TABLE_NAME, got `{self.target_config.name}`'
@@ -206,8 +206,8 @@ class Step:
 
         temp_table_name = f'{self.target_config.name.split(".")[1]}_{uuid.uuid4().hex}'
         for col in extra_cols:
-            df = df.with_column(col.name, col.value)
-        backend.create_temp_table(df, temp_table_name)
+            table = table.with_column(col.name, col.value)
+        backend.create_temp_table(table, temp_table_name)
 
         source_table = Table(temp_table_name)
         target_table_name = f'{self.target_config.name}'
@@ -240,11 +240,11 @@ class Step:
             if static_partition_name:
                 if backend.is_spark_backend:
                     from pyspark.sql.functions import lit
-                    column = df.with_column(static_partition_name, lit(static_partition_value))
+                    table = table.with_column(static_partition_name, lit(static_partition_value))
                 else:
-                    column = df.with_column(static_partition_name, backend.sql_expr.for_value(static_partition_value))
-                backend.create_temp_table(column, temp_table_name + "_output")
-            self.collect_report(message=f'will not save data to hive, since we are in dry run mode')
+                    table = table.with_column(static_partition_name, backend.sql_expr.for_value(static_partition_value))
+            backend.create_temp_table(table, temp_table_name + "_output")
+            self.collect_report(message=f'will not save data to data warehouse, since we are in dry run mode')
             return
 
         target_table_exists = backend.table_exists(target_table)

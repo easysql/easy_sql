@@ -1,2 +1,5 @@
 pyspark==3.2.1
 coverage==6.3.2
+# used bson from pymongo
+pymongo==3.10.1
+xlrd==1.2.0

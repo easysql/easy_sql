@@ -44,7 +44,9 @@ def _exec_sql(conn, sql: Union[str, 'TextClause', List[str]], *args, **kwargs):
         else:
             execute_result = None
             for each_sql in sql:
-                execute_result = conn.execute(each_sql, *args, **kwargs)
+                each_sql = each_sql.strip()
+                if each_sql:
+                    execute_result = conn.execute(each_sql, *args, **kwargs)
             return execute_result
 
 
@@ -955,6 +957,16 @@ class RdbBackend(Backend):
         return inspector
 
     def reset(self):
+        if self.conn:
+            try:
+                self.conn.close()
+            except:
+                pass
+        if self.engine:
+            try:
+                self.engine.dispose()
+            except:
+                pass
         self.__init_inner(self.url, self.credentials)
 
     def init_udfs(self, *args, **kwargs):
@@ -1125,7 +1137,8 @@ class RdbBackend(Backend):
         partitions = set([tuple([Partition(field, value) for field, value in zip(pt_cols, pt_values)]) for pt_values in pt_values_list])
         if partitions and not self.db_config.create_partition_automatically():
             for partition in partitions:
-                _exec_sql(self.conn, self.db_config.create_partition_sql(full_table_name, list(partition)))
+                if partition:
+                    _exec_sql(self.conn, self.db_config.create_partition_sql(full_table_name, list(partition)))
         from sqlalchemy.sql import text
         converted_col_names = ", ".join(self.db_config.convert_col([f":{col}" for col in cols], pt_cols))
         stmt = text(f'insert into {full_table_name} ({", ".join(cols)}) VALUES ({converted_col_names})')
@@ -1135,7 +1148,8 @@ class RdbBackend(Backend):
         if partitions and not self.db_config.support_static_partition():
             _exec_sql(self.conn, self.db_config.create_pt_meta_table(db))
             for partition in partitions:
-                _exec_sql(self.conn, self.db_config.insert_pt_metadata(full_table_name, list(partition)))
+                if partition:
+                    _exec_sql(self.conn, self.db_config.insert_pt_metadata(full_table_name, list(partition)))
 
     def create_temp_table_with_data(self, table_name: str, values: List[List[Any]], schema: List[Col]):
         _exec_sql(self.conn, self.db_config.create_table_with_partitions_sql(table_name, [col.as_dict() for col in schema], []))

@@ -28,4 +28,4 @@ select id, val from sample.test
 select * from result
 
 -- target=log.sample_result
-select * from sample.result
+select * from result

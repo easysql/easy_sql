@@ -8,13 +8,10 @@ from typing import List, Tuple, Any, Dict, Callable, Union, Optional
 
 import xlrd
 from bson import json_util
-from pyspark.sql import SparkSession
-from pyspark.sql.functions import expr
-from pyspark.sql.types import *
 from xlrd import open_workbook, Book
 from xlrd.sheet import Sheet, Cell
 
-__all__ = ['SqlTester', 'TableData', 'TestCase', 'work_path', 'SqlReader', 'TableColumnTypes']
+__all__ = ['SqlTester', 'TableData', 'TestCase', 'WorkPath', 'work_path', 'SqlReader', 'TableColumnTypes']
 
 from easy_sql.sql_processor import SqlProcessor
 from easy_sql.sql_processor.backend import Backend, SparkBackend, Row, Partition
@@ -70,8 +67,8 @@ class lazy_property(object):
 
 class WorkPath:
 
-    def __init__(self):
-        self._work_path: Optional[str] = None
+    def __init__(self, work_path: str = None):
+        self._work_path: Optional[str] = work_path
 
     def set_work_path(self, work_path: str):
         self._work_path = work_path
@@ -114,7 +111,7 @@ class TableColumnTypes:
             return self.table_col_types[table_name][col_name].strip()
         return self.table_col_types[table_name][col_name].lower().strip()
 
-    def column_types_to_schema(self, backend: Backend, columns: List[str], types: List[str]) -> Union[StructType, List[Col]]:
+    def column_types_to_schema(self, backend: Backend, columns: List[str], types: List[str]) -> Union['StructType', List[Col]]:
         if isinstance(backend, SparkBackend):
             return self.column_types_to_schema_spark(backend.spark, columns, types)
         elif isinstance(backend, RdbBackend):
@@ -125,7 +122,10 @@ class TableColumnTypes:
     def column_types_to_schema_rdb(self, backend: RdbBackend, columns: List[str], types: List[str]) -> List[Col]:
         return [Col(col, type_) for col, type_ in zip(columns, types)]
 
-    def column_types_to_schema_spark(self, spark: SparkSession, columns: List[str], types: List[str]) -> StructType:
+    def column_types_to_schema_spark(self, spark: 'SparkSession', columns: List[str], types: List[str]) -> 'StructType':
+        from pyspark.sql.functions import expr
+        from pyspark.sql.types import StructType, StructField, IntegerType, ShortType, LongType, DoubleType, FloatType, StringType, BooleanType, \
+            DateType, TimestampType, ArrayType
         fields_creators = {
             'int': lambda name: StructField(name, IntegerType()),
             'tinyint': lambda name: StructField(name, ShortType()),
@@ -569,14 +569,17 @@ class TestCaseRunner:
         sql = case.read_sql_content()
 
         backend = self.backend_creator(case)
-        self.clean(case, backend)
-        self.create_inputs(case, backend)
+        try:
+            self.clean(case, backend)
+            self.create_inputs(case, backend)
 
-        sql_processor = self.create_sql_processor(backend, case, sql)
+            sql_processor = self.create_sql_processor(backend, case, sql)
 
-        sql_processor.run(self.dry_run)
+            sql_processor.run(self.dry_run)
 
-        self.verify_outputs(backend, case)
+            self.verify_outputs(backend, case)
+        finally:
+            backend.clean()
 
     def verify_outputs(self, backend: Backend, case: TestCase):
         tempviews = backend.temp_tables()
@@ -596,7 +599,7 @@ class TestCaseRunner:
             print('actual output: ', list_item_to_set(actual_output))
             self.unit_test_case.assertListEqual(list_item_to_set(expected_output), list_item_to_set(actual_output))
 
-    def create_sql_processor(self, backend: Backend, case: TestCase, sql: str):
+    def create_sql_processor(self, backend: Backend, case: TestCase, sql: str) -> SqlProcessor:
         sql_processor = self.sql_processor_creator(backend, sql, case)
         for udf_file in case.udf_file_paths:
             sql_processor.register_udfs_from_pyfile(work_path.path(udf_file))
@@ -627,7 +630,8 @@ class TestCaseRunner:
         else:
             tempview_name = [tv for tv in tempviews if tv == output.name]
         if len(tempview_name) == 0:
-            raise Exception(f'output `{output.name}` not found after execute test: {case.simple_sql_name}.{case.name}')
+            raise Exception(f'output `{output.name}` not found after execute test: {case.simple_sql_name}.{case.name}. '
+                            f'All temporary views are: {tempviews}')
         elif len(tempview_name) > 1:
             raise Exception(f'multiple temp views found for output `{output.name}` found after execute test: {tempview_name}')
         else:
@@ -651,22 +655,24 @@ class TestCaseRunner:
         for table_name in table_names:
             if '.' in table_name:
                 databases.add(table_name.split(".")[0])
-        if backend.is_bigquery_backend:
-            for db in databases:
-                try:
+        for db in databases:
+            try:
+                if backend.is_bigquery_backend:
                     backend.exec_native_sql(f"drop schema if exists {db} cascade")
-                except Exception as e:
-                    # BigQuery will throw an exception when deleting a nonexistent dataset even if using [IF EXISTS]
-                    import re
-                    if not re.match(r"[\s\S]*Permission bigquery.datasets.delete denied on dataset[\s\S]*(or it may not exist)[\s\S]*",
-                                    str(e.args[0])):
-                        raise e
+                elif backend.is_clickhouse_backend:
+                    backend.exec_native_sql(f"drop database if exists {db}")
+            except Exception as e:
+                # BigQuery will throw an exception when deleting a nonexistent dataset even if using [IF EXISTS]
+                import re
+                if not re.match(r"[\s\S]*Permission bigquery.datasets.delete denied on dataset[\s\S]*(or it may not exist)[\s\S]*",
+                                str(e.args[0])):
+                    raise e
 
 
 class SqlTester:
 
     def __init__(self,
-                 backend_creator: Callable[[TestCase], Backend],
+                 backend_creator: Callable[[TestCase], Backend] = None,
                  table_column_types: TableColumnTypes = None,
                  sql_reader_creator: Callable[[], 'SqlReader'] = None,
                  sql_processor_creator: Callable[[Backend, str, TestCase], SqlProcessor] = None,
@@ -689,7 +695,7 @@ class SqlTester:
         self.dry_run = dry_run
         self.env = env
         self.sql_reader = sql_reader_creator() if sql_reader_creator else SqlReader()
-        self.test_case_runner = TestCaseRunner(self.env, self.dry_run, backend_creator, table_column_types,
+        self.test_case_runner = TestCaseRunner(self.env, self.dry_run, backend_creator, self.table_column_types,
                                                sql_processor_creator=self.sql_processor_creator, unit_test_case=self.unit_test_case)
 
     def run_tests(self, test_data_files: List[str]):

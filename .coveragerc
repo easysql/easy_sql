@@ -3,7 +3,6 @@ branch = True
 source =
     easy_sql/
 omit =
-    */sql_tester.py
     */*_test.py
     */*_itest.py
 

@@ -1,0 +1,40 @@
+[
+  {
+    "completed": 1,
+    "default_col_type": "string",
+    "func_file_paths": [],
+    "includes": {},
+    "inputs": [
+      {
+        "column_types": "[\"int\", \"text\"]",
+        "columns": "[\"id\", \"val\"]",
+        "name": "sample.test",
+        "value_descriptions": [
+          "Some sample data for testing"
+        ],
+        "values": [
+          "[1, \"1\"]"
+        ]
+      }
+    ],
+    "missed_fields": [],
+    "name": "test for sample etl",
+    "outputs": [
+      {
+        "column_types": "[\"int\", \"text\"]",
+        "columns": "[\"id\", \"val\"]",
+        "name": "sample.result",
+        "value_descriptions": [],
+        "values": [
+          "[1, \"1\"]",
+          "[1, \"2\"]"
+        ]
+      }
+    ],
+    "simple_sql_name": "sample_etl.postgres.sql",
+    "sql_file_content": null,
+    "sql_file_path": "test/sample_etl.postgres.sql",
+    "udf_file_paths": [],
+    "vars": {}
+  }
+]
