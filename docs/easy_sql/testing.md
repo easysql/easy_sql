@@ -94,7 +94,8 @@ If the type of any other column is not specified, it will be default to 'string'
 The type of column varies for different backends.
 
 For Spark, it should be 'int' 'bigint' 'boolean' 'string' and so on.
-The full list of types with built-in support are: 'int' 'tinyint' 'bigint' 'double' 'float' 'string' 'decimal' 'boolean' 'date' 'timestamp' 'array<string>' 'array<int>' 'array<tinyint>' 'array<bigint>' 'array<double>' 'array<float>' 'array<boolean>' 'array<date>' 'array<timestamp>'.
+The full list of types with built-in support are: 'int' 'tinyint' 'bigint' 'double' 'float' 'string' 'decimal' 'boolean' 'date' 'timestamp'
+'array\<string\>' 'array\<int\>' 'array\<tinyint\>' 'array\<bigint\>' 'array\<double\>' 'array\<float\>' 'array\<boolean\>' 'array\<date\>' 'array\<timestamp\>'.
 
 For Postgres, it should be 'int' 'bigint' 'boolean' 'text' and so on.
 The full list of types could be found [here](https://www.postgresql.org/docs/current/datatype.html). The default type is 'text'.
