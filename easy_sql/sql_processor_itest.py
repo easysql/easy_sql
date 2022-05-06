@@ -1,7 +1,7 @@
 import unittest
 
 from easy_sql import base_test
-from easy_sql.base_test import dt, TEST_PG_URL, TEST_CH_URL, TEST_BQ_URL, sql_expr, date, dt_zone
+from easy_sql.base_test import dt, TEST_PG_URL, TEST_CH_URL, TEST_BQ_URL, bigquery_sql_expr, date, dt_zone
 
 
 class SqlProcessorTest(unittest.TestCase):
@@ -26,7 +26,7 @@ class SqlProcessorTest(unittest.TestCase):
         import os
         from easy_sql.sql_processor.backend.rdb import RdbBackend, _exec_sql
         backend = RdbBackend(TEST_BQ_URL, credentials=f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-test.json",
-                             sql_expr=sql_expr)
+                             sql_expr=bigquery_sql_expr)
         _exec_sql(backend.conn, 'drop schema if exists t cascade')
         _exec_sql(backend.conn, 'create schema if not exists t')
         self.run_sql_for_pg_backend(backend)
@@ -51,7 +51,7 @@ class SqlProcessorTest(unittest.TestCase):
         import os
         from easy_sql.sql_processor.backend.rdb import RdbBackend, _exec_sql
         backend = RdbBackend(TEST_BQ_URL, credentials=f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-test.json",
-                             sql_expr=sql_expr)
+                             sql_expr=bigquery_sql_expr)
         _exec_sql(backend.conn, 'drop schema if exists t cascade')
         _exec_sql(backend.conn, 'create schema t')
         self.run_sql_for_dynamic_partitions(backend)

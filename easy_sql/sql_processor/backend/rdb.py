@@ -649,7 +649,8 @@ class PgDbConfig(DbConfig):
         return f'alter table {table_name} set schema {schema}'
 
     def rename_view_sql(self, from_table: str, to_table: str) -> str:
-        return f'alter view {from_table} rename to {to_table}'
+        pure_to_table = to_table if '.' not in to_table else to_table[to_table.index('.') + 1:]
+        return f'alter view {from_table} rename to {pure_to_table}'
 
     def create_view_sql(self, table_name: str, select_sql: str) -> str:
         return f'create view {table_name} as {select_sql}'

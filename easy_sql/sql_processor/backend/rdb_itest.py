@@ -3,7 +3,7 @@ import time
 import unittest
 
 from easy_sql import base_test
-from easy_sql.base_test import dt, date, TEST_PG_URL, TEST_CH_URL, TEST_BQ_URL, sql_expr
+from easy_sql.base_test import dt, date, TEST_PG_URL, TEST_CH_URL, TEST_BQ_URL, bigquery_sql_expr
 from easy_sql.sql_processor.backend import TableMeta, SaveMode, Partition
 from easy_sql.sql_processor.backend.rdb import RdbBackend, RdbRow, _exec_sql, TimeLog
 
@@ -40,8 +40,8 @@ class RdbTest(unittest.TestCase):
             return
         import os
         backend = RdbBackend(TEST_BQ_URL,
-                             credentials=f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-test.json",
-                             sql_expr=sql_expr)
+                             credentials=f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-prod.json",
+                             sql_expr=bigquery_sql_expr)
         from sqlalchemy import inspect
         from sqlalchemy.engine.reflection import Inspector
         insp: Inspector = inspect(backend.engine)
@@ -72,7 +72,7 @@ class RdbTest(unittest.TestCase):
         import os
         backend = RdbBackend(TEST_BQ_URL,
                              credentials=f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-test.json",
-                             sql_expr=sql_expr)
+                             sql_expr=bigquery_sql_expr)
         _exec_sql(backend.conn, 'drop schema if exists t cascade')
         _exec_sql(backend.conn, 'create schema if not exists t')
         _exec_sql(backend.conn, 'drop table if exists t.test')
@@ -106,7 +106,7 @@ class RdbTest(unittest.TestCase):
         import os
         backend = RdbBackend(TEST_BQ_URL,
                              credentials=f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-test.json",
-                             sql_expr=sql_expr)
+                             sql_expr=bigquery_sql_expr)
         _exec_sql(backend.conn, 'drop schema if exists t cascade')
         _exec_sql(backend.conn, 'create schema if not exists t')
         _exec_sql(backend.conn, 'create table if not exists t.test(id int, val string)')
@@ -120,7 +120,7 @@ class RdbTest(unittest.TestCase):
         table = table.limit(0)
         self.assertTrue(table.is_empty())
 
-        _exec_sql(backend.conn, backend.db_config.rename_table_sql("t.test", 't.test1'))
+        backend.exec_native_sql(backend.db_config.rename_table_sql("t.test", 't.test1'))
         table = backend.exec_sql('select * from t.test1 order by id').with_column('a', backend.sql_expr.for_value(1))
         self.assertFalse(table.is_empty())
         self.assertTrue(table.count(), 3)
@@ -133,7 +133,7 @@ class RdbTest(unittest.TestCase):
         self.assertListEqual(table.field_names(), ['id', 'val', 'a'])
         self.assertEqual(table.limit(2).count(), 2)
 
-        _exec_sql(backend.conn, backend.db_config.create_table_sql("t.test2", "select * from t.test1"))
+        backend.exec_native_sql(backend.db_config.create_table_sql("t.test2", "select * from t.test1"))
         table = backend.exec_sql('select * from t.test2 order by id').with_column('a', backend.sql_expr.for_value('1'))
         self.assertEqual(table.first(), RdbRow(['id', 'val', 'a'], (1, '1', '1')))
 
@@ -145,6 +145,11 @@ class RdbTest(unittest.TestCase):
                          RdbRow(['id', 'val', 'a'], (1, '1', base_test.dt_zone('2020-01-01 11:11:11', timezone=timezone))))
 
         table.show(1)
+
+        backend.exec_native_sql(backend.db_config.create_view_sql("t.test2_view", "select * from t.test2"))
+        backend.exec_native_sql(backend.db_config.rename_view_sql("t.test2_view", "t.test2_view_new"))
+        table = backend.exec_sql('select * from t.test2_view_new order by id')
+        self.assertEqual(table.first(), RdbRow(['id', 'val'], (1, '1')))
 
     def run_test_backend(self, backend: RdbBackend):
         backend.create_empty_table()  # should not raise exception
