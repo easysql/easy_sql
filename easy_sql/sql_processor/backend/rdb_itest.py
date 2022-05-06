@@ -282,6 +282,11 @@ class RdbTest(unittest.TestCase):
             RdbRow(['id', 'val', 'a'], (2, '2', mock_dt_2)),
         ])
 
+        pre_temp_db = backend.temp_schema
+        backend.reset()
+        cur_temp_db = backend.temp_schema
+        self.assertNotEqual(pre_temp_db, cur_temp_db)
+
 
 if __name__ == '__main__':
     unittest.main()
