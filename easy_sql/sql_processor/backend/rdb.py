@@ -488,7 +488,9 @@ class BqDbConfig(DbConfig):
     # There's no statement that could change the dataset directly
     # Copy cannot be operated at view
     def rename_table_db_sql(self, table_name: str, schema: str):
-        return f'create table if not exists {schema}.{table_name} copy {self.db}.{table_name}'
+        pure_table_name = table_name[table_name.index('.') + 1:] if self.contain_db(table_name) else table_name
+        from_table_name = table_name if self.contain_db(table_name) else f'{self.db}.{table_name}'
+        return f'create table if not exists {schema}.{pure_table_name} copy {from_table_name}'
 
     def get_tables_sql(self, db) -> str:
         return f'select table_name from {db}.INFORMATION_SCHEMA.TABLES'
@@ -499,13 +501,16 @@ class BqDbConfig(DbConfig):
 
     # Cannot rename view directly in BigQuery
     def rename_view_sql(self, from_table: str, to_table: str) -> str:
-        return f'create view if not exists {self.db}.{to_table} as select * from {self.db}.{from_table}'
+        from_table_name = from_table if self.contain_db(from_table) else f'{self.db}.{from_table}'
+        to_table_name = to_table if self.contain_db(to_table) else f'{self.db}.{to_table}'
+        return f'create view if not exists {to_table_name} as select * from {from_table_name}'
 
     def drop_view_sql(self, table: str) -> str:
         return f'drop view if exists {self.db}.{table}'
 
     def create_view_sql(self, table_name: str, select_sql: str) -> str:
-        return f'create view if not exists {self.db}.{table_name} as {select_sql}'
+        full_table_name = table_name if self.contain_db(table_name) else f'{self.db}.{table_name}'
+        return f'create view if not exists {full_table_name} as {select_sql}'
 
     def support_native_partition(self) -> bool:
         return True
@@ -774,7 +779,8 @@ class ChDbConfig(DbConfig):
         return f'rename table {from_table} to {to_table}'
 
     def rename_table_db_sql(self, table_name: str, schema: str):
-        return f'rename table {table_name} to {schema}.{table_name}'
+        pure_table_name = table_name if '.' not in table_name else table_name[table_name.index('.') + 1:]
+        return f'rename table {table_name} to {schema}.{pure_table_name}'
 
     def rename_view_sql(self, from_table: str, to_table: str) -> str:
         return self.rename_table_sql(from_table, to_table)

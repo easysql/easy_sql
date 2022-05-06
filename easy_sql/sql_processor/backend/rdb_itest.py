@@ -8,7 +8,6 @@ from easy_sql.sql_processor.backend import TableMeta, SaveMode, Partition
 from easy_sql.sql_processor.backend.rdb import RdbBackend, RdbRow, _exec_sql, TimeLog
 
 
-
 class RdbTest(unittest.TestCase):
 
     def test_log_time(self):
@@ -54,6 +53,8 @@ class RdbTest(unittest.TestCase):
         backend = RdbBackend(TEST_PG_URL)
         _exec_sql(backend.conn, 'drop schema if exists t cascade')
         _exec_sql(backend.conn, 'create schema t')
+        _exec_sql(backend.conn, 'drop schema if exists t1 cascade')
+        _exec_sql(backend.conn, 'create schema t1')
         _exec_sql(backend.conn, 'create table t.test(id int, val varchar(100))')
         _exec_sql(backend.conn, "insert into t.test values(1, '1'), (2, '2'), (3, '3')")
         self.run_test_table(backend)
@@ -62,6 +63,8 @@ class RdbTest(unittest.TestCase):
         backend = RdbBackend(TEST_CH_URL)
         _exec_sql(backend.conn, 'drop database if exists t')
         _exec_sql(backend.conn, 'create database t')
+        _exec_sql(backend.conn, 'drop database if exists t1')
+        _exec_sql(backend.conn, 'create database t1')
         _exec_sql(backend.conn, 'create table t.test(id int, val String) engine=MergeTree order by tuple()')
         _exec_sql(backend.conn, "insert into t.test values(1, '1'), (2, '2'), (3, '3')")
         self.run_test_table(backend)
@@ -73,8 +76,25 @@ class RdbTest(unittest.TestCase):
         backend = RdbBackend(TEST_BQ_URL,
                              credentials=f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-test.json",
                              sql_expr=bigquery_sql_expr)
-        _exec_sql(backend.conn, 'drop schema if exists t cascade')
-        _exec_sql(backend.conn, 'create schema if not exists t')
+        try:
+            _exec_sql(backend.conn, 'drop schema if exists t cascade')
+        except Exception as e:
+            # BigQuery will throw an exception when deleting a nonexistent dataset even if using [IF EXISTS]
+            import re
+            if not re.match(r"[\s\S]*Permission bigquery.datasets.delete denied on dataset[\s\S]*(or it may not exist)[\s\S]*",
+                            str(e.args[0])):
+                raise e
+
+        try:
+            _exec_sql(backend.conn, 'drop schema if exists t1 cascade')
+        except Exception as e:
+            import re
+            if not re.match(r"[\s\S]*Permission bigquery.datasets.delete denied on dataset[\s\S]*(or it may not exist)[\s\S]*",
+                            str(e.args[0])):
+                raise e
+
+        _exec_sql(backend.conn, 'create schema t')
+        _exec_sql(backend.conn, 'create schema t1')
         _exec_sql(backend.conn, 'drop table if exists t.test')
         _exec_sql(backend.conn, 'create table if not exists t.test(id int, val string)')
         _exec_sql(backend.conn, "insert into t.test values(1, '1'), (2, '2'), (3, '3')")
@@ -149,6 +169,10 @@ class RdbTest(unittest.TestCase):
         backend.exec_native_sql(backend.db_config.create_view_sql("t.test2_view", "select * from t.test2"))
         backend.exec_native_sql(backend.db_config.rename_view_sql("t.test2_view", "t.test2_view_new"))
         table = backend.exec_sql('select * from t.test2_view_new order by id')
+        self.assertEqual(table.first(), RdbRow(['id', 'val'], (1, '1')))
+
+        backend.exec_native_sql(backend.db_config.rename_table_db_sql("t.test2", "t1"))
+        table = backend.exec_sql('select * from t1.test2 order by id')
         self.assertEqual(table.first(), RdbRow(['id', 'val'], (1, '1')))
 
     def run_test_backend(self, backend: RdbBackend):
