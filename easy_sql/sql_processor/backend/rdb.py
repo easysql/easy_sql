@@ -856,7 +856,7 @@ class ChDbConfig(DbConfig):
             drop_pt_metadata_if_exist = f"alter table {self.partitions_table_name} delete " \
                                         f"where db_name = '{db}' and table_name = '{pure_table_name}' " \
                                         f"and partition_value = '{partitions[0].value}'"
-            insert_pt_metadata = f"insert into {self.partitions_table_name} values('{db}', '{pure_table_name}', '{partitions[0].value}', now());"
+            insert_pt_metadata = self.insert_pt_metadata(table_name, partitions)
             return [insert_date_sql, drop_pt_metadata_if_exist, insert_pt_metadata]
         return [insert_date_sql]
 
