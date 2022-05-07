@@ -58,50 +58,29 @@ class SqlProcessorTest(unittest.TestCase):
 
     def run_sql_for_dynamic_partitions(self, backend):
         from easy_sql.sql_processor import SqlProcessor
-        if backend.is_bigquery_backend:
-            sql = '''
-            -- target=variables
-            select '2021-01-01'       as __partition__data_date
-            -- target=temp.result
-            select 1 as a
-            -- target=output.t.result
-            select *, 2 as b from ${temp_db}.result
-            '''
-        else:
-            sql = '''
-            -- target=variables
-            select '2021-01-01'       as __partition__data_date
-            -- target=temp.result
-            select 1 as a
-            -- target=output.t.result
-            select *, 2 as b from result
-            '''
+        prefix = "${temp_db}." if backend.is_bigquery_backend else ""
+        sql = f'''
+        -- target=variables
+        select '2021-01-01'       as __partition__data_date
+        -- target=temp.result
+        select 1 as a
+        -- target=output.t.result
+        select *, 2 as b from {prefix}result
+        '''
         processor = SqlProcessor(backend, sql,
                                  variables={'__create_output_table__': True,
                                             'temp_db': backend.temp_schema if backend.is_bigquery_backend else None})
         processor.func_runner.register_funcs({'t': lambda a, b: int(a) + int(b)})
         processor.run(dry_run=False)
-        if backend.is_bigquery_backend:
-            sql = '''
-            -- target=temp.result1
-            select 1 as a
-            -- target=output.t.result
-            select *, 3 as b, '2021-01-01' as data_date from ${temp_db}.result1 union all
-            select *, 3 as b, '2021-01-02' as data_date from ${temp_db}.result1
-            -- target=output.t.result
-            select *, 3 as b, '2021-01-03' as data_date from ${temp_db}.result1
-            '''
-        else:
-            sql = '''
-            -- target=temp.result1
-            select 1 as a
-            -- target=output.t.result
-            select *, 3 as b, '2021-01-01' as data_date from result1 union all
-            select *, 3 as b, '2021-01-02' as data_date from result1
-            -- target=output.t.result
-            select *, 3 as b, '2021-01-03' as data_date from result1
-            '''
-
+        sql = f'''
+        -- target=temp.result1
+        select 1 as a
+        -- target=output.t.result
+        select *, 3 as b, '2021-01-01' as data_date from {prefix}result1 union all
+        select *, 3 as b, '2021-01-02' as data_date from {prefix}result1
+        -- target=output.t.result
+        select *, 3 as b, '2021-01-03' as data_date from {prefix}result1
+        '''
         processor = SqlProcessor(backend, sql,
                                  variables={'temp_db': backend.temp_schema if backend.is_bigquery_backend else None})
         processor.func_runner.register_funcs({'t': lambda a, b: int(a) + int(b)})
@@ -117,48 +96,27 @@ class SqlProcessorTest(unittest.TestCase):
 
     def run_sql_for_pg_backend(self, backend):
         from easy_sql.sql_processor import SqlProcessor
-        if backend.is_bigquery_backend:
-            sql = '''
-            -- backend: postgres
-            -- target=variables
-            select
-                1                    as __create_output_table__
-                , 'append'           as __save_mode__
-                , '2021-01-01'       as __partition__data_date
-            -- target=temp.result
-            select 1 as a
-            -- target=temp.result1
-            select *, 2 as b from ${temp_db}.result
-            -- target=output.t.result
-            select *, 2 as b from ${temp_db}.result
-            -- target=output.t.result
-            select * from ${temp_db}.result1
-            -- target=output.t.result1
-            select 1 as a, 2 as b, 't' as c, cast('2021-01-01' as timestamp) as d, ${t(1, 2)} as e
-            -- target=output.t.result1
-            select 1 as a, 2 as b, 't' as c, cast('2021-01-01' as timestamp) as d, ${t(1, 2)} as e
-            '''
-        else:
-            sql = '''
-            -- backend: postgres
-            -- target=variables
-            select
-                1                    as __create_output_table__
-                , 'append'           as __save_mode__
-                , '2021-01-01'       as __partition__data_date
-            -- target=temp.result
-            select 1 as a
-            -- target=temp.result1
-            select *, 2 as b from result
-            -- target=output.t.result
-            select *, 2 as b from result
-            -- target=output.t.result
-            select * from result1
-            -- target=output.t.result1
-            select 1 as a, 2 as b, 't' as c, cast('2021-01-01' as timestamp) as d, ${t(1, 2)} as e
-            -- target=output.t.result1
-            select 1 as a, 2 as b, 't' as c, cast('2021-01-01' as timestamp) as d, ${t(1, 2)} as e
-            '''
+        prefix = "${temp_db}." if backend.is_bigquery_backend else ""
+        sql = f'''
+        -- backend: postgres
+        -- target=variables
+        select
+            1                    as __create_output_table__
+            , 'append'           as __save_mode__
+            , '2021-01-01'       as __partition__data_date
+        -- target=temp.result
+        select 1 as a
+        -- target=temp.result1
+        select *, 2 as b from {prefix}result
+        -- target=output.t.result
+        select *, 2 as b from {prefix}result
+        -- target=output.t.result
+        select * from {prefix}result1
+        -- target=output.t.result1
+        select 1 as a, 2 as b, 't' as c, cast('2021-01-01' as timestamp) as d, ${{t(1, 2)}} as e
+        -- target=output.t.result1
+        select 1 as a, 2 as b, 't' as c, cast('2021-01-01' as timestamp) as d, ${{t(1, 2)}} as e
+        '''
         processor = SqlProcessor(backend, sql, variables={'__create_output_table__': True,
                                                           "temp_db": backend.temp_schema if backend.is_bigquery_backend else None})
         processor.func_runner.register_funcs({'t': lambda a, b: int(a) + int(b)})
