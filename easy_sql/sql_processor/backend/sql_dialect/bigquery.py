@@ -89,7 +89,7 @@ class BqSqlDialect(SqlDialect):
                 break
         return pt_cols
 
-    def create_table_with_partitions_sql(self, table_name: str, cols: List[Dict[str, 'TypeEngine']], partitions: List[Partition]):
+    def create_table_with_partitions_sql(self, table_name: str, cols: List[Dict[str, 'sqlalchemy.types.TypeEngine']], partitions: List[Partition]):
         cols_expr = f',\n'.join(f"{col['name']} {self.sql_expr.for_bigquery_type(col['name'], col['type'])}" for col in cols)
         if len(partitions) == 0:
             partition_expr = ''

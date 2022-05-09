@@ -43,7 +43,7 @@ extensions = [
 
 autoapi_type = 'python'
 autoapi_dirs = ['../']
-_docs_dir = os.path.dirname(os.path.abspath(__file__))
+_docs_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 autoapi_ignore = [f'{_docs_dir}/debugger.py', f'{_docs_dir}/test/*', f'{_docs_dir}/build/*', f'{_docs_dir}/docs/*', f'{_docs_dir}/requirements/*',
                   '*_itest.py', '*_test.py']
 autoapi_options = ['show-module-summary', 'members', 'undoc-members', 'imported-members'

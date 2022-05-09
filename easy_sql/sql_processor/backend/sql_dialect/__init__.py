@@ -11,7 +11,7 @@ class SqlExpr:
 
     def __init__(self,
                  value_to_sql_expr: Callable[[Any], Optional[str]] = None,
-                 column_sql_type_converter: Callable[[str, str, 'sqlalchemy.sql.elements.TypeEngine'], Optional[str]] = None,
+                 column_sql_type_converter: Callable[[str, str, 'sqlalchemy.types.TypeEngine'], Optional[str]] = None,
                  partition_col_converter: Callable[[str], str] = None,
                  partition_value_converter: Callable[[str, str], Any] = None,
                  partition_expr: Callable[[str, str], str] = None):
@@ -57,7 +57,7 @@ class SqlExpr:
         else:
             raise Exception(f'value of type {type(value)} not supported yet!')
 
-    def for_bigquery_type(self, col_name: str, col_type: Union[str, 'sqlalchemy.sql.elements.TypeEngine']) -> str:
+    def for_bigquery_type(self, col_name: str, col_type: Union[str, 'sqlalchemy.types.TypeEngine']) -> str:
         if self.column_sql_type_converter:
             converted_col_type = self.column_sql_type_converter('bigquery', col_name, col_type)
             if converted_col_type is not None:
