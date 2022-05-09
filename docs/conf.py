@@ -37,9 +37,16 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
+    'autoapi.extension',
 ]
 
-autosummary_generate = True  # Turn on sphinx.ext.autosummary
+autoapi_type = 'python'
+autoapi_dirs = ['../']
+autoapi_ignore = ['*/debugger.py', '*/test/*', '*/build/*', '*/docs/*', '*/requirements/*', '*_itest.py', '*_test.py']
+autoapi_options = ['show-module-summary', 'members', 'undoc-members', 'imported-members'
+                   'show-inheritance', 'show-inheritance-diagram']
+autoapi_member_order = 'groupwise'
+autodoc_typehints = 'description'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

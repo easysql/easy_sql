@@ -4,7 +4,7 @@ from .backend import Backend, SparkBackend
 from .common import Column
 from .context import ProcessorContext, VarsContext, TemplatesContext
 from .funcs import FuncRunner
-from .report import DataSqlProcessorReporter, StepStatus
+from .report import SqlProcessorReporter, StepStatus
 from .step import Step, StepFactory
 from ..logger import logger
 
@@ -28,8 +28,8 @@ class SqlProcessor:
         self.backend = backend
         self.sql = sql
 
-        self.reporter = DataSqlProcessorReporter(report_task_id=report_task_id, report_hdfs_path=report_hdfs_path,
-                                                 report_es_url=report_es_url, report_es_index_prefix=report_es_index_prefix)
+        self.reporter = SqlProcessorReporter(report_task_id=report_task_id, report_hdfs_path=report_hdfs_path,
+                                             report_es_url=report_es_url, report_es_index_prefix=report_es_index_prefix)
         log_var_tmpl_replace = False
         vars_context = VarsContext(debug_log=log_var_tmpl_replace, vars=variables)
         self.func_runner = FuncRunner.create(self.backend)

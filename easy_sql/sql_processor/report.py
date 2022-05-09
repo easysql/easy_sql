@@ -48,7 +48,7 @@ messages:
 ''' + "\n".join(self.messages)
 
 
-class DataSqlProcessorReporter(ReportCollector):
+class SqlProcessorReporter(ReportCollector):
 
     def __init__(self, report_task_id: str, report_hdfs_path: str = None, report_es_url: str = None, report_es_index_prefix: str = None):
         self.report_task_id = report_task_id

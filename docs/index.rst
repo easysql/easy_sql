@@ -20,6 +20,7 @@ Contents
 --------
 
 .. toctree::
+   :maxdepth: 6
 
    easy_sql/easy_sql.md
    easy_sql/build_install.md
@@ -27,8 +28,7 @@ Contents
    easy_sql/syntax.md
    easy_sql/debug.md
    easy_sql/testing.md
-   easy_sql/api.md
-
+   autoapi/index
 
 
 
