@@ -8,6 +8,7 @@ from pyspark.sql import SparkSession
 from easy_sql.sql_processor.backend.rdb import SqlExpr
 from easy_sql.sql_processor import SqlProcessor
 from .local_spark import LocalSpark
+from .logger import log_time
 
 
 def should_run_integration_test(key: str = None):
@@ -47,6 +48,7 @@ def dt_zone(dt_s: str, formate='%Y-%m-%d %H:%M:%S', timezone=None):
 next_id = lambda: str(uuid.uuid1()).replace('-', '')
 
 
+@log_time
 def run_sql(sql: str, result_table: str,
             funcs: dict = None, variables: dict = None, dry_run: bool = False,
             spark: SparkSession = None, spark_conf: Dict = None) -> List:

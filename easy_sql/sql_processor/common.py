@@ -20,7 +20,13 @@ class SqlProcessorException(Exception):
         super().__init__(message)
 
 
+class SqlProcessorAssertionError(Exception):
+
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
 class VarsReplacer:
 
     def replace_variables(self, text: str, include_funcs: bool = True) -> str:
-        raise NotImplemented()
+        raise NotImplementedError()

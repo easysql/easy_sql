@@ -17,7 +17,7 @@ __all__ = [
 class ReportCollector:
 
     def collect_report(self, step: 'Step', status: str = None, message: str = None):
-        raise NotImplemented()
+        raise NotImplementedError()
 
 
 class StepConfig:

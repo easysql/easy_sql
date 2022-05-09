@@ -6,6 +6,8 @@ __all__ = [
     'SqlExpr', 'SqlDialect'
 ]
 
+from ...common import SqlProcessorAssertionError
+
 
 class SqlExpr:
 
@@ -43,7 +45,7 @@ class SqlExpr:
                 return sql_expr
 
         if not isinstance(value, (str, int, float, datetime, date)):
-            raise Exception(
+            raise SqlProcessorAssertionError(
                 f'when create new columns, the current supported value types are [str, int, float, datetime, date], found: '
                 f'value={value}, type={type(value)}')
         if isinstance(value, (str,)):
@@ -55,7 +57,7 @@ class SqlExpr:
         elif isinstance(value, (date,)):
             return f"cast ('{value.strftime('%Y-%m-%d')}' as date)"
         else:
-            raise Exception(f'value of type {type(value)} not supported yet!')
+            raise SqlProcessorAssertionError(f'value of type {type(value)} not supported yet!')
 
     def for_bigquery_type(self, col_name: str, col_type: Union[str, 'sqlalchemy.types.TypeEngine']) -> str:
         if self.column_sql_type_converter:
@@ -140,7 +142,7 @@ class SqlDialect:
             return all_cols
         else:
             if len(partition_cols) > 1:
-                raise Exception(f'Only single-column partitioning is supported! found: {partition_cols}')
+                raise SqlProcessorAssertionError(f'Only single-column partitioning is supported! found: {partition_cols}')
             # the format of pt_col may be :{pt_col}, which is transferred by method create_table_with_data
             return [col if col not in [partition_cols[0], f":{partition_cols[0]}"] else self.sql_expr.convert_partition_col(col)
                     for col in all_cols]

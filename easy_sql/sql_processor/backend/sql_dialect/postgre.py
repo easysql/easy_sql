@@ -5,6 +5,8 @@ from ..base import Partition
 
 __all__ = ['PgSqlDialect']
 
+from ...common import SqlProcessorAssertionError
+
 
 class PostgrePartition:
 
@@ -64,13 +66,13 @@ class PgSqlDialect(SqlDialect):
 
     def delete_partition_sql(self, table_name, partitions: List[Partition]) -> str:
         if len(partitions) > 1:
-            raise Exception(f'Only support exactly one partition column, found: {[str(p) for p in partitions]}')
+            raise SqlProcessorAssertionError(f'Only support exactly one partition column, found: {[str(p) for p in partitions]}')
         partition = PostgrePartition(partitions[0].field, partitions[0].value)
         return f'drop table if exists {partition.partition_table_name(table_name)}'
 
     def native_partitions_sql(self, table_name: str) -> Tuple[str, Callable[['sqlalchemy.engine.ResultProxy'], List[str]]]:
         if '.' not in table_name:
-            raise Exception('table name must be of format {DB}.{TABLE} when query native partitions, found: ' + table_name)
+            raise SqlProcessorAssertionError('table name must be of format {DB}.{TABLE} when query native partitions, found: ' + table_name)
 
         db, table = table_name[:table_name.index('.')], table_name[table_name.index('.') + 1:]
         sql = f'''
@@ -95,7 +97,7 @@ class PgSqlDialect(SqlDialect):
 
     def create_table_with_partitions_sql(self, table_name: str, cols: List[Dict], partitions: List[Partition]):
         if len(partitions) > 1:
-            raise Exception(f'Only support exactly one partition column, found: {[str(p) for p in partitions]}')
+            raise SqlProcessorAssertionError(f'Only support exactly one partition column, found: {[str(p) for p in partitions]}')
         cols_expr = ',\n'.join([f"{col['name']} {col['type']}" for col in cols])
         partition_expr = f'partition by range({partitions[0].field})' if len(partitions) == 1 else ''
         return f'create table {table_name} (\n{cols_expr}\n) {partition_expr}'
@@ -105,7 +107,7 @@ class PgSqlDialect(SqlDialect):
 
     def create_partition_sql(self, target_table_name: str, partitions: List[Partition], if_not_exists: bool = False) -> str:
         if len(partitions) > 1:
-            raise Exception(f'Only support exactly one partition column, found: {[str(p) for p in partitions]}')
+            raise SqlProcessorAssertionError(f'Only support exactly one partition column, found: {[str(p) for p in partitions]}')
         partition = PostgrePartition(partitions[0].field, partitions[0].value)
         partition_table_name = partition.partition_table_name(target_table_name)
         if_not_exists = 'if not exists' if if_not_exists else ''
@@ -120,7 +122,7 @@ class PgSqlDialect(SqlDialect):
         sqls = []
         for partition in partitions:
             if len(partition) > 1:
-                raise Exception(f'Only support exactly one partition column, found: {[str(p) for p in partitions]}')
+                raise SqlProcessorAssertionError(f'Only support exactly one partition column, found: {[str(p) for p in partitions]}')
             partition = PostgrePartition(partition[0].field, partition[0].value)
             partition_table_name = partition.partition_table_name(target_table_name)
             temp_table_name = f'{partition_table_name}__temp'

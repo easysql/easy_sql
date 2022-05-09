@@ -1,6 +1,7 @@
 from typing import Dict, Callable, List, Any, Tuple
 
 from .base import *
+from ..common import SqlProcessorAssertionError
 from ...udf import udfs
 from ...logger import logger
 
@@ -149,9 +150,10 @@ class SparkBackend(Backend):
         for p in (partitions or []):
             if p.field not in schema.fieldNames():
                 if p.value is None:
-                    raise Exception(f'partition column value is None when create table with partitions but partitions is not in dataframe. '
-                                    f'this should not happen. '
-                                    f'table_name={dbname}.{table_name}, p.field={p.field}, p.value={p.value}')
+                    raise SqlProcessorAssertionError(
+                        f'partition column value is None when create table with partitions but partitions is not in dataframe. '
+                        f'this should not happen. '
+                        f'table_name={dbname}.{table_name}, p.field={p.field}, p.value={p.value}')
                 df = df.withColumn(p.field, lit(p.value))
 
         df.createOrReplaceTempView('table_data')

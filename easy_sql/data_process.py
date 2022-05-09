@@ -3,7 +3,7 @@ import re
 import urllib.parse
 from datetime import datetime
 from os import path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Callable
 
 import click
 
@@ -12,10 +12,10 @@ def resolve_file(file_path: str, abs_path: bool = False) -> str:
     if file_path.lower().startswith('hdfs://'):
         # do not resolve if it is hdfs path
         return file_path
-    workflow_base_path = path.dirname(path.dirname(path.abspath(__file__)))
+    base_path = os.path.abspath(os.curdir)
     if not path.exists(file_path):
-        if path.exists(path.join(workflow_base_path, file_path)):
-            file_path = path.join(workflow_base_path, file_path)
+        if path.exists(path.join(base_path, file_path)):
+            file_path = path.join(base_path, file_path)
         elif path.exists(path.basename(file_path)):
             file_path = path.basename(file_path)
         else:
@@ -136,8 +136,9 @@ class EasySqlConfig:
         self.udf_file_path, self.func_file_path = udf_file_path, func_file_path
 
     @staticmethod
-    def from_sql(sql_file: str) -> 'EasySqlConfig':
-        sql = read_sql(sql_file)
+    def from_sql(sql_file: str = None, sql: str = None) -> 'EasySqlConfig':
+        assert sql_file is not None or sql is not None, 'sql_file or sql must be set'
+        sql = read_sql(sql_file) if sql_file else sql
         sql_lines = sql.split('\n')
 
         backend = _parse_backend(sql)
@@ -202,7 +203,7 @@ class EasySqlConfig:
                 customized_conf = [conf for conf in customized_backend_conf if conf.startswith(conf_key)][0]
                 if conf_key in ['spark.files', 'spark.jars', 'spark.submit.pyFiles']:
                     customized_values = [resolve_file(val.strip(), abs_path=True)
-                                         for val in customized_conf[customized_conf.index('=') + 1:].strip('"').split(',')]
+                                         for val in customized_conf[customized_conf.index('=') + 1:].strip('"').split(',') if val.strip()]
                     default_values = [v for v in conf[conf.index('=') + 1:].strip('"').split(',') if v]
                     args.append(f'--conf {conf_key}="{",".join(set(default_values + customized_values))}"')
                 else:

@@ -5,6 +5,8 @@ from ..base import Partition
 
 __all__ = ['ChSqlDialect']
 
+from ...common import SqlProcessorAssertionError
+
 
 def split_table_name(table_name: str) -> Tuple[str, ...]:
     if len(table_name.split(".")) != 2:
@@ -56,7 +58,7 @@ class ChSqlDialect(SqlDialect):
 
     def delete_partition_sql(self, table_name, partitions: List[Partition]) -> List[str]:
         if len(partitions) > 1:
-            raise Exception(f'Only support exactly one partition column, found: {[str(p) for p in partitions]}')
+            raise SqlProcessorAssertionError(f'Only support exactly one partition column, found: {[str(p) for p in partitions]}')
         db, pure_table_name = split_table_name(table_name)
 
         drop_pt_metadata = f"alter table {self.partitions_table_name} delete " \
@@ -101,11 +103,11 @@ class ChSqlDialect(SqlDialect):
         insert_date_sql = f"insert into {table_name}({col_names_expr}) {select_sql};"
 
         if any([pt.value is None for pt in partitions]):
-            raise Exception(f"cannot insert data when partition value is None, partitions: {partitions}, there maybe some bug, please check")
+            raise SqlProcessorAssertionError(f"cannot insert data when partition value is None, partitions: {partitions}, there maybe some bug, please check")
 
         if len(partitions) != 0:
             if len(partitions) > 1:
-                raise Exception("for now clickhouse backend only support table with single field partition")
+                raise SqlProcessorAssertionError("for now clickhouse backend only support table with single field partition")
             db, pure_table_name = split_table_name(table_name)
             drop_pt_metadata_if_exist = f"alter table {self.partitions_table_name} delete " \
                                         f"where db_name = '{db}' and table_name = '{pure_table_name}' " \
@@ -131,7 +133,7 @@ class ChSqlDialect(SqlDialect):
         if len(partitions) == 0:
             return ''
         elif len(partitions) > 1:
-            raise Exception('clickhouse only supports single-column partitioning.')
+            raise SqlProcessorAssertionError('clickhouse only supports single-column partitioning.')
         else:
             db, pure_table_name = tuple(table_name.split('.'))
             insert_pt_metadata = f"insert into {self.partitions_table_name} values('{db}', '{pure_table_name}', '{partitions[0].value}', now());"

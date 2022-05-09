@@ -6,6 +6,8 @@ from ..base import Partition
 
 __all__ = ['BqSqlDialect']
 
+from ...common import SqlProcessorAssertionError
+
 
 class BqSqlDialect(SqlDialect):
 
@@ -61,14 +63,14 @@ class BqSqlDialect(SqlDialect):
 
     def delete_partition_sql(self, table_name, partitions: List[Partition]) -> str:
         if not self.contains_db(table_name):
-            raise Exception("BigQuery table must be qualified with a dataset.")
+            raise SqlProcessorAssertionError("BigQuery table must be qualified with a dataset.")
 
         db, pure_table_name = tuple(table_name.split('.'))
         if not partitions or len(partitions) == 0:
             raise Exception(
                 f'cannot delete partition when partitions not specified: table_name={table_name}, partitions={partitions}')
         if len(partitions) > 1:
-            raise Exception('BigQuery only supports single-column partitioning.')
+            raise SqlProcessorAssertionError('BigQuery only supports single-column partitioning.')
         pt_expr = f"""{partitions[0].field} = '{partitions[0].value}'"""
 
         delete_pt_sql = f"delete {db}.{pure_table_name} where {pt_expr};"
@@ -96,7 +98,7 @@ class BqSqlDialect(SqlDialect):
         elif len(partitions) == 1:
             partition_expr = f'partition by {self.sql_expr.bigquery_partition_expr(partitions[0].field)}'
         else:
-            raise Exception('BigQuery only supports single-column partitioning.')
+            raise SqlProcessorAssertionError('BigQuery only supports single-column partitioning.')
         table_name_with_db = table_name if self.contains_db(table_name) else f'{self.db}.{table_name}'
         return f'create table if not exists {table_name_with_db} (\n{cols_expr}\n)\n{partition_expr}\n'
 
@@ -105,9 +107,10 @@ class BqSqlDialect(SqlDialect):
 
     def insert_data_sql(self, table_name: str, col_names_expr: str, select_sql: str, partitions: List[Partition]):
         if not self.contains_db(table_name):
-            raise Exception("BigQuery table must be qualified with a dataset.")
+            raise SqlProcessorAssertionError("BigQuery table must be qualified with a dataset.")
         if any([pt.value is None for pt in partitions]):
-            raise Exception(f"cannot insert data when partition value is None, partitions: {partitions}, there maybe some bug, please check")
+            raise SqlProcessorAssertionError(f"cannot insert data when partition value is None, partitions: {partitions}, "
+                                        f"there maybe some bug, please check")
 
         insert_date_sql = f"insert into {table_name}({col_names_expr}) {select_sql};"
         delete_pt_metadata_if_exist = self.delete_pt_metadata_sql(table_name, partitions)
@@ -116,7 +119,7 @@ class BqSqlDialect(SqlDialect):
 
     def drop_table_sql(self, table: str):
         if not self.contains_db(table):
-            raise Exception("BigQuery table must be qualified with a dataset.")
+            raise SqlProcessorAssertionError("BigQuery table must be qualified with a dataset.")
         db, pure_table_name = tuple(table.split('.'))
         drop_table_sql = f"drop table if exists {db}.{pure_table_name};"
         drop_pt_metadata = f"delete {db}.__table_partitions__ where table_name = '{pure_table_name}';"
@@ -134,10 +137,10 @@ class BqSqlDialect(SqlDialect):
         if len(partitions) == 0:
             return ''
         elif len(partitions) > 1:
-            raise Exception('BigQuery only supports single-column partitioning.')
+            raise SqlProcessorAssertionError('BigQuery only supports single-column partitioning.')
         else:
             if not self.contains_db(table_name):
-                raise Exception("BigQuery table must be qualified with a dataset.")
+                raise SqlProcessorAssertionError("BigQuery table must be qualified with a dataset.")
             db, pure_table_name = tuple(table_name.split('.'))
             return f"insert into {db}.__table_partitions__ values ('{pure_table_name}', '{partitions[0].value}', CURRENT_TIMESTAMP());"
 
@@ -145,10 +148,10 @@ class BqSqlDialect(SqlDialect):
         if len(partitions) == 0:
             return ''
         elif len(partitions) > 1:
-            raise Exception('BigQuery only supports single-column partitioning.')
+            raise SqlProcessorAssertionError('BigQuery only supports single-column partitioning.')
         else:
             if not self.contains_db(table_name):
-                raise Exception("BigQuery table must be qualified with a dataset.")
+                raise SqlProcessorAssertionError("BigQuery table must be qualified with a dataset.")
             db, pure_table_name = tuple(table_name.split('.'))
             return f"delete {db}.__table_partitions__ where table_name = '{pure_table_name}' and partition_value = '{partitions[0].value}';"
 
