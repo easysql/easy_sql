@@ -53,8 +53,7 @@ class PartitionFuncs(PartitionFuncsBase):
         return partition_values
 
     def _get_partition_values(self, table_name):
-        if not isinstance(self.backend, RdbBackend):
-            raise Exception(f"Backend of type {type(self.backend)} not supported, only support for RdbBackend")
+        self.__check_backend()
         if self.backend.is_pg:
             return self._get_postgresql_partition_values(table_name)
         elif self.backend.is_ch:
@@ -69,22 +68,12 @@ class PartitionFuncs(PartitionFuncsBase):
     def get_partition_cols(self, table_name: str) -> List[str]:
         self.__check_backend()
         db, table = self.__parse_table_name(table_name)
-        sql = f'''
-        SELECT pg_catalog.pg_get_partkeydef(pt_table.oid) as partition_key
-        FROM pg_class pt_table
-            JOIN pg_namespace nmsp_pt_table   ON nmsp_pt_table.oid  = pt_table.relnamespace
-        WHERE nmsp_pt_table.nspname='{db}' and pt_table.relname='{table}'
-        '''
-        partition_values = [v[0] for v in self.backend.exec_sql(sql).collect()]
-        if not partition_values:
-            raise Exception('no partition values found, table may not exist')
-        partition_value = partition_values[0]
-        if partition_value is None:
-            return []
-        partition_value: str = partition_value
-        if not partition_value.upper().startswith('RANGE (') or not partition_value.endswith(')'):
-            raise Exception('unable to parse partition: ' + partition_value)
-        return partition_value[len('RANGE ('): -1].split(',')
+        if isinstance(self.backend, RdbBackend):
+            native_partitions_sql, extract_partition_cols = self.backend.sql_dialect.native_partitions_sql(f'{db}.{table}')
+            pt_cols = extract_partition_cols(self.backend.exec_native_sql(native_partitions_sql))
+            return pt_cols
+        else:
+            raise AssertionError('should not happen!')
 
     def __parse_table_name(self, table_name):
         backend: RdbBackend = self.backend

@@ -2,7 +2,7 @@ import traceback
 from datetime import datetime, timedelta
 from typing import List, Optional, Union
 
-from . import SqlProcessorException
+from . import SqlProcessorException, Step
 from .backend import Backend
 from ..logger import logger
 
@@ -16,14 +16,15 @@ class ColumnFuncs:
     def __init__(self, backend: Backend):
         self.backend = backend
 
-    def all_cols_without_one_expr(self, table_name: str, *cols_to_exclude: List[str]) -> str:
+    def all_cols_without_one_expr(self, table_name: str, *cols_to_exclude: str) -> str:
         return self.all_cols_with_exclusion_expr(table_name, *cols_to_exclude)
 
-    def all_cols_with_exclusion_expr(self, table_name: str, *cols_to_exclude: List[str]) -> str:
+    def all_cols_with_exclusion_expr(self, table_name: str, *cols_to_exclude: str) -> str:
         pure_table_name = table_name.split(".")[1] if "." in table_name else table_name
+        fields = self.backend.exec_sql(f'select * from {table_name} limit 0').field_names()
         return ', '.join([f'{pure_table_name}.{col}'
-                          for col in self.backend.exec_sql(f'select * from {table_name} limit 0').field_names()
-                          if col not in cols_to_exclude])
+                          for col in fields
+                          if col not in cols_to_exclude or (col.find('.') != -1 and col.split('.')[-1] not in cols_to_exclude)])
 
 
 class TableFuncs:
@@ -31,14 +32,14 @@ class TableFuncs:
     def __init__(self, backend: Backend):
         self.backend = backend
 
-    def ensure_no_null_data_in_table(self, step, table_name: str, query: str = None) -> bool:
+    def ensure_no_null_data_in_table(self, step: Step, table_name: str, query: str = None) -> bool:
         fields = self.backend.exec_sql(f'select * from {table_name} limit 0').field_names()
         return self._check_not_null_columns_in_table(step, table_name, fields, query, 'ensure_no_null_data_in_table')
 
-    def check_not_null_column_in_table(self, step, table_name: str, not_null_column: str, query: str = None) -> bool:
+    def check_not_null_column_in_table(self, step: Step, table_name: str, not_null_column: str, query: str = None) -> bool:
         return self._check_not_null_columns_in_table(step, table_name, [not_null_column], query, 'check_not_null_column_in_table')
 
-    def _check_not_null_columns_in_table(self, step, table_name: str, not_null_columns: List[str],
+    def _check_not_null_columns_in_table(self, step: Step, table_name: str, not_null_columns: List[str],
                                          query: str = None, context: str = 'check_not_null_column_in_table') -> bool:
         null_counts = {}
         for field in not_null_columns:
@@ -214,7 +215,7 @@ class PartitionFuncs:
         return partition_cols[0]
 
     def has_partition_col(self, table_name: str):
-        return len(self.get_partition_cols(table_name)) == 0
+        return len(self.get_partition_cols(table_name)) > 0
 
 
 class Alerter:

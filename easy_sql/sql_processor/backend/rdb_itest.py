@@ -140,7 +140,7 @@ class RdbTest(unittest.TestCase):
         table = table.limit(0)
         self.assertTrue(table.is_empty())
 
-        backend.exec_native_sql(backend.db_config.rename_table_sql("t.test", 't.test1'))
+        backend.exec_native_sql(backend.sql_dialect.rename_table_sql("t.test", 't.test1'))
         table = backend.exec_sql('select * from t.test1 order by id').with_column('a', backend.sql_expr.for_value(1))
         self.assertFalse(table.is_empty())
         self.assertTrue(table.count(), 3)
@@ -153,7 +153,7 @@ class RdbTest(unittest.TestCase):
         self.assertListEqual(table.field_names(), ['id', 'val', 'a'])
         self.assertEqual(table.limit(2).count(), 2)
 
-        backend.exec_native_sql(backend.db_config.create_table_sql("t.test2", "select * from t.test1"))
+        backend.exec_native_sql(backend.sql_dialect.create_table_sql("t.test2", "select * from t.test1"))
         table = backend.exec_sql('select * from t.test2 order by id').with_column('a', backend.sql_expr.for_value('1'))
         self.assertEqual(table.first(), RdbRow(['id', 'val', 'a'], (1, '1', '1')))
 
@@ -166,12 +166,12 @@ class RdbTest(unittest.TestCase):
 
         table.show(1)
 
-        backend.exec_native_sql(backend.db_config.create_view_sql("t.test2_view", "select * from t.test2"))
-        backend.exec_native_sql(backend.db_config.rename_view_sql("t.test2_view", "t.test2_view_new"))
+        backend.exec_native_sql(backend.sql_dialect.create_view_sql("t.test2_view", "select * from t.test2"))
+        backend.exec_native_sql(backend.sql_dialect.rename_view_sql("t.test2_view", "t.test2_view_new"))
         table = backend.exec_sql('select * from t.test2_view_new order by id')
         self.assertEqual(table.first(), RdbRow(['id', 'val'], (1, '1')))
 
-        backend.exec_native_sql(backend.db_config.rename_table_db_sql("t.test2", "t1"))
+        backend.exec_native_sql(backend.sql_dialect.rename_table_db_sql("t.test2", "t1"))
         table = backend.exec_sql('select * from t1.test2 order by id')
         self.assertEqual(table.first(), RdbRow(['id', 'val'], (1, '1')))
 
@@ -206,7 +206,7 @@ class RdbTest(unittest.TestCase):
         ])
 
         # second save without partitions, should overwrite
-        backend.exec_native_sql(backend.db_config.drop_view_sql('test_limit'))
+        backend.exec_native_sql(backend.sql_dialect.drop_view_sql('test_limit'))
         backend.create_cache_table(backend.exec_sql('select * from t.test order by id limit 2'), 'test_limit')
         backend.save_table(TableMeta('test_limit'), TableMeta('t.xx'), SaveMode.overwrite, True)
         self.assertListEqual(backend.exec_sql(f'select * from t.xx order by id').collect(), [
@@ -220,7 +220,7 @@ class RdbTest(unittest.TestCase):
         else:
             mock_dt_1, mock_dt_2 = dt('2021-01-01 00:00:00'), dt('2021-01-02 00:00:00')
 
-        backend.exec_native_sql(backend.db_config.drop_view_sql('test_limit'))
+        backend.exec_native_sql(backend.sql_dialect.drop_view_sql('test_limit'))
         backend.create_cache_table(backend.exec_sql('select id from t.test limit 2'), 'test_limit')
         self.assertRaisesRegex(Exception, re.compile(r'source_cols does not contain target_cols.*'),
                                lambda: backend.save_table(TableMeta('test_limit'),
@@ -231,7 +231,7 @@ class RdbTest(unittest.TestCase):
         _exec_sql(backend.conn, f'drop table if exists t.xx')
 
         # first save with partitions, should create
-        backend.exec_native_sql(backend.db_config.drop_view_sql('test_limit'))
+        backend.exec_native_sql(backend.sql_dialect.drop_view_sql('test_limit'))
         backend.create_cache_table(backend.exec_sql('select * from t.test order by id limit 2'), 'test_limit')
         backend.save_table(TableMeta('test_limit'),
                            TableMeta('t.xx', partitions=[Partition('a', mock_dt_1)]), SaveMode.overwrite,
@@ -242,7 +242,7 @@ class RdbTest(unittest.TestCase):
         ])
 
         # second save with partitions, should overwrite
-        backend.exec_native_sql(backend.db_config.drop_view_sql('test_limit'))
+        backend.exec_native_sql(backend.sql_dialect.drop_view_sql('test_limit'))
         backend.create_cache_table(backend.exec_sql('select * from t.test order by id limit 2'), 'test_limit')
         backend.save_table(TableMeta('test_limit'),
                            TableMeta('t.xx', partitions=[Partition('a', mock_dt_2)]), SaveMode.overwrite,
@@ -255,7 +255,7 @@ class RdbTest(unittest.TestCase):
         ])
 
         # third save with partitions, should overwrite
-        backend.exec_native_sql(backend.db_config.drop_view_sql('test_limit'))
+        backend.exec_native_sql(backend.sql_dialect.drop_view_sql('test_limit'))
         backend.create_cache_table(backend.exec_sql('select * from t.test order by id limit 2'), 'test_limit')
         backend.save_table(TableMeta('test_limit'),
                            TableMeta('t.xx', partitions=[Partition('a', mock_dt_2)]), SaveMode.overwrite,
@@ -268,7 +268,7 @@ class RdbTest(unittest.TestCase):
         ])
 
         # fourth save with partitions, should append
-        backend.exec_native_sql(backend.db_config.drop_view_sql('test_limit'))
+        backend.exec_native_sql(backend.sql_dialect.drop_view_sql('test_limit'))
         backend.create_cache_table(backend.exec_sql('select * from t.test order by id limit 2'), 'test_limit')
         backend.save_table(TableMeta('test_limit'),
                            TableMeta('t.xx', partitions=[Partition('a', mock_dt_2)]), SaveMode.append,
