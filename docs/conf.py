@@ -16,6 +16,7 @@
 
 
 # -- Project information -----------------------------------------------------
+import os.path
 
 project = 'Easy SQL'
 copyright = '2022, easysql'
@@ -42,7 +43,9 @@ extensions = [
 
 autoapi_type = 'python'
 autoapi_dirs = ['../']
-autoapi_ignore = ['*/debugger.py', '*/test/*', '*/build/*', '*/docs/*', '*/requirements/*', '*_itest.py', '*_test.py']
+_docs_dir = os.path.dirname(os.path.abspath(__file__))
+autoapi_ignore = [f'{_docs_dir}/debugger.py', f'{_docs_dir}/test/*', f'{_docs_dir}/build/*', f'{_docs_dir}/docs/*', f'{_docs_dir}/requirements/*',
+                  '*_itest.py', '*_test.py']
 autoapi_options = ['show-module-summary', 'members', 'undoc-members', 'imported-members'
                    'show-inheritance', 'show-inheritance-diagram']
 autoapi_member_order = 'groupwise'
