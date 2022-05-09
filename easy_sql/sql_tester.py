@@ -655,7 +655,7 @@ class TestCaseRunner:
                 print(f'creating temp table: {input.name}')
                 backend.create_temp_table_with_data(input.name, input.values, schema)
 
-    def clean(self, case, backend):
+    def clean(self, case: TestCase, backend: Backend):
         databases = set()
         table_names = set.union(set(input.name for input in case.inputs), set(output.name for output in case.outputs))
         for table_name in table_names:

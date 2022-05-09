@@ -24,17 +24,17 @@ class Backend:
     @property
     def is_postgres_backend(self):
         return str(self.__class__) == "<class 'easy_sql.sql_processor.backend.rdb.RdbBackend'>" \
-            and str(self.db_config.__class__) == "<class 'easy_sql.sql_processor.backend.rdb.PgDbConfig'>"
+            and self.is_pg
 
     @property
     def is_clickhouse_backend(self):
         return str(self.__class__) == "<class 'easy_sql.sql_processor.backend.rdb.RdbBackend'>" \
-            and str(self.db_config.__class__) == "<class 'easy_sql.sql_processor.backend.rdb.ChDbConfig'>"
+            and self.is_ch
 
     @property
     def is_bigquery_backend(self):
-        return str(self.__class__) == "<class 'easy_sql.sql_processor.backend.rdb.RdbBackend'>" and \
-               str(self.db_config.__class__) == "<class 'easy_sql.sql_processor.backend.rdb.BqDbConfig'>"
+        return str(self.__class__) == "<class 'easy_sql.sql_processor.backend.rdb.RdbBackend'>" \
+               and self.is_bq
 
     def reset(self):
         raise NotImplementedError()
