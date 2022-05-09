@@ -66,7 +66,7 @@ class RdbTable(Table):
         self._exec_sql = lambda sql: _exec_sql(self.backend.conn, sql)
         self._actions = actions or []
 
-        self._temp_table_time_prefix = lambda: f't_{int(time.mktime(time.gmtime()))}_{int(random() * 10000):04d}'
+        self._temp_table_time_prefix = lambda: f't_{round(time.time() * 1000)}_{int(random() * 100000):04d}'
         self._is_simple_query = lambda sql: re.match(r'^select \* from [\w.]+$', sql)
         self._table_name_of_simple_query = lambda sql: re.match(r'select \* from ([\w.]+)', sql).group(1)
 
