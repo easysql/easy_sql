@@ -27,6 +27,7 @@ Contents
    easy_sql/syntax.md
    easy_sql/debug.md
    easy_sql/testing.md
+   easy_sql/api.md
 
 
 
