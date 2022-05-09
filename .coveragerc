@@ -5,6 +5,8 @@ source =
 omit =
     */*_test.py
     */*_itest.py
+    */maxcompute.py
+    */sql_dialect/bigquery.py
 
 [report]
 # Regexes for lines to exclude from consideration

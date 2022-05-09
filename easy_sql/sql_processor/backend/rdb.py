@@ -1,15 +1,18 @@
 import re
-import string
 import time
-from datetime import datetime, date
+from datetime import datetime
 from random import random
 from typing import Dict, Callable, List, Tuple, Optional, Any, Union
 
-from ...logger import logger
 from .base import *
+from .sql_dialect import SqlDialect, SqlExpr
+from .sql_dialect.bigquery import BqSqlDialect
+from .sql_dialect.clickhouse import ChSqlDialect
+from .sql_dialect.postgre import PgSqlDialect
+from ...logger import logger
 
 __all__ = [
-    'RdbBackend'
+    'RdbBackend', 'SqlExpr'
 ]
 
 from .base import Col
@@ -34,7 +37,7 @@ class TimeLog:
         logger.info(self.end_log_tpl.format(time_took=time_took))
 
 
-def _exec_sql(conn, sql: Union[str, 'TextClause', List[str]], *args, **kwargs):
+def _exec_sql(conn, sql: Union[str, 'sqlalchemy.sql.elements.TextClause', List[str]], *args, **kwargs) -> 'sqlalchemy.engine.ResultProxy':
     from sqlalchemy.engine.base import Connection
     from sqlalchemy.sql.elements import TextClause
     conn: Connection = conn
@@ -50,88 +53,14 @@ def _exec_sql(conn, sql: Union[str, 'TextClause', List[str]], *args, **kwargs):
             return execute_result
 
 
-def split_table_name(table_name: str) -> Tuple[str, ...]:
-    if len(table_name.split(".")) != 2:
-        raise Exception(f"cannot split table name: {table_name}")
-    return tuple(table_name.split("."))
-
-
 _quote_str = lambda x: f"'{x}'" if isinstance(x, str) else f'{x}'
-
-
-class SqlExpr:
-
-    def __init__(self,
-                 value_to_sql_expr: Callable[[Any], Optional[str]] = None,
-                 column_sql_type_converter: Callable[[str, str, 'TypeEngine'], Optional[str]] = None,
-                 partition_col_converter: Callable[[str], str] = None,
-                 partition_value_converter: Callable[[str, str], Any] = None,
-                 partition_expr: Callable[[str, str], str] = None):
-        self.value_to_sql_expr = value_to_sql_expr
-        self.column_sql_type_converter = column_sql_type_converter
-        self.partition_col_converter = partition_col_converter
-        self.partition_value_converter = partition_value_converter
-        self.partition_expr = partition_expr
-
-    def convert_partition_col(self, partition_col: str) -> str:
-        if self.partition_col_converter:
-            return self.partition_col_converter(partition_col)
-        return partition_col
-
-    def bigquery_partition_expr(self, partition_col: str) -> str:
-        if self.partition_expr:
-            return self.partition_expr('bigquery', partition_col)
-        return partition_col
-
-    def convert_partition_value(self, partition_col: str, value: str) -> Any:
-        if self.partition_value_converter:
-            return self.partition_value_converter(partition_col, value)
-        return value
-
-    def for_value(self, value: Union[str, int, float, datetime, date]) -> str:
-        if self.value_to_sql_expr:
-            sql_expr = self.value_to_sql_expr(value)
-            if sql_expr is not None:
-                return sql_expr
-
-        if not isinstance(value, (str, int, float, datetime, date)):
-            raise Exception(
-                f'when create new columns, the current supported value types are [str, int, float, datetime, date], found: '
-                f'value={value}, type={type(value)}')
-        if isinstance(value, (str,)):
-            return f"'{value}'"
-        elif isinstance(value, (int, float,)):
-            return f"{value}"
-        elif isinstance(value, (datetime,)):
-            return f"cast('{value.strftime('%Y-%m-%d %H:%M:%S')}' as timestamp)"
-        elif isinstance(value, (date,)):
-            return f"cast ('{value.strftime('%Y-%m-%d')}' as date)"
-        else:
-            raise Exception(f'value of type {type(value)} not supported yet!')
-
-    def for_bigquery_type(self, col_name: str, col_type: Union[str, 'TypeEngine']) -> str:
-        if self.column_sql_type_converter:
-            converted_col_type = self.column_sql_type_converter('bigquery', col_name, col_type)
-            if converted_col_type is not None:
-                return converted_col_type
-
-        if str(col_type.__class__) == "<class 'str'>":
-            return col_type
-
-        import sqlalchemy
-        if isinstance(col_type, (sqlalchemy.FLOAT, sqlalchemy.Float)):
-            return 'FLOAT64'
-        elif isinstance(col_type, sqlalchemy.VARCHAR):
-            return 'STRING'
-        else:
-            return col_type.__class__.__name__
 
 
 class RdbTable(Table):
 
     def __init__(self, backend, sql: str, actions: List[Tuple] = None):
         self.backend: RdbBackend = backend
-        self.db_config: DbConfig = backend.db_config
+        self.db_config: SqlDialect = backend.db_config
         self.sql = sql
         self._exec_sql = lambda sql: _exec_sql(self.backend.conn, sql)
         self._actions = actions or []
@@ -327,7 +256,7 @@ class RdbTable(Table):
         else:
             cols = [col['name'] for col in cols]
             col_names = ', '.join(cols)
-            converted_col_names = ", ".join(self.db_config.convert_col(cols, [pt.field for pt in target_table.partitions]))
+            converted_col_names = ", ".join(self.db_config.convert_pt_col_expr(cols, [pt.field for pt in target_table.partitions]))
             if not partitions_to_save:
                 self._exec_sql(self.db_config.insert_data_sql(target_table_name, col_names,
                                                               f'select {converted_col_names} from {self.backend.temp_schema}.{temp_table_name}',
@@ -379,511 +308,6 @@ class RdbRow(Row):
         return 'RdbRow' + str(self)
 
 
-class DbConfig:
-
-    def __init__(self, sql_expr: SqlExpr):
-        self.sql_expr = sql_expr
-
-    def create_partition_automatically(self) -> bool:
-        raise NotImplementedError()
-
-    def create_db_sql(self, db: str) -> str:
-        raise NotImplementedError()
-
-    def use_db_sql(self, db: str) -> str:
-        raise NotImplementedError()
-
-    def drop_db_sql(self, db: str) -> Union[str, List[str]]:
-        raise NotImplementedError()
-
-    def rename_table_sql(self, from_table: str, to_table: str) -> str:
-        raise NotImplementedError()
-
-    def rename_table_db_sql(self, table_name: str, schema: str):
-        raise NotImplementedError()
-
-    def get_tables_sql(self, db) -> str:
-        raise NotImplementedError()
-
-    def create_table_sql(self, table_name: str, select_sql: str) -> str:
-        raise NotImplementedError()
-
-    def rename_view_sql(self, from_table: str, to_table: str) -> str:
-        raise NotImplementedError()
-
-    def drop_view_sql(self, table: str) -> str:
-        raise NotImplementedError()
-
-    def create_view_sql(self, table_name: str, select_sql: str) -> str:
-        raise NotImplementedError()
-
-    def support_native_partition(self) -> bool:
-        raise NotImplementedError()
-
-    def delete_partition_sql(self, table_name, partitions: List[Partition]) -> Union[str, List[str]]:
-        raise NotImplementedError()
-
-    def native_partitions(self, table_name: str) -> Tuple[str, Callable]:
-        raise NotImplementedError()
-
-    def create_table_with_partitions_sql(self, table_name: str, cols: List[Dict], partitions: List[Partition]):
-        raise NotImplementedError()
-
-    def create_partitions_with_data_sqls(self, source_table_name: str, target_table_name: str, col_names: List[str],
-                                         partitions: List[List[Partition]]):
-        raise NotImplementedError()
-
-    def create_partition_sql(self, target_table_name: str, partitions: List[Partition], if_not_exists: bool = False) -> str:
-        raise NotImplementedError()
-
-    def convert_col(self, cols: List[str], partitions: List[str]) -> List[str]:
-        if len(partitions) == 0:
-            return cols
-        else:
-            # the format of pt_col may be :{pt_col}, which is transferred by method create_table_with_data
-            return [col if col not in [partitions[0], f":{partitions[0]}"] else self.sql_expr.convert_partition_col(col)
-                    for col in cols]
-
-    def insert_data_sql(self, table_name: str, col_names_expr: str, select_sql: str, partitions: List[Partition]) -> Union[str, List[str]]:
-        raise NotImplementedError()
-
-    def drop_table_sql(self, table: str):
-        raise NotImplementedError()
-
-    def support_static_partition(self):
-        raise NotImplementedError()
-
-    def create_pt_meta_table(self, db: str):
-        raise NotImplementedError()
-
-    def insert_pt_metadata(self, table_name: str, partitions: List[Partition]):
-        raise NotImplementedError()
-
-    def delete_pt_metadata(self, table_name: str, partitions: List[Partition]):
-        raise NotImplementedError()
-
-
-class BqDbConfig(DbConfig):
-
-    def __init__(self, db: str, sql_expr: SqlExpr):
-        self.db = db
-        super().__init__(sql_expr)
-
-    def create_db_sql(self, db: str) -> str:
-        return f'create schema if not exists {db}'
-
-    # There's no such equivalent statement like 'use ${db}' in BigQuery.
-    # Table must be qualified with a dataset when using BigQuery
-    def use_db_sql(self, db: str) -> str:
-        return f'select 1'
-
-    def drop_db_sql(self, db: str) -> str:
-        return f'drop schema if exists {db} cascade'
-
-    def rename_table_sql(self, from_table: str, to_table: str) -> str:
-        from_full_table_name = from_table if self.contain_db(from_table) else f'{self.db}.{from_table}'
-        to_pure_table_name = to_table.split(".")[1] if self.contain_db(to_table) else to_table
-        return f'alter table if exists {from_full_table_name} rename to {to_pure_table_name}'
-
-    # There's no statement that could change the dataset directly
-    # Copy cannot be operated at view
-    def rename_table_db_sql(self, table_name: str, schema: str):
-        pure_table_name = table_name[table_name.index('.') + 1:] if self.contain_db(table_name) else table_name
-        from_table_name = table_name if self.contain_db(table_name) else f'{self.db}.{table_name}'
-        return f'create table if not exists {schema}.{pure_table_name} copy {from_table_name}'
-
-    def get_tables_sql(self, db) -> str:
-        return f'select table_name from {db}.INFORMATION_SCHEMA.TABLES'
-
-    def create_table_sql(self, table_name: str, select_sql: str) -> str:
-        full_table_name = table_name if self.contain_db(table_name) else f'{self.db}.{table_name}'
-        return f'create table if not exists {full_table_name} as {select_sql}'
-
-    # Cannot rename view directly in BigQuery
-    def rename_view_sql(self, from_table: str, to_table: str) -> str:
-        from_table_name = from_table if self.contain_db(from_table) else f'{self.db}.{from_table}'
-        to_table_name = to_table if self.contain_db(to_table) else f'{self.db}.{to_table}'
-        return f'create view if not exists {to_table_name} as select * from {from_table_name}'
-
-    def drop_view_sql(self, table: str) -> str:
-        return f'drop view if exists {self.db}.{table}'
-
-    def create_view_sql(self, table_name: str, select_sql: str) -> str:
-        full_table_name = table_name if self.contain_db(table_name) else f'{self.db}.{table_name}'
-        return f'create view if not exists {full_table_name} as {select_sql}'
-
-    def support_native_partition(self) -> bool:
-        return True
-
-    def delete_partition_sql(self, table_name, partitions: List[Partition]) -> str:
-        if not self.contain_db(table_name):
-            raise Exception("BigQuery table must be qualified with a dataset.")
-
-        db, pure_table_name = tuple(table_name.split('.'))
-        if not partitions or len(partitions) == 0:
-            raise Exception(
-                f'cannot delete partition when partitions not specified: table_name={table_name}, partitions={partitions}')
-        if len(partitions) > 1:
-            raise Exception('BigQuery only supports single-column partitioning.')
-        pt_expr = f"""{partitions[0].field} = '{partitions[0].value}'"""
-
-        delete_pt_sql = f"delete {db}.{pure_table_name} where {pt_expr};"
-        delete_pt_metadata = f"delete {db}.__table_partitions__ where table_name = '{pure_table_name}' and partition_value = '{partitions[0].value}';"
-        return self.transaction(f'{delete_pt_sql}\n{delete_pt_metadata}')
-
-    def native_partitions(self, table_name: str) -> Tuple[str, Callable]:
-        db = table_name.split(".")[0] if self.contain_db(table_name) else {self.db}
-        pure_table_name = table_name.split(".")[1] if self.contain_db(table_name) else {table_name}
-        return f"select ddl from {db}.INFORMATION_SCHEMA.TABLES where table_name = '{pure_table_name}'", self.extract_partition_cols
-
-    def extract_partition_cols(self, native_partitions_sql_result):
-        create_table_sql_lines = native_partitions_sql_result.fetchall()[0][0].split('\n')
-        pt_cols = []
-        for line in create_table_sql_lines:
-            if line.startswith('PARTITION BY '):
-                pt_cols = [line[len('PARTITION BY '):-1].strip()]
-                break
-        return pt_cols
-
-    def create_table_with_partitions_sql(self, table_name: str, cols: List[Dict[str, 'TypeEngine']], partitions: List[Partition]):
-        cols_expr = f',\n'.join(f"{col['name']} {self.sql_expr.for_bigquery_type(col['name'], col['type'])}" for col in cols)
-        if len(partitions) == 0:
-            partition_expr = ''
-        elif len(partitions) == 1:
-            partition_expr = f'partition by {self.sql_expr.bigquery_partition_expr(partitions[0].field)}'
-        else:
-            raise Exception('BigQuery only supports single-column partitioning.')
-        table_name_with_db = table_name if self.contain_db(table_name) else f'{self.db}.{table_name}'
-        return f'create table if not exists {table_name_with_db} (\n{cols_expr}\n)\n{partition_expr}\n'
-
-    def create_partition_automatically(self):
-        return True
-
-    def insert_data_sql(self, table_name: str, col_names_expr: str, select_sql: str, partitions: List[Partition]):
-        if not self.contain_db(table_name):
-            raise Exception("BigQuery table must be qualified with a dataset.")
-        if any([pt.value is None for pt in partitions]):
-            raise Exception(f"cannot insert data when partition value is None, partitions: {partitions}, there maybe some bug, please check")
-
-        insert_date_sql = f"insert into {table_name}({col_names_expr}) {select_sql};"
-        delete_pt_metadata_if_exist = self.delete_pt_metadata(table_name, partitions)
-        insert_pt_metadata = self.insert_pt_metadata(table_name, partitions)
-        return self.transaction(f'{insert_date_sql}\n{delete_pt_metadata_if_exist}\n{insert_pt_metadata}')
-
-    def drop_table_sql(self, table: str):
-        if not self.contain_db(table):
-            raise Exception("BigQuery table must be qualified with a dataset.")
-        db, pure_table_name = tuple(table.split('.'))
-        drop_table_sql = f"drop table if exists {db}.{pure_table_name};"
-        drop_pt_metadata = f"delete {db}.__table_partitions__ where table_name = '{pure_table_name}';"
-        return f'{drop_table_sql}\n{drop_pt_metadata}'
-
-    def support_static_partition(self):
-        return False
-
-    def create_pt_meta_table(self, db: str):
-        return f"""create table if not exists {db}.__table_partitions__(
-        table_name string, partition_value string, last_modified_time timestamp)
-        cluster by table_name;"""
-
-    def insert_pt_metadata(self, table_name: str, partitions: List[Partition]):
-        if len(partitions) == 0:
-            return ''
-        elif len(partitions) > 1:
-            raise Exception('BigQuery only supports single-column partitioning.')
-        else:
-            if not self.contain_db(table_name):
-                raise Exception("BigQuery table must be qualified with a dataset.")
-            db, pure_table_name = tuple(table_name.split('.'))
-            return f"insert into {db}.__table_partitions__ values ('{pure_table_name}', '{partitions[0].value}', CURRENT_TIMESTAMP());"
-
-    def delete_pt_metadata(self, table_name: str, partitions: List[Partition]):
-        if len(partitions) == 0:
-            return ''
-        elif len(partitions) > 1:
-            raise Exception('BigQuery only supports single-column partitioning.')
-        else:
-            if not self.contain_db(table_name):
-                raise Exception("BigQuery table must be qualified with a dataset.")
-            db, pure_table_name = tuple(table_name.split('.'))
-            return f"delete {db}.__table_partitions__ where table_name = '{pure_table_name}' and partition_value = '{partitions[0].value}';"
-
-    @staticmethod
-    def transaction(statement: str):
-        return f"BEGIN TRANSACTION;\n{statement}\nCOMMIT TRANSACTION;"
-
-    @staticmethod
-    def contain_db(table_name: str):
-        return "." in table_name
-
-
-class PostgrePartition:
-
-    def __init__(self, name: str, value: Union[int, str]):
-        self.name = name
-        self.value = value
-        self.value_next = value + '_' if isinstance(value, str) else value + 1
-        self.value_expr = f"'{value}'" if isinstance(value, str) else str(value)
-        self.value_next_expr = f"'{self.value_next}'" if isinstance(self.value_next, str) else str(self.value_next)
-        self.table_suffix = str(value).lower().replace('-', '_')
-
-    @property
-    def field_name(self):
-        return self.name
-
-    def partition_table_name(self, table_name: str):
-        return f'{table_name}__{self.table_suffix}'
-
-
-class PgDbConfig(DbConfig):
-
-    def create_db_sql(self, db: str) -> str:
-        return f'create schema if not exists {db}'
-
-    def use_db_sql(self, db: str) -> str:
-        return f"set search_path='{db}'"
-
-    def drop_db_sql(self, db: str):
-        return f'drop schema if exists {db} cascade'
-
-    def rename_table_sql(self, from_table: str, to_table: str) -> str:
-        pure_to_table = to_table if '.' not in to_table else to_table[to_table.index('.') + 1:]
-        return f'alter table {from_table} rename to {pure_to_table}'
-
-    def rename_table_db_sql(self, table_name: str, schema: str):
-        return f'alter table {table_name} set schema {schema}'
-
-    def rename_view_sql(self, from_table: str, to_table: str) -> str:
-        pure_to_table = to_table if '.' not in to_table else to_table[to_table.index('.') + 1:]
-        return f'alter view {from_table} rename to {pure_to_table}'
-
-    def create_view_sql(self, table_name: str, select_sql: str) -> str:
-        return f'create view {table_name} as {select_sql}'
-
-    def drop_view_sql(self, table_name: str) -> str:
-        return f'drop view {table_name} cascade'
-
-    def get_tables_sql(self, db) -> str:
-        return f"select tablename FROM pg_catalog.pg_tables where schemaname='{db}' union " \
-               f"select viewname FROM pg_catalog.pg_views where schemaname='{db}'"
-
-    def create_table_sql(self, table_name: str, select_sql: str) -> str:
-        return f'create table {table_name} as {select_sql}'
-
-    def support_native_partition(self) -> bool:
-        return True
-
-    def delete_partition_sql(self, table_name, partitions: List[Partition]) -> str:
-        if len(partitions) > 1:
-            raise Exception(f'Only support exactly one partition column, found: {[str(p) for p in partitions]}')
-        partition = PostgrePartition(partitions[0].field, partitions[0].value)
-        return f'drop table if exists {partition.partition_table_name(table_name)}'
-
-    def native_partitions(self, table_name: str) -> Tuple[str, Callable]:
-        if '.' not in table_name:
-            raise Exception('table name must be of format {DB}.{TABLE} when query native partitions, found: ' + table_name)
-
-        db, table = table_name[:table_name.index('.')], table_name[table_name.index('.') + 1:]
-        sql = f'''
-        SELECT pg_catalog.pg_get_partkeydef(pt_table.oid) as partition_key
-        FROM pg_class pt_table
-            JOIN pg_namespace nmsp_pt_table   ON nmsp_pt_table.oid  = pt_table.relnamespace
-        WHERE nmsp_pt_table.nspname='{db}' and pt_table.relname='{table}'
-        '''
-        return sql, self.extract_partition_cols
-
-    def extract_partition_cols(self, native_partitions_sql_result):
-        partition_values = [v[0] for v in native_partitions_sql_result.fetchall()]
-        if not partition_values:
-            raise Exception('no partition values found, table may not exist')
-        partition_value = partition_values[0]
-        if partition_value is None:
-            return []
-        partition_value: str = partition_value
-        if not partition_value.upper().startswith('RANGE (') or not partition_value.endswith(')'):
-            raise Exception('unable to parse partition: ' + partition_value)
-        return partition_value[len('RANGE ('): -1].split(',')
-
-    def create_table_with_partitions_sql(self, table_name: str, cols: List[Dict], partitions: List[Partition]):
-        if len(partitions) > 1:
-            raise Exception(f'Only support exactly one partition column, found: {[str(p) for p in partitions]}')
-        cols_expr = ',\n'.join([f"{col['name']} {col['type']}" for col in cols])
-        partition_expr = f'partition by range({partitions[0].field})' if len(partitions) == 1 else ''
-        return f'create table {table_name} (\n{cols_expr}\n) {partition_expr}'
-
-    def create_partition_automatically(self):
-        return False
-
-    def create_partition_sql(self, target_table_name: str, partitions: List[Partition], if_not_exists: bool = False) -> str:
-        if len(partitions) > 1:
-            raise Exception(f'Only support exactly one partition column, found: {[str(p) for p in partitions]}')
-        partition = PostgrePartition(partitions[0].field, partitions[0].value)
-        partition_table_name = partition.partition_table_name(target_table_name)
-        if_not_exists = 'if not exists' if if_not_exists else ''
-        return f'create table {if_not_exists} {partition_table_name} partition of {target_table_name} ' \
-               f'for values from ({partition.value_expr}) to ({partition.value_next_expr})'
-
-    def create_partitions_with_data_sqls(self, source_table_name: str, target_table_name: str, col_names: List[str],
-                                         partitions: List[List[Partition]]):
-        col_names_expr = ', '.join(col_names)
-        if not partitions:
-            return [f'insert into {target_table_name}({col_names_expr}) select {col_names_expr} from {source_table_name}']
-        sqls = []
-        for partition in partitions:
-            if len(partition) > 1:
-                raise Exception(f'Only support exactly one partition column, found: {[str(p) for p in partitions]}')
-            partition = PostgrePartition(partition[0].field, partition[0].value)
-            partition_table_name = partition.partition_table_name(target_table_name)
-            temp_table_name = f'{partition_table_name}__temp'
-            sqls.append(f'drop table if exists {temp_table_name}')
-            sqls.append(f'create table {temp_table_name} (like {target_table_name} including defaults including constraints)')
-            sqls.append(f'alter table {temp_table_name} add constraint p '
-                        f'check ({partition.field_name} >= {partition.value_expr} and {partition.field_name} < {partition.value_next_expr})')
-            filter_expr = f'{partition.field_name} = {partition.value_expr}'
-            sqls.append(f'insert into {temp_table_name}({col_names_expr}) select {col_names_expr} from {source_table_name} where {filter_expr}')
-            sqls.append(f'drop table if exists {partition_table_name}')
-            sqls.append(f'alter table {temp_table_name} rename to {partition_table_name[partition_table_name.index(".") + 1:]}')
-            sqls.append(f'alter table {target_table_name} attach partition {partition_table_name} '
-                        f'for values from ({partition.value_expr}) to ({partition.value_next_expr})')
-            sqls.append(f'alter table {partition_table_name} drop constraint p')
-        return sqls
-
-    def insert_data_sql(self, table_name: str, col_names_expr: str, select_sql: str, partitions: List[Partition]):
-        return f'insert into {table_name}({col_names_expr}) {select_sql}'
-
-    def drop_table_sql(self, table: str):
-        return f'drop table if exists {table}'
-
-    def support_static_partition(self):
-        return True
-
-
-class ChDbConfig(DbConfig):
-    def __init__(self, sql_expr: SqlExpr, partitions_table_name: string):
-        self.partitions_table_name = partitions_table_name
-        super(ChDbConfig, self).__init__(sql_expr)
-
-    def create_db_sql(self, db: str):
-        return f'create database if not exists {db}'
-
-    def use_db_sql(self, db: str):
-        return f'use {db}'
-
-    def drop_db_sql(self, db: str) -> List[str]:
-        drop_db = f'drop database if exists {db}'
-        drop_pt_metadata = f"alter table {self.partitions_table_name} delete " \
-                           f"where db_name = '{db}'"
-        return [drop_db, drop_pt_metadata]
-
-    def rename_table_sql(self, from_table: str, to_table: str) -> str:
-        return f'rename table {from_table} to {to_table}'
-
-    def rename_table_db_sql(self, table_name: str, schema: str):
-        pure_table_name = table_name if '.' not in table_name else table_name[table_name.index('.') + 1:]
-        return f'rename table {table_name} to {schema}.{pure_table_name}'
-
-    def rename_view_sql(self, from_table: str, to_table: str) -> str:
-        return self.rename_table_sql(from_table, to_table)
-
-    def drop_view_sql(self, table: str) -> str:
-        return f'drop table {table}'
-
-    def create_view_sql(self, table_name: str, select_sql: str) -> str:
-        return f'create view {table_name} as {select_sql}'
-
-    def get_tables_sql(self, db: str):
-        return f'show tables in {db}'
-
-    def create_table_sql(self, table_name: str, select_sql: str):
-        return f'create table {table_name} engine=MergeTree order by tuple() as {select_sql}'
-
-    def support_native_partition(self) -> bool:
-        return True
-
-    def delete_partition_sql(self, table_name, partitions: List[Partition]) -> List[str]:
-        if len(partitions) > 1:
-            raise Exception(f'Only support exactly one partition column, found: {[str(p) for p in partitions]}')
-        db, pure_table_name = split_table_name(table_name)
-
-        drop_pt_metadata = f"alter table {self.partitions_table_name} delete " \
-                           f"where db_name = '{db}' and table_name = '{pure_table_name}' " \
-                           f"and partition_value = '{partitions[0].value}'"
-
-        pt_expr = f'tuple({", ".join([self.sql_expr.for_value(pt.value) for pt in partitions])})'
-        drop_pt = f'alter table {table_name} drop partition {pt_expr}'
-
-        return [drop_pt, drop_pt_metadata]
-
-    def native_partitions(self, table_name: str) -> Tuple[str, Callable]:
-        return f'show create table {table_name}', self.extract_partition_cols
-
-    def extract_partition_cols(self, native_partitions_sql_result):
-        create_table_sql_lines = native_partitions_sql_result.fetchall()[0][0].split('\n')
-        pt_cols = []
-        for line in create_table_sql_lines:
-            if line.startswith('PARTITION BY ('):
-                pt_cols = [col.strip() for col in line[len('PARTITION BY ('):-1].split(',')]
-                break
-            elif line.startswith('PARTITION BY '):
-                pt_cols = [line[len('PARTITION BY '):].strip()]
-                break
-        return pt_cols
-
-    def create_table_with_partitions_sql(self, table_name: str, cols: List[Dict], partitions: List[Partition]):
-        cols_expr = ',\n'.join([f"{col['name']} {col['type']}" for col in cols])
-        if len(partitions) == 0:
-            partition_expr = ''
-        elif len(partitions) == 1:
-            partition_expr = f'partition by {partitions[0].field}'
-        else:
-            partition_expr = f'partition by tuple({", ".join([pt.field for pt in partitions])})'
-        return f'create table if not exists ' \
-               f'{table_name} (\n{cols_expr}\n)\nengine=MergeTree\n{partition_expr}\norder by tuple() settings allow_nullable_key=1;'
-
-    def create_partition_automatically(self):
-        return True
-
-    def insert_data_sql(self, table_name: str, col_names_expr: str, select_sql: str, partitions: List[Partition]) -> List[str]:
-        insert_date_sql = f"insert into {table_name}({col_names_expr}) {select_sql};"
-
-        if any([pt.value is None for pt in partitions]):
-            raise Exception(f"cannot insert data when partition value is None, partitions: {partitions}, there maybe some bug, please check")
-
-        if len(partitions) != 0:
-            if len(partitions) > 1:
-                raise Exception("for now clickhouse backend only support table with single field partition")
-            db, pure_table_name = split_table_name(table_name)
-            drop_pt_metadata_if_exist = f"alter table {self.partitions_table_name} delete " \
-                                        f"where db_name = '{db}' and table_name = '{pure_table_name}' " \
-                                        f"and partition_value = '{partitions[0].value}'"
-            insert_pt_metadata = self.insert_pt_metadata(table_name, partitions)
-            return [insert_date_sql, drop_pt_metadata_if_exist, insert_pt_metadata]
-        return [insert_date_sql]
-
-    def drop_table_sql(self, table: str) -> List[str]:
-        drop_table_sql = f'drop table if exists {table}'
-        db, pure_table_name = split_table_name(table)
-        drop_pt_metadata = f"alter table {self.partitions_table_name} delete where db_name = '{db}' and table_name = '{pure_table_name}'"
-        return [drop_table_sql, drop_pt_metadata]
-
-    def support_static_partition(self):
-        return False
-
-    def create_pt_meta_table(self, db: str):
-        # As clickhouse has create partition table in RdbBackend, no need to create again
-        return 'select 1'
-
-    def insert_pt_metadata(self, table_name: str, partitions: List[Partition]):
-        if len(partitions) == 0:
-            return ''
-        elif len(partitions) > 1:
-            raise Exception('clickhouse only supports single-column partitioning.')
-        else:
-            db, pure_table_name = tuple(table_name.split('.'))
-            insert_pt_metadata = f"insert into {self.partitions_table_name} values('{db}', '{pure_table_name}', '{partitions[0].value}', now());"
-            return insert_pt_metadata
-
-
 class RdbBackend(Backend):
     """table_partitions_table_name; means the table name which save the static partition info for all partition tables in data warehouse,
     for now need support backend type: [clickhouse]
@@ -903,17 +327,17 @@ class RdbBackend(Backend):
         self.temp_schema = f'sp_temp_{int(time.mktime(time.gmtime()))}_{int(random() * 10000):04d}'
 
         self.backend_type, self.is_pg, self.is_ch, self.is_bq = None, False, False, False
-        self.db_config: DbConfig = None
+        self.db_config: SqlDialect = None
         if url.startswith('postgresql://'):
             self.backend_type, self.is_pg = 'pg', True
-            self.db_config = PgDbConfig(self.sql_expr)
+            self.db_config = PgSqlDialect(self.sql_expr)
             self.engine: Engine = create_engine(url, isolation_level="AUTOCOMMIT", pool_size=1)
             self.conn: Connection = self.engine.connect()
             _exec_sql(self.conn, self.db_config.create_db_sql(self.temp_schema))
             _exec_sql(self.conn, self.db_config.use_db_sql(self.temp_schema))
         elif url.startswith('clickhouse://') or url.startswith('clickhouse+native://'):
             self.backend_type, self.is_ch = 'ch', True
-            self.db_config = ChDbConfig(self.sql_expr, self.partitions_table_name)
+            self.db_config = ChSqlDialect(self.sql_expr, self.partitions_table_name)
 
             engine: Engine = create_engine(url, pool_size=1)
             conn: Connection = engine.connect()
@@ -938,7 +362,7 @@ class RdbBackend(Backend):
             self.conn: Connection = self.engine.connect()
         elif url.startswith('bigquery://'):
             self.backend_type, self.is_bq = 'bq', True
-            self.db_config = BqDbConfig(self.temp_schema, self.sql_expr)
+            self.db_config = BqSqlDialect(self.temp_schema, self.sql_expr)
             self.engine: Engine = create_engine(url, credentials_path=credentials)
             self.conn: Connection = self.engine.connect()
             _exec_sql(self.conn, self.db_config.create_db_sql(self.temp_schema))
@@ -1043,7 +467,7 @@ class RdbBackend(Backend):
 
     def refresh_table_partitions(self, table: 'TableMeta'):
         if self.db_config.support_native_partition():
-            native_partitions_sql, extract_partition_cols = self.db_config.native_partitions(table.table_name)
+            native_partitions_sql, extract_partition_cols = self.db_config.native_partitions_sql(table.table_name)
             pt_cols = extract_partition_cols(_exec_sql(self.conn, native_partitions_sql))
             table.update_partitions([Partition(col) for col in pt_cols])
         # no need to do anything, if the db does not support partition
@@ -1068,7 +492,7 @@ class RdbBackend(Backend):
                     f'save_mode={save_mode}, create_target_table={create_target_table}')
 
         if not self.db_config.support_static_partition():
-            _exec_sql(self.conn, self.db_config.create_pt_meta_table(target_table.dbname))
+            _exec_sql(self.conn, self.db_config.create_pt_meta_table_sql(target_table.dbname))
 
         if not self.table_exists(target_table) and not create_target_table:
             raise Exception(f'target table {target_table.table_name} does not exist, and create_target_table is False, '
@@ -1147,16 +571,16 @@ class RdbBackend(Backend):
                 if partition:
                     _exec_sql(self.conn, self.db_config.create_partition_sql(full_table_name, list(partition)))
         from sqlalchemy.sql import text
-        converted_col_names = ", ".join(self.db_config.convert_col([f":{col}" for col in cols], pt_cols))
+        converted_col_names = ", ".join(self.db_config.convert_pt_col_expr([f":{col}" for col in cols], pt_cols))
         stmt = text(f'insert into {full_table_name} ({", ".join(cols)}) VALUES ({converted_col_names})')
         for v in values:
             _exec_sql(self.conn, stmt, **dict([(col, _v) for _v, col in zip(v, cols)]))
 
         if partitions and not self.db_config.support_static_partition():
-            _exec_sql(self.conn, self.db_config.create_pt_meta_table(db))
+            _exec_sql(self.conn, self.db_config.create_pt_meta_table_sql(db))
             for partition in partitions:
                 if partition:
-                    _exec_sql(self.conn, self.db_config.insert_pt_metadata(full_table_name, list(partition)))
+                    _exec_sql(self.conn, self.db_config.insert_pt_metadata_sql(full_table_name, list(partition)))
 
     def create_temp_table_with_data(self, table_name: str, values: List[List[Any]], schema: List[Col]):
         _exec_sql(self.conn, self.db_config.create_table_with_partitions_sql(table_name, [col.as_dict() for col in schema], []))
