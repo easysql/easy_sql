@@ -3,7 +3,7 @@ from typing import Any
 from ..logger import logger
 
 
-def _exec_sql(spark: 'SparkSession', sql: str) -> 'DataFrame':
+def _exec_sql(spark: 'pyspark.sql.SparkSession', sql: str) -> 'pyspark.sql.DataFrame':
     logger.info(f'will exec sql: {sql}')
     return spark.sql(sql)
 

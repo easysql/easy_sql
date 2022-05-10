@@ -107,10 +107,10 @@ class CommentSubstitutor:
 
 class VarsContext(VarsReplacer):
 
-    def __init__(self, vars: Dict[str, Any] = None, debug_log: bool = False):
+    def __init__(self, vars: Dict[str, Any] = None, list_vars: Dict[str, List] = None, debug_log: bool = False):
         vars = vars or {}
         self.vars = copy.deepcopy(vars)
-        self.list_vars = {}
+        self.list_vars = list_vars or {}
         self.func_runner = None
         self.debug_log = debug_log
 

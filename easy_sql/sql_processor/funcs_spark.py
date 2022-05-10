@@ -5,7 +5,7 @@ from typing import List, Dict, Union
 from pyspark.sql import SparkSession
 
 from .backend import SparkBackend
-from .common import _exec_sql
+from .common import _exec_sql, SqlProcessorAssertionError
 from .funcs_common import ColumnFuncs, TableFuncs, PartitionFuncs as PartitionFuncsBase, AlertFunc
 
 __all__ = [
@@ -54,21 +54,31 @@ class IOFuncs:
     def rename_csv_output(self, spark_output_path: str, to_file: str):
         import subprocess
         import re
-        result = subprocess.check_output(f'hdfs dfs -ls {spark_output_path}'.split(' ')).decode('utf8').split('\n')
+        assert to_file.startswith('/'), 'to_file must be a full path starts with /, found: ' + to_file
+        is_local_file = spark_output_path.startswith('file:///')
+        if is_local_file:
+            command_prefix = ''
+            spark_output_path = spark_output_path[len('file://'):]
+        else:
+            command_prefix = 'hdfs dfs -'
+        result = subprocess.check_output(f'{command_prefix}ls {spark_output_path}'.split(' ')).decode('utf8').split('\n')
         generated_files = []
         for line in result:
             if line.endswith('.csv'):
-                generated_files.append(re.sub(r'.*[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}', '', line).strip())
+                file_path = re.sub(r'.*[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}', '', line).strip()
+                # hdfs command will return full path, but system command will not, try fix to full path
+                file_path = os.path.join(spark_output_path, file_path) if is_local_file else file_path
+                generated_files.append(file_path)
         if not generated_files:
             raise Exception('no csv file found at path: ' + spark_output_path)
         if len(generated_files) != 1:
-            raise Exception(f'found multiple csv file at path: {spark_output_path}, files={generated_files}')
-        subprocess.check_output(f'hdfs dfs -mkdir -p {os.path.dirname(to_file)}'.split(' '))
+            raise SqlProcessorAssertionError(f'found multiple csv file at path: {spark_output_path}, files={generated_files}')
+        subprocess.check_output(f'{command_prefix}mkdir -p {os.path.dirname(to_file)}'.split(' '))
         try:
-            subprocess.check_output(f'hdfs dfs -rm {to_file}'.split(' '))
+            subprocess.check_output(f'{command_prefix}rm {to_file}'.split(' '))
         except Exception:
             logger.info(f'{to_file} not found, remove skipped')
-        subprocess.check_output(f'hdfs dfs -mv {generated_files[0]} {to_file}'.split(' ')).decode('utf8').split('\n')
+        subprocess.check_output(f'{command_prefix}mv {generated_files[0]} {to_file}'.split(' ')).decode('utf8').split('\n')
 
     def write_json_local(self, table: str, output_file: str):
         from pyspark.sql import DataFrame

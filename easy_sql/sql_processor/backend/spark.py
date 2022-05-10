@@ -1,6 +1,9 @@
-from typing import Dict, Callable, List, Any, Tuple
+from typing import Dict, Callable, List, Any, Tuple, Union
+
+from pyspark.sql.types import StructType
 
 from .base import *
+from .base import Col
 from ..common import SqlProcessorAssertionError
 from ...udf import udfs
 from ...logger import logger
@@ -126,7 +129,7 @@ class SparkBackend(Backend):
         df = broadcast(table.df)
         df.createOrReplaceTempView(name)
 
-    def exec_native_sql(self, sql: str) -> 'DataFrame':
+    def exec_native_sql(self, sql: str) -> 'pyspark.sql.DataFrame':
         logger.info(f'will exec sql: {sql}')
         return self.spark.sql(sql)
 
@@ -214,11 +217,13 @@ class SparkBackend(Backend):
         self.spark.catalog.clearCache()
         clear_temp_views(self.spark)
 
-    def create_table_with_data(self, full_table_name: str, values: List[List[Any]], schema: Any, partitions: List['Partition']):
+    def create_table_with_data(self, full_table_name: str, values: List[List[Any]], schema: Union[StructType, List[Col]],
+                               partitions: List['Partition']):
         print(f'creating table: {full_table_name}')
         self.spark.sql(f'create database if not exists {full_table_name.split(".")[0]}')
         self.spark.sql(f'drop table if exists {full_table_name}').collect()
-        write = self.spark.createDataFrame(values, schema).write
+        schema_or_cols = schema if isinstance(schema, StructType) else [col.name for col in schema]
+        write = self.spark.createDataFrame(values, schema_or_cols).write
         if partitions:
             write = write.partitionBy(*[p.field for p in partitions])
         write.mode('overwrite').saveAsTable(full_table_name, mode='overwrite')
