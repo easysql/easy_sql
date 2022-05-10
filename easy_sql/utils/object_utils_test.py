@@ -13,7 +13,7 @@ class ObjectUtilsTest(unittest.TestCase):
         self.assertEqual(get_attr({}, 'a'), {})
         self.assertEqual(get_attr({'a': ''}, 'a'), '')
 
-        self.assertEqual(get_attr({'a': 1}, ''), {})
+        self.assertEqual(get_attr({'a': 1}, ''), {'a': 1})
 
 
 if __name__ == '__main__':
