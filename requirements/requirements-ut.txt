@@ -1,4 +1,4 @@
-pyspark==3.2.1
+pyspark==3.2.2
 coverage==6.3.2
 # used bson from pymongo
 pymongo==3.10.1
