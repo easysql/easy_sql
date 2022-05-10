@@ -92,6 +92,7 @@ class FuncsRdbTest(unittest.TestCase):
         step = Step('1', _ReportCollector(), FuncRunner({'bool': lambda x: x == '1'}),
                     select_sql='select 0 as a')
 
+        self.assertEqual(pf.get_first_partition(table_name), '2022-01-01')
         self.assertTrue(pf.is_first_partition(table_name, '2022-01-01'))
         self.assertTrue(pf.is_not_first_partition(table_name, '2022-01-02'))
         self.assertTrue(pf.partition_exists(table_name, '2022-01-02'))
@@ -100,6 +101,8 @@ class FuncsRdbTest(unittest.TestCase):
         self.assertTrue(pf.ensure_partition_or_first_partition_exists(step, table_name, '2022-01-01'))
         self.assertTrue(pf.ensure_partition_or_first_partition_exists(step, table_name, '2022-01-02'))
         self.assertTrue(pf.ensure_partition_exists(step, table_name, '2022-01-01'))
+        self.assertFalse(pf.previous_partition_exists(table_name, '2022-01-01'))
+        self.assertTrue(pf.previous_partition_exists(table_name, '2022-01-03'))
         self.assertFalse(pf.ensure_partition_exists(step, table_name, '2022-01-03'))
         self.assertTrue(pf.ensure_dwd_partition_exists(step, table_name, '2022-01-01', 'id'))
         self.assertFalse(pf.ensure_dwd_partition_exists(step, table_name, '2022-01-02', 'val'))

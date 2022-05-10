@@ -127,12 +127,21 @@ f2 = lambda a, b: a + b
         self.assertEqual(debugger.next_step_no, 1)
         self.assertEqual(debugger.last_step_no, None)
         self.assertEqual(debugger.left_step_count, len(debugger.steps))
+        self.assertFalse(debugger.is_started)
+        self.assertFalse(debugger.is_finished)
+        self.assertIsNone(debugger.current_step)
+        self.assertIsNone(debugger.last_step)
 
         debugger.step_on()
         self.assertEqual(debugger.current_step_no, 1)
         self.assertEqual(debugger.next_step_no, 2)
         self.assertEqual(debugger.last_step_no, None)
         self.assertEqual(debugger.left_step_count, len(debugger.steps) - 1)
+        self.assertTrue(debugger.is_started)
+        self.assertFalse(debugger.is_finished)
+        self.assertEqual(debugger.current_step, debugger.steps[0])
+        debugger.step_to(1)  # will print info, but do nothing
+        debugger.run_to(1)  # will print info, but do nothing
 
         debugger.step_to(3)
         self.assertEqual(debugger.current_step_no, 3)
@@ -141,15 +150,32 @@ f2 = lambda a, b: a + b
 
         debugger.run()
         self.assertEqual(debugger.current_step_no, len(debugger.steps))
-        self.assertEqual(debugger.next_step_no, None)
+        self.assertEqual(debugger.current_step, debugger.steps[-1])
+        self.assertIsNone(debugger.next_step_no)
+        self.assertIsNone(debugger.next_step)
         self.assertEqual(debugger.last_step_no, len(debugger.steps) - 1)
         self.assertEqual(debugger.left_step_count, 0)
+        self.assertEqual(debugger.last_step, debugger.steps[-2])
 
         self.assertListEqual(debugger.sql('select * from test_result order by id').collect(), [
             (1, 'a'),
             (2, 'b'),
             (3, 'c'),
         ])
+
+        self.assertGreater(len(debugger.vars), 0)
+        vars_count = len(debugger.vars)
+        debugger.add_vars(None)  # will print info and do nothing
+        debugger.add_vars({'__some_var': 1})
+        self.assertEqual(len(debugger.vars), vars_count + 1)
+        debugger.set_vars({'__some_var': 1})
+        self.assertEqual(len(debugger.vars), vars_count + 1)  # vars will not change when finished
+        self.assertEqual(len(debugger.initial_vars), 1)
+        debugger.set_vars(variables)
+        self.assertGreater(len(debugger.templates), 0)
+        debugger.showdf('test_result')
+
+        debugger.step_to(-1)  # will print info and do nothing
 
         debugger.restart()
         self.assertEqual(debugger.current_step_no, None)

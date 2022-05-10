@@ -6,7 +6,7 @@ from pyspark.sql.types import StructType, StructField, IntegerType
 from pyspark.sql.utils import ParseException
 
 from easy_sql.base_test import LocalSpark, run_sql
-from .sql_processor import FuncRunner, VarsContext, SqlProcessor
+from .sql_processor import FuncRunner, VarsContext, SqlProcessor, SqlProcessorException
 from .sql_processor.step import StepFactory
 
 
@@ -299,6 +299,50 @@ select ${not_existed3}
         self.assertIn('error: current_a, b, ', reports['step-4'].report_as_text(1))
         self.assertEqual(StepStatus.FAILED, reports['step-4'].status)
         self.assertEqual(StepStatus.FAILED, reports['step-6'].status)
+
+    def test_should_raise_exception_when_check_failed(self):
+        check_fail_sqls = [
+            '-- target=check.test_check\nselect 1 as actual, 0 as expected',
+            '-- target=check.test_check\nselect 1 as actual, 1 as expected1',
+            '-- target=check.test_check\nselect 1 as actual, 0 as expected where 1=0',
+        ]
+        for sql in check_fail_sqls:
+            processor = SqlProcessor(LocalSpark.get(), sql)
+            self.assertRaises(SqlProcessorException, lambda: processor.run())
+
+    def test_should_not_fail_and_log_no_data_when_no_data_found_in_log_target(self):
+        processor = SqlProcessor(LocalSpark.get(), '-- target=log.no_data\nselect 1 as actual, 0 as expected where 1=0')
+        processor.run()
+
+    def test_should_raise_error_when_no_table_and_no_create_output_table(self):
+        processor = SqlProcessor(LocalSpark.get(), '-- target=output.t.some_table\nselect 1 as a, 0 as b')
+        self.assertRaises(Exception, lambda: processor.run())
+
+    def test_should_raise_error_when_output_table_name_does_not_contain_dbname(self):
+        processor = SqlProcessor(LocalSpark.get(), '-- target=output.some_table\nselect 1 as actual, 0 as expected')
+        self.assertRaises(Exception, lambda: processor.run())
+
+    def test_should_do_action_step_ok(self):
+        processor = SqlProcessor(LocalSpark.get(), '-- target=variables\nselect true as __create_output_table__\n'
+                                                   '-- target=output.t.some_table\nselect 1 as a, 0 as b\n'
+                                                   '-- target=action.some_action\ndrop table t.some_table')
+        processor.run()
+        from easy_sql.sql_processor.backend import TableMeta
+        self.assertFalse(processor.backend.table_exists(TableMeta('t.some_table')))
+
+    def test_should_add_static_partition_value_for_dryrun_as_well(self):
+        sql = '''
+-- target=variables
+select 20200101 as __partition__dt
+-- target=output.t.result
+select 1 as a, 2 as b
+        '''
+        spark = LocalSpark.get()
+        processor = SqlProcessor(spark, sql)
+        processor.run(True)
+        result = [t for t in processor.backend.temp_tables() if t.startswith('result_') and t.endswith('_output')]
+        self.assertEqual(len(result), 1)
+        self.assertEqual(spark.sql(f'select * from {result[0]}').collect(), [(1, 2, '20200101')])
 
 
 class FuncRunnerTest(unittest.TestCase):
