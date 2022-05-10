@@ -57,7 +57,7 @@ class TestCaseParserTest(unittest.TestCase):
         self.assertEqual(len(cases), 1)
         case = cases[0]
         self.assertEqual(set(case.includes.keys()), {'some_etl_snippets', 'some_etl_snippets1'})
-        self.assertEqual(case.vars, {'some_var': 1.0, 'some_string_var': 2.0, 'some_int_var': 3.0})
+        self.assertEqual(case.vars, {'data_date': '2021-01-01', 'some_var': 1.0, 'some_string_var': 2.0, 'some_int_var': 3.0})
         self.assertEqual(case.udf_file_paths, ['test/sample_data_process.py', 'not_exist.py'])
         self.assertEqual(case.func_file_paths, ['test/sample_data_process.py'])
         self.assertEqual(len(case.inputs), 1)
@@ -65,4 +65,4 @@ class TestCaseParserTest(unittest.TestCase):
         self.assertEqual(input.columns, ['id', 'val', 'val_date', 'data_date'])
         self.assertEqual(input.column_types, ['int', 'string', 'date', 'date'])
         self.assertEqual(input.values, [[1, '1', datetime(2021, 1, 1, 0, 0), datetime(2021, 1, 1, 0, 0)]])
-        self.assertEqual(case.outputs[0].values, [[1, '1', datetime(2021, 1, 1, 0, 0)], [1, '2', None]])
+        self.assertEqual(case.outputs[0].values, [[1, '1', datetime(2021, 1, 1, 0, 0)], [1, '2', None], [1, '3', None]])

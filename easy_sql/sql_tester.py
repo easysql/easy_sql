@@ -75,7 +75,7 @@ class WorkPath:
 
     def work_path(self):
         if not self._work_path:
-            raise Exception('work_path must be set before use.')
+            raise AssertionError('work_path must be set before use.')
         return self._work_path
 
     def path(self, relative_path: str):
@@ -83,7 +83,7 @@ class WorkPath:
 
     def relative_path(self, abs_path: str):
         if not abs_path.startswith(self.work_path()):
-            raise Exception(f'abs path `{abs_path}` not in work directory: ')
+            raise AssertionError(f'abs path `{abs_path}` not in work directory: ')
         return '' if len(abs_path) == self.work_path() else abs_path[len(self.work_path()) + 1:]
 
 
@@ -117,7 +117,7 @@ class TableColumnTypes:
         elif isinstance(backend, RdbBackend):
             return self.column_types_to_schema_rdb(backend, columns, types)
         else:
-            raise Exception(f'unsupported backend type: {type(backend)}')
+            raise AssertionError(f'unsupported backend type: {type(backend)}')
 
     def column_types_to_schema_rdb(self, backend: RdbBackend, columns: List[str], types: List[str]) -> List[Col]:
         return [Col(col, type_) for col, type_ in zip(columns, types)]
@@ -165,7 +165,7 @@ class TableColumnTypes:
         col_type = self.get_col_type(table_name, col_name) if col_type is None else col_type
         if self.backend == 'clickhouse':
             if 'Nested' in col_type:
-                raise Exception("clickhouse backend can not support Nested col type")
+                raise AssertionError("clickhouse backend can not support Nested col type")
             # for these type in clickhouse is case insensitive
             if col_type.lower() in ['bool', 'date', 'datetime', 'decimal']:
                 col_type = col_type.lower()
@@ -198,7 +198,7 @@ class TableColumnTypes:
                             raise e
 
             if col_type.replace(' ', '').startswith('map<'):
-                raise Exception(f'map type not supported right now when parsing value `{col_value}` for column: {table_name}.{col_name}')
+                raise AssertionError(f'map type not supported right now when parsing value `{col_value}` for column: {table_name}.{col_name}')
             if col_type.startswith('decimal(') or col_type == 'double':
                 return col_type, float(col_value)
             if col_type in ['bigint', 'int', 'tinyint', 'Int32', 'Int64', 'UInt32', 'UInt64']:
@@ -218,7 +218,7 @@ class TableColumnTypes:
             if col_type.replace(' ', '') == 'struct<latest_value:string,first_show_time:timestamp>':
                 vals = str(col_value).strip().split('|')
                 if len(vals) < 2:
-                    raise Exception(f'must provide all the values of type {col_type} for {table_name}.{col_name}. Incomplete value `{col_value}`')
+                    raise AssertionError(f'must provide all the values of type {col_type} for {table_name}.{col_name}. Incomplete value `{col_value}`')
                 latest_value = str(vals[0]).strip()
                 first_show_time = str(vals[1]).strip() if not date_converter else date_converter(vals[1])
                 return col_type, (latest_value, first_show_time)
@@ -230,7 +230,7 @@ class TableColumnTypes:
         except Exception as e:
             raise Exception(f'convert {col_type} failed for {table_name}.{col_name} for value `{col_value}`', e)
 
-        raise Exception(f'not supported type {col_type} for column {table_name}.{col_name} when parsing value {col_value}')
+        raise AssertionError(f'not supported type {col_type} for column {table_name}.{col_name} when parsing value {col_value}')
 
 
 class TestCase:
@@ -287,14 +287,14 @@ class TestCase:
         elif label == 'FUNCS':
             self.parse_funcs(row_start_idx, rows)
         else:
-            raise Exception(f'unknown label: {label}')
+            raise AssertionError(f'unknown label: {label}')
 
     def parse_includes(self, wb: Book, row_start_idx: int, rows: List[List[Cell]]):
         for i, row in enumerate(rows):
             include_name, include_value = row[1].value.strip(), row[2].value.strip()
             if include_name:
                 if not include_value:
-                    raise Exception(f'parse test case at row {row_start_idx + 1 + i} failed: there must be value set for INCLUDES, found None')
+                    raise AssertionError(f'parse test case at row {row_start_idx + 1 + i} failed: there must be value set for INCLUDES, found None')
                 self.includes[include_name] = include_value
                 log_debug(f'find includes at row {row_start_idx + 1}: include_name={include_name}, include_value={include_value}')
 
@@ -312,7 +312,7 @@ class TestCase:
 
     def parse_vars(self, wb: Book, row_start_idx: int, rows: List[List[Cell]]):
         if len(rows) < 2:
-            raise Exception(f'parse test case at row {row_start_idx + 1} failed: there must be value set for VARS, found None')
+            raise AssertionError(f'parse test case at row {row_start_idx + 1} failed: there must be value set for VARS, found None')
         else:
             for var_name, var_value in zip(rows[0][1:], rows[1][1:]):
                 if var_name.value and var_name.value.strip():
@@ -334,7 +334,7 @@ class TestCase:
         elif isinstance(value, str) and value.strip() != '':
             value = value.strip()
             if len(value) != len('2000-01-01') and len(value) != len('2000-01-01 00:00:00'):
-                raise Exception('date column must be of format `yyyy-MM-dd` or `yyyy-MM-dd HH:mm:ss`')
+                raise AssertionError('date column must be of format `yyyy-MM-dd` or `yyyy-MM-dd HH:mm:ss`')
             format = '%Y-%m-%d' if len(value) == len('2000-01-01') else '%Y-%m-%d %H:%M:%S'
             return datetime.strptime(value, format)
         return datetime(*xlrd.xldate_as_tuple(value, wb.datemode))
@@ -348,9 +348,9 @@ class TestCase:
     def parse_table(self, wb: Book, label: str, row_start_idx: int, rows: List[List[Cell]], table_column_types: TableColumnTypes) -> TableData:
         cells = rows[0]
         if len(cells) < 2 or not cells[1].value or not str(cells[1].value).strip():
-            raise Exception(f'parse test case at row {row_start_idx + 1} failed: there must be table name set for {label}, found None')
+            raise AssertionError(f'parse test case at row {row_start_idx + 1} failed: there must be table name set for {label}, found None')
         if len(cells) < 3 or not cells[2].value or not str(cells[2].value).strip():
-            raise Exception(f'parse test case at row {row_start_idx + 1} failed: there must be at least one column set for {label}, found 0')
+            raise AssertionError(f'parse test case at row {row_start_idx + 1} failed: there must be at least one column set for {label}, found 0')
 
         table_name = str(cells[1].value)
 
@@ -385,7 +385,7 @@ class TestCase:
                 # If no description mentioned for this row, just ignore it.
                 # This ensures we must add description for a row, to clarify how the data comes.
                 if has_values:
-                    raise Exception(f'no description for table({table_name}) data at row {row_start_idx + 1 + row_idx + 1}')
+                    raise AssertionError(f'no description for table({table_name}) data at row {row_start_idx + 1 + row_idx + 1}')
             elif label == 'OUTPUT':
                 has_values = any([value_cells[i].value not in [None, ''] for i in range(len(columns))])
                 if has_values:
@@ -428,7 +428,7 @@ class TestCase:
             return self.sql_file_content
         else:
             if self.sql_file_path is None:
-                raise Exception(f'can not find the sql file having same name with test file')
+                raise AssertionError(f'can not find the sql file having same name with test file')
             with open(work_path.path(self.sql_file_path), 'r') as f:
                 return f.read()
 
@@ -507,7 +507,7 @@ class TestDataFile:
             case.parse_test_case_of_label(self.wb, last_label, case_start_idx + last_label_idx, case_rows[last_label_idx:], table_column_types)
 
         if not case.completed:
-            raise Exception(f'parse test case failed, got incomplete case, missed fields: {case.missed_fields}')
+            raise AssertionError(f'parse test case failed, got incomplete case, missed fields: {case.missed_fields}')
 
         return case
 
@@ -720,7 +720,7 @@ class SqlTester:
         cases = self.parse_test_cases(test_data_file, self.table_column_types)
 
         if case_idx != -1 and (case_idx < 0 or case_idx >= len(cases)):
-            raise Exception(f'test case {case_idx} not found. {len(cases)} cases in {test_data_file} are found.')
+            raise AssertionError(f'test case {case_idx} not found. {len(cases)} cases in {test_data_file} are found.')
         cases = cases if case_idx == -1 else [cases[case_idx]]
 
         tr = TestResult(test_data_file)
@@ -737,7 +737,7 @@ class SqlTester:
                 cases = json.loads(f.read(), object_hook=json_util.object_hook)
             cases = [TestCase.from_dict(case_dict) for case_dict in cases]
         else:
-            raise Exception(f'unsupported format of test file: {test_data_file}')
+            raise AssertionError(f'unsupported format of test file: {test_data_file}')
         return cases
 
     def run_case(self, case: TestCase) -> bool:
@@ -751,7 +751,7 @@ class SqlTester:
 
     def convert_cases_to_json(self, test_data_file: str):
         if not test_data_file.endswith('.xlsx'):
-            raise Exception(f'only support to convert excel file, got `{test_data_file}`')
+            raise AssertionError(f'only support to convert excel file, got `{test_data_file}`')
         cases = TestDataFile(test_data_file, sql_reader=self.sql_reader).parse_test_cases(self.table_column_types)
         data = [case.as_dict() for case in cases]
         output_file = test_data_file[:-len('.xlsx')] + '.json'
