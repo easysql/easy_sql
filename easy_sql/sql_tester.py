@@ -94,7 +94,7 @@ class TableColumnTypes:
 
     def __init__(self, predefined_table_col_types: Dict[str, Dict[str, str]], partition_col_types: Dict[str, str], backend: str):
         self.table_col_types = predefined_table_col_types
-        assert set(partition_col_types.values()).issubset({'int', 'string'}), \
+        assert set(partition_col_types.values()).issubset({'int', 'string', 'Int32', 'String'}), \
             f'only int/string partition column types supported, found {partition_col_types}'
         self.partition_col_types = partition_col_types
         self.backend = backend
@@ -190,7 +190,7 @@ class TableColumnTypes:
                 else:
                     try:
                         # try convert partition column to int to remove possible float values
-                        return col_type, str(int(col_value)) if col_type == 'string' else int(col_value)
+                        return col_type, str(round(float(col_value))) if col_type == 'string' else round(float(col_value))
                     except ValueError as e:
                         if col_type == 'string':
                             return col_type, str(col_value)
@@ -491,7 +491,7 @@ class TestDataFile:
         else:
             default_col_type = 'string'
         if self.sql_reader.read_as_content(self.test_data_file):
-            case = TestCase(sql_file_content=self.sql_reader.read_sql(self.test_data_file), default_col_type='String')
+            case = TestCase(sql_file_content=self.sql_reader.read_sql(self.test_data_file), default_col_type=default_col_type)
         else:
             case = TestCase(self.sql_reader.find_file_path(self.test_data_file[:self.test_data_file.rindex('.')] + '.sql'))
         last_label, last_label_idx = None, -1
