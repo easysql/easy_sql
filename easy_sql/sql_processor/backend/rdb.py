@@ -528,7 +528,7 @@ class RdbBackend(Backend):
 
                     filter_expr = " and ".join([f"{pt.field} = {self.sql_expr.for_value(pt.value)}" for pt in save_partition])
                     _exec_sql(self.conn, self.sql_dialect.insert_data_sql(full_target_table_name, col_names,
-                                                                        f'select {col_names} from {temp_table_name} where {filter_expr}',
+                                                                          f'select {col_names} from {temp_table_name} where {filter_expr}',
                                                                           save_partition))
                 _exec_sql(self.conn, self.sql_dialect.drop_table_sql(temp_table_name))
             else:
@@ -542,11 +542,11 @@ class RdbBackend(Backend):
                     if not self.sql_dialect.create_partition_automatically():
                         _exec_sql(self.conn, self.sql_dialect.create_partition_sql(full_target_table_name, save_partition, True))
                     _exec_sql(self.conn, self.sql_dialect.insert_data_sql(full_target_table_name, col_names,
-                                                                        f'select {col_names} from {source_table.get_full_table_name(self.temp_schema)}',
+                                                                          f'select {col_names} from {source_table.get_full_table_name(self.temp_schema)}',
                                                                           save_partition))
             else:
                 _exec_sql(self.conn, self.sql_dialect.insert_data_sql(full_target_table_name, col_names,
-                                                                    f'select {col_names} from {source_table.get_full_table_name(self.temp_schema)}',
+                                                                      f'select {col_names} from {source_table.get_full_table_name(self.temp_schema)}',
                                                                       []))
 
         else:

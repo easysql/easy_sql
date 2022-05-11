@@ -110,7 +110,7 @@ class BqSqlDialect(SqlDialect):
             raise SqlProcessorAssertionError("BigQuery table must be qualified with a dataset.")
         if any([pt.value is None for pt in partitions]):
             raise SqlProcessorAssertionError(f"cannot insert data when partition value is None, partitions: {partitions}, "
-                                        f"there maybe some bug, please check")
+                                             f"there maybe some bug, please check")
 
         insert_date_sql = f"insert into {table_name}({col_names_expr}) {select_sql};"
         delete_pt_metadata_if_exist = self.delete_pt_metadata_sql(table_name, partitions)
