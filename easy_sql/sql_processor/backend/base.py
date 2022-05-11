@@ -96,6 +96,9 @@ class Partition:
         self.field = field
         self.value = value
 
+    def __repr__(self):
+        return f"Partition(field={self.field}, value={self.value}"
+
     def __str__(self):
         return f'{self.field}={self.value}'
 
@@ -119,6 +122,12 @@ class TableMeta:
         self.table_name = table_name
         self.partitions = partitions or []
         self.dbname, self.pure_table_name = self.__parse_table_name()
+
+    def __repr__(self):
+        return f"TableMeta(table_name={self.table_name}" \
+               f", partitions={self.partitions}" \
+               f", dbname={self.dbname}" \
+               f", pure_table_name={self.pure_table_name})"
 
     def update_partitions(self, partitions: List[Partition]) -> 'TableMeta':
         self.partitions = partitions
