@@ -26,6 +26,15 @@ class ColumnFuncs:
                           for col in fields
                           if col not in cols_to_exclude or (col.find('.') != -1 and col.split('.')[-1] not in cols_to_exclude)])
 
+    def all_cols_for_json_using_as(self, table_name: str, *cols_to_exclude: str) -> str:
+        pure_table_name = table_name.split(".")[1] if "." in table_name else table_name
+        fields = self.backend.exec_sql(f'select * from {table_name} limit 0').field_names()
+        return ', '.join([f'{pure_table_name}.{col} as `{pure_table_name}.{col}`'
+                          for col in fields
+                          if col not in cols_to_exclude or (col.find('.') != -1 and col.split('.')[-1] not in cols_to_exclude)])
+
+
+
 
 class TableFuncs:
 
