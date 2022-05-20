@@ -90,8 +90,18 @@ create or replace function sha1(value text) returns text
 
 
 class ChUdfs:
-
+    """
+    https://clickhouse.com/docs/en/sql-reference/statements/create/function
+    CREATE FUNCTION name AS (parameter0, ...) -> expression
+    """
     @staticmethod
     def all() -> Dict[str, Callable[[], str]]:
         return all_udfs(ChUdfs)
+
+    @staticmethod
+    def translate():
+        return """
+CREATE FUNCTION IF NOT EXISTS translate AS (input, from, to) -> replaceAll(input, from, to)
+        """
+
 

@@ -169,8 +169,7 @@ class TableColumnTypes:
             # for these type in clickhouse is case insensitive
             if col_type.lower() in ['bool', 'date', 'datetime', 'decimal']:
                 col_type = col_type.lower()
-        col_type = col_type.lower()
-
+        # col_type = col_type.lower()
         if col_value is None or (isinstance(col_value, str) and col_value.strip() == 'null'):
             return col_type, None
 
