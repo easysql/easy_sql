@@ -45,10 +45,11 @@ class FuncRunner:
 
     @staticmethod
     def _get_rdb_funcs(backend) -> Dict[str, Callable]:
-        from easy_sql.sql_processor.funcs_rdb import PartitionFuncs, ColumnFuncs, TableFuncs
+        from easy_sql.sql_processor.funcs_rdb import PartitionFuncs, ColumnFuncs, TableFuncs, ModelFuncs
         partition_funcs = PartitionFuncs(backend)
         col_funcs = ColumnFuncs(backend)
         table_funcs = TableFuncs(backend)
+        model_funcs = ModelFuncs(backend)
         return {
             'partition_exists': partition_funcs.partition_exists,
             'partition_not_exists': partition_funcs.partition_not_exists,
@@ -67,6 +68,7 @@ class FuncRunner:
             'ensure_no_null_data_in_table': table_funcs.ensure_no_null_data_in_table,
             'check_not_null_column_in_table': table_funcs.check_not_null_column_in_table,
             'all_cols_prefixed_with_exclusion_expr': col_funcs.all_cols_prefixed_with_exclusion_expr,
+            'model_predict': model_funcs.model_predict,
         }
 
     @staticmethod
