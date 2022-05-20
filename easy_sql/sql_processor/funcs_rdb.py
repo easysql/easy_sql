@@ -80,31 +80,3 @@ class PartitionFuncs(PartitionFuncsBase):
         full_table_name = table_name if '.' in table_name else f'{backend.temp_schema}.{table_name}'
         db, table = full_table_name[:full_table_name.index('.')], full_table_name[full_table_name.index('.') + 1:]
         return db, table
-
-
-class ModelFuncs:
-
-    def __init__(self, backend: RdbBackend):
-        self.backend = backend
-
-    def model_predict(self, model_save_path: str, table_name: str, feature_cols: str, id_col: str, output_ref_cols: str):
-        from pyspark.ml import PipelineModel
-        from pyspark.sql.functions import expr
-
-        output_ref_cols = [col.strip() for col in output_ref_cols.split(',') if col.strip()]
-        model = PipelineModel.load(model_save_path)
-        data = self.backend.exec_native_sql(f'select {feature_cols} from {table_name}')
-        print("select data is")
-        print(data)
-
-        is_int_type = lambda type_name: any([type_name.startswith(t) for t in ['integer', 'long', 'decimal', 'short']])
-        int_cols = [f.name for f in data.schema.fields if is_int_type(f.dataType.typeName())]
-        for col in int_cols:
-            data = data.withColumn(col, expr(f'cast({col} as double)'))
-
-        predictions = model.transform(data)
-        output = predictions.select(output_ref_cols + [id_col, 'prediction'])
-        print("output is ")
-        print(output)
-
-

@@ -35,6 +35,30 @@ class ColumnFuncs:
                           if col not in cols_to_exclude or (col.find('.') != -1 and col.split('.')[-1] not in cols_to_exclude)])
 
 
+    def model_predict_with_tmp_spark(self, model_save_path: str, table_name: str, feature_cols: str, id_col: str, output_ref_cols: str):
+        from pyspark.ml import PipelineModel
+        from pyspark.sql.functions import expr
+        # from pyspark.sql import SparkSession
+        #
+        # spark = SparkSession.builder.getOrCreate()
+
+        output_ref_cols = [col.strip() for col in output_ref_cols.split(',') if col.strip()]
+        model = PipelineModel.load(model_save_path)
+        data = self.backend.exec_native_sql(f'select {feature_cols} from {table_name}')
+        print("select data is")
+        print(data)
+
+        is_int_type = lambda type_name: any([type_name.startswith(t) for t in ['integer', 'long', 'decimal', 'short']])
+        int_cols = [f.name for f in data.schema.fields if is_int_type(f.dataType.typeName())]
+        for col in int_cols:
+            data = data.withColumn(col, expr(f'cast({col} as double)'))
+
+        predictions = model.transform(data)
+        output = predictions.select(output_ref_cols + [id_col, 'prediction'])
+        print("output is ")
+        print(output)
+
+
 
 
 class TableFuncs:
