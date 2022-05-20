@@ -46,10 +46,11 @@ class FuncRunner:
 
     @staticmethod
     def _get_rdb_funcs(backend) -> Dict[str, Callable]:
-        from easy_sql.sql_processor.funcs_rdb import PartitionFuncs, ColumnFuncs, TableFuncs
+        from easy_sql.sql_processor.funcs_rdb import PartitionFuncs, ColumnFuncs, TableFuncs,ModelFuncs
         partition_funcs = PartitionFuncs(backend)
         col_funcs = ColumnFuncs(backend)
         table_funcs = TableFuncs(backend)
+        model_funcs = ModelFuncs(backend)
         return {
             'partition_exists': partition_funcs.partition_exists,
             'partition_not_exists': partition_funcs.partition_not_exists,
@@ -65,7 +66,7 @@ class FuncRunner:
             'ensure_partition_or_first_partition_exists': partition_funcs.ensure_partition_or_first_partition_exists,
             'all_cols_without_one_expr': col_funcs.all_cols_without_one_expr,
             'all_cols_with_exclusion_expr': col_funcs.all_cols_with_exclusion_expr,
-            'model_predict_with_tmp_spark': col_funcs.model_predict_with_tmp_spark,
+            'model_predict_with_tmp_spark': model_funcs.bg_model_predict_with_tmp_spark,
             'ensure_no_null_data_in_table': table_funcs.ensure_no_null_data_in_table,
             'check_not_null_column_in_table': table_funcs.check_not_null_column_in_table,
             'all_cols_prefixed_with_exclusion_expr': col_funcs.all_cols_prefixed_with_exclusion_expr,
@@ -118,7 +119,7 @@ class FuncRunner:
         logger.info("try to find func "+func_name)
         logger.info(str(self.funcs))
         if func_name not in self.funcs:
-            raise SqlProcessorException(f'no function found for {func_name} in sql_processor: {func_def} while all funcd is {self.funcs}')
+            raise SqlProcessorException(f'no function found for {func_def} in sql_processor: {func_def}')
         func = self.funcs[func_name]
         try:
             original_params = func_def[func_def.index('(') + 1: func_def.index(')')].strip()
