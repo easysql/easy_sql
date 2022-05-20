@@ -118,7 +118,7 @@ class FuncRunner:
         logger.info("try to find func "+func_name)
         logger.info(str(self.funcs))
         if func_name not in self.funcs:
-            raise SqlProcessorException(f'no function found for {func_def} in sql_processor: {func_def}')
+            raise SqlProcessorException(f'no function found for {func_name} in sql_processor: {func_def} while all funcd is {self.funcs}')
         func = self.funcs[func_name]
         try:
             original_params = func_def[func_def.index('(') + 1: func_def.index(')')].strip()
