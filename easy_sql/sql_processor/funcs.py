@@ -66,7 +66,7 @@ class FuncRunner:
             'ensure_partition_or_first_partition_exists': partition_funcs.ensure_partition_or_first_partition_exists,
             'all_cols_without_one_expr': col_funcs.all_cols_without_one_expr,
             'all_cols_with_exclusion_expr': col_funcs.all_cols_with_exclusion_expr,
-            'model_predict_with_tmp_spark': model_funcs.bg_model_predict_with_tmp_spark,
+            'bq_model_predict_with_tmp_spark': model_funcs.bq_model_predict_with_tmp_spark,
             'ensure_no_null_data_in_table': table_funcs.ensure_no_null_data_in_table,
             'check_not_null_column_in_table': table_funcs.check_not_null_column_in_table,
             'all_cols_prefixed_with_exclusion_expr': col_funcs.all_cols_prefixed_with_exclusion_expr,
