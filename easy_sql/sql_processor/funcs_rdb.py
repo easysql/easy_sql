@@ -2,7 +2,6 @@ from typing import List
 
 from .backend.rdb import RdbBackend
 from .funcs_common import ColumnFuncs, TableFuncs, PartitionFuncs as PartitionFuncsBase, AlertFunc
-from ..spark_optimizer import get_spark
 import os
 
 __all__ = [
@@ -19,6 +18,7 @@ class ModelFuncs:
                                         feature_cols: str, id_col: str, output_ref_cols: str):
         from pyspark.ml import PipelineModel
         from pyspark.sql.functions import expr
+        from ..spark_optimizer import get_spark
 
         SPARK_JARS = "/tmp/app/dataplat/lib/scala/lib_spark3/spark-bigquery-latest_2.12.jar," \
                      "/tmp/app/dataplat/lib/scala/lib_spark3/gcs-connector-hadoop2-latest.jar,"
