@@ -4,7 +4,6 @@ from .backend import Backend, SparkBackend
 from .backend.rdb import RdbBackend
 from .common import SqlProcessorException, VarsReplacer
 
-from ..logger import logger
 __all__ = [
     'FuncRunner'
 ]
@@ -116,8 +115,6 @@ class FuncRunner:
 
     def run_func(self, func_def: str, vars_replacer: VarsReplacer) -> bool:
         func_name = func_def[:func_def.index('(')]
-        logger.info("try to find func "+func_name)
-        logger.info(str(self.funcs))
         if func_name not in self.funcs:
             raise SqlProcessorException(f'no function found for {func_def} in sql_processor: {func_def}')
         func = self.funcs[func_name]
