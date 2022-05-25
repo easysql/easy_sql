@@ -98,7 +98,7 @@ jobs:
     strategy:
       matrix:
         python-version: [ '3.7', '3.8']
-        clickhouse-version: ['20', '21', '22']
+        clickhouse-version: ['21', '22']
     services:
       clickhouse:
         image: yandex/clickhouse-server:${{ matrix.clickhouse-version }}
@@ -125,7 +125,7 @@ jobs:
         java-version: ['8']
     services:
       clickhouse:
-        image: yandex/clickhouse-server:20
+        image: yandex/clickhouse-server:21
         ports:
           - 8123:8123
           - 9000:9000
