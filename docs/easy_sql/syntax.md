@@ -4,7 +4,7 @@ Easy SQL defines a few customized syntax on top of SQL to add imperative charact
 
 ## Language features in Easy SQL
 
-For Easy SQL, guided by the design principals, there are a few simple language features added to support these imperative characteristics.
+For Easy SQL, guided by the design principles, there are a few simple language features added to support these imperative characteristics.
 
 Below is a list of these features:
 
@@ -25,7 +25,7 @@ The most obvious characteristics of imperative programming is that code will be 
 And the declarative way (standard SQL) suggests the opposite, which says, all logic should be defined first and then be executed in one final action.
 
 The major task of designing the imperative structure is to introduce a way to execute SQL step by step.
-If we look at Spark DataFrame API, we could found that it works in an imperative way.
+If we look at Spark DataFrame API, we could find that it works in an imperative way.
 For example, we can assign a DataFrame to some variable, then do something about the variable, then transform the variable and assign it to another variable.
 
 In Easy SQL, a simple syntax is introduced as SQL comment, which is `target=` and `-- target=SOME_TARGET` in Easy SQL.
@@ -91,7 +91,7 @@ If you believe you got it already, please skip it.
 ### Variables
 
 Variables could be defined and modified at any step. The syntax is as the case above.
-If we'd like to modify the value of it, we can just add another `variables` target and write a query with a result of changed 'a' and 'b'.
+If we'd like to modify the value of it, we can just add another `variables` target and write a query with the result of changed 'a' and 'b'.
 A simple example is as below:
 
 ```sql
@@ -119,7 +119,7 @@ select
 ```
 
 When Easy SQL engine reaches the second step, it will do a variable lookup and simply replace the reference with the real value.
-It will replace with the string value of the variable and converts types when required.
+It will replace it with the string value of the variable and converts types when required.
 
 The above example will result in variables: `a=1, b=2, a1=11, ab=3`.
 
@@ -137,22 +137,22 @@ Another common case is to save a query to a temporary table for later query. We 
 
 It works simply as what you expected. 
 
-- The query result will be save to a temporary table if target is 'temp'.
-- The query result will be saved to a cached temporary table if target is 'cache'.
-- The query result will be saved to a broadcasted temporary table if target is 'broadcast'.
+- The query result will be saved to a temporary table if the target is 'temp'.
+- The query result will be saved to a cached temporary table if the target is 'cache'.
+- The query result will be saved to a broadcasted temporary table if the target is 'broadcast'.
 
-Speaking to implementation, if the backend is Spark, 'temp' 'cache' and 'broadcast' behave the same as that in Spark,
-and with global temporary table created or replaced with specified name.
+Speaking of implementation, if the backend is Spark, 'temp' 'cache' and 'broadcast' behave the same as that in Spark,
+and with a global temporary table created or replaced with the specified name.
 For the other backends in which there is no support of caching and broadcasting of temporary tables,
 Easy SQL just create views with the specified name in a temporary default database.
 
-Since there is no actual loading of data for temporary table, to define a temporary table is a very light-weight operation.
-You can create as many temporary table as you wish.
+Since there is no actual loading of data for temporary tables, to define a temporary table is a very light-weight operation.
+You can create as many temporary tables as you wish.
 
-There are a few things to note when create temporary tables for different backends. 
+There are a few things to note when creating temporary tables for different backends. 
 
 - For Spark backend, the name of the temporary table can be reused, but it cannot be reused for the other backends since we cannot create two database views with the same name in the same default database.
-- For BigQuery backend, we have to specify names like `${temp_db}.SOME_TEMP_TABLE_NAME` when query the created temporary table. You guessed it, the 'temp_db' is a pre-defined variable provided by Easy SQL engine. This limitation is introduced by BigQuery since there is no such concept as default database (named dataset in BigQuery). 
+- For BigQuery backend, we have to specify names like `${temp_db}.SOME_TEMP_TABLE_NAME` when query the created temporary table. You guessed it, the 'temp_db' is a pre-defined variable provided by Easy SQL engine. This limitation is introduced by BigQuery since there is no such concept of a default database (named dataset in BigQuery). 
 
 ### Function calls
 
@@ -178,16 +178,16 @@ select ${plus(${a}, 2)} as b
 From the ETL code above, we can find a few things about function calls:
 
 - Function calls could be used as a 'func' target.
-- The result of function calls could be as a variable.
+- The result of function calls could be used as a variable.
 - Parameters of function calls could be variables.
 
 Besides these, there are a few other things to note:
 
 - One function call expression must be in one line of code.
-- When functions are called, all non-variable parameters are passed as strings even if it looks like an integer. In the function implementation, we need to convert types from string to it's real type.
-- There should be no chars from any of ',()' in literal parameters. If there is, we need to define a variable before the function call and pass in the variable as an parameter.
+- When functions are called, all non-variable parameters are passed as strings even if it looks like an integer. In the function implementation, we need to convert types from string to its real type.
+- There should be no chars from any of `,()` in literal parameters. If there is, we need to define a variable before the function call and pass in the variable as a parameter.
 - Any user-defined variable will be converted to string and passed to functions as string value. We may need to convert types in the function implementation.
-- All functions in the Python 'builtin' module and 'operators' module are automatically registered, so we can use a lot of Python functions without providing an implementation.
+- All functions in the Python `builtin` module and `operators` module are automatically registered, so we can use a lot of Python functions without providing an implementation.
 
 Before execution of the above ETL, we need to define the functions referenced in the ETL. Followed by the above rules, an example of the function implementations could be:
 
@@ -203,18 +203,18 @@ And then after the execution of the ETL, the value of the variables will be: `a=
 
 ### Control execution flow
 
-For an imperative language, provide a way to control execution flow is important. 
+For an imperative language, providing a way to control execution flow is important. 
 
 Back to the top, there is a case mentioned that
 'we would like to use large computing resources when we're handling data in the first partition since the amount of data there is far larger than that in the other partitions'.
-In order to implement this in ETL, we need to control the execution flow to configure a large computing resources.
+In order to implement this in ETL, we need to control the execution flow to configure a large computing resource.
 
 A common way in general programming language to handle this is to provide some 'if' statement.
 And we need to provide a condition expression for 'if' statement.
 The inner action of 'if' statement is then executed according to the true or false value of the condition expression.
 
 Easy SQL provides a similar way to control execution flow.
-We can control if a step need to be executed by providing a 'if' statement after any step definition.
+We can control if a step needs to be executed by providing a 'if' statement after any step definition.
 Below is an example:
 
 ```sql
@@ -230,7 +230,7 @@ select 1 as a
 From the example, we know the following things about 'if' statement in Easy SQL:
 
 - There must be a function call following the 'if' statement.
-- The function call must return a boolean value to indicate if the step need to be executed.
+- The function call must return a boolean value to indicate if the step needs to be executed.
 - Any step could be controlled by a 'if' statement, including 'func' 'temp' 'variables' and so on.
 
 ### Debugging support
