@@ -169,7 +169,8 @@ class TableColumnTypes:
             # for these type in clickhouse is case insensitive
             if col_type.lower() in ['bool', 'date', 'datetime', 'decimal']:
                 col_type = col_type.lower()
-        # col_type = col_type.lower()
+        else:
+            col_type = col_type.lower()
         if col_value is None or (isinstance(col_value, str) and col_value.strip() == 'null'):
             return col_type, None
 
@@ -771,7 +772,7 @@ from {self.__module__} import SqlTester
 
 
 class SqlTest(unittest.TestCase):
-    
+
     def __init__(self, methodName='runTest'):
         super().__init__(methodName)
         work_dir = os.environ.get('WORK_DIR')
@@ -784,7 +785,7 @@ class SqlTest(unittest.TestCase):
     def test_{{{{loop.index}}}}(self):
         # {{{{ case.name }}}}
         self.assertTrue(self.sql_tester.run_test(self.test_data_file, {{{{loop.index0}}}}).is_success)
-        
+
 {{% endfor %}}
 if __name__ == '__main__':
     unittest.main()
