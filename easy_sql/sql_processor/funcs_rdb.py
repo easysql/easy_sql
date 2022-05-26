@@ -1,5 +1,7 @@
 from typing import List
 
+
+
 from .backend.rdb import RdbBackend
 from .funcs_common import ColumnFuncs, TableFuncs, PartitionFuncs as PartitionFuncsBase, AlertFunc
 import os
@@ -71,6 +73,74 @@ class ModelFuncs:
             .mode("overwrite") \
             .save()
 
+    def model_predict_with_local_spark(self, model_save_path: str, input_table_name: str, output_table_name: str,
+                                        feature_cols: str, id_col: str, output_ref_cols: str):
+        from pyspark.ml import PipelineModel
+        from pyspark.sql.functions import expr
+        from ..spark_optimizer import get_spark
+
+        SPARK_JARS = "/tmp/app/dataplat/lib/scala/lib_spark3/clickhouse-integration-spark_2.12-2.5.4.jar," \
+                    "/tmp/app/dataplat/lib/scala/lib_spark3/clickhouse-native-jdbc-shaded-2.5.4.jar," \
+                    "/tmp/app/dataplat/lib/scala/lib_spark3/mysql-connector-java-8.0.20.jar," \
+                    "/tmp/app/dataplat/lib/scala/lib_spark3/postgresql-42.2.19.jar,"
+
+        file_dir = os.path.dirname(os.path.abspath(__file__))
+        spark_config_settings_dict = {
+            'spark.jars': SPARK_JARS,
+            'spark.master': 'local[2]',
+            'spark.submit.deployMode': 'client',
+            'spark.executor.memory': '1g',
+            'spark.executor.cores': '1',
+            'spark.sql.warehouse.dir': '/tmp/spark-warehouse-localdw',
+            'spark.driver.extraJavaOptions': "-Dderby.system.home=/tmp/spark-warehouse-metastore "
+                                             "-Dderby.stream.error.file=/tmp/spark-warehouse-metastore.log",
+            'spark.driver.extraClassPath': os.path.join(file_dir, '../../../deps/lib/*')
+
+        }
+
+        from py4j.java_gateway import java_import
+        spark = get_spark("ml_local", spark_config_settings_dict)
+        gw = spark.sparkContext._gateway
+        java_import(gw.jvm, "common.dataplat.sparkutils")
+        data = spark.read.format("jdbc") \
+            .option("driver", "com.github.housepower.jdbc.ClickHouseDriver") \
+            .option("url", "jdbc:clickhouse://backend-ch:32123") \
+            .option("user", "default") \
+            .option("password", "") \
+            .option("dbtable", input_table_name) \
+            .load()
+
+        output_ref_cols = [col.strip() for col in output_ref_cols.split(',') if col.strip()]
+        model = PipelineModel.load(model_save_path)
+
+        is_int_type = lambda type_name: any([type_name.startswith(t) for t in ['integer', 'long', 'decimal', 'short']])
+        int_cols = [f.name for f in data.schema.fields if is_int_type(f.dataType.typeName())]
+        for col in int_cols:
+            data = data.withColumn(col, expr(f'cast({col} as double)'))
+
+        predictions = model.transform(data)
+        output = predictions.select(output_ref_cols + [id_col, 'prediction'])
+
+        _data_type_map = {
+            'int': 'Int64',
+            'string': 'String',
+            'double': 'Float64'
+        }
+        columns_def = ', '.join([f'{col} {_data_type_map[col_type]}' for col, col_type in output.dtypes])
+        ddl = f"""CREATE TABLE IF NOT EXISTS {output_table_name} ({columns_def}) engine = MergeTree
+PRIMARY KEY {id_col}
+ORDER BY {id_col}"""
+        self.backend.exec_native_sql(ddl)
+        self.backend.exec_native_sql(f"truncate table {output_table_name}")
+        output.write.format('jdbc') \
+            .mode("append") \
+            .option("driver", "com.github.housepower.jdbc.ClickHouseDriver") \
+            .option("truncate", "true") \
+            .option("url", "jdbc:clickhouse://backend-ch:32123") \
+            .option("user", "default") \
+            .option("password", "") \
+            .option("dbtable", output_table_name) \
+            .save()
 
 
 class PartitionFuncs(PartitionFuncsBase):

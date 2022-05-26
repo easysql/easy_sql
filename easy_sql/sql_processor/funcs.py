@@ -66,6 +66,7 @@ class FuncRunner:
             'all_cols_without_one_expr': col_funcs.all_cols_without_one_expr,
             'all_cols_with_exclusion_expr': col_funcs.all_cols_with_exclusion_expr,
             'bq_model_predict_with_tmp_spark': model_funcs.bq_model_predict_with_tmp_spark,
+            'model_predict_with_local_spark': model_funcs.model_predict_with_local_spark,
             'ensure_no_null_data_in_table': table_funcs.ensure_no_null_data_in_table,
             'check_not_null_column_in_table': table_funcs.check_not_null_column_in_table,
             'all_cols_prefixed_with_exclusion_expr': col_funcs.all_cols_prefixed_with_exclusion_expr,
@@ -111,6 +112,7 @@ class FuncRunner:
             'write_json_local': io_funcs.write_json_local,
             'update_json_local': io_funcs.update_json_local,
             'model_predict': model_funcs.model_predict,
+            'parentProject': 'data-dev-workbench-prod-3fd9',
         }
 
     def run_func(self, func_def: str, vars_replacer: VarsReplacer) -> bool:
