@@ -197,6 +197,15 @@ class Step:
     def _should_skip_check(self, variables):
         return '__no_check__' in variables and variables['__no_check__'] in ['TRUE', True, 1, 'True', 'true']
 
+    def add_template_to_context(self, context):
+        if self.target_config.name:
+            context.add_templates({self.target_config.name: self.select_sql})
+
+    def check_if_template_statement(self):
+        return  StepType.TEMPLATE == self.target_config.step_type
+
+
+
     def _write_for_output_step(self, backend: Backend, table: BackendTable, context: ProcessorContext, dry_run: bool):
         extra_cols, variables = context.extra_cols, context.vars
         if '.' not in self.target_config.name:
