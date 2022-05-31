@@ -134,10 +134,7 @@ class SqlLinter:
             return lint_error
 
     def lint_step_sql(self, step: Step, backend: str):
-        self.preprocess_select_sql_for_template(step)
-        if step.check_if_template_statement():
-            step.add_template_to_context(self.context)
-            return
+        step.add_template_to_context(self.context)
         sql = step.select_sql
         logger.info("check sql :" + sql)
         lexer = Lexer(dialect=self._get_dialect_from_backend(backend))
@@ -153,18 +150,23 @@ class SqlLinter:
         linter = Linter(config=update_config, user_rules=[Rule_BigQuery_L001])
 
         tokens, _ = lexer.lex(sql)
-        if self.check_lexable(tokens):
-            parsed = parser.parse(tokens)
-            result = linter.lint(parsed)
-            fixed_tree, violation = linter.fix(parsed)
-            logger.info("after fix: " + fixed_tree.raw)
-            return result
+        self.check_lexable(tokens)
+        # TODO：skip check for warning part> log all sql
+
+
+        parsed = parser.parse(tokens)
+        result = linter.lint(parsed)
+        fixed_tree, violation = linter.fix(parsed)
+        logger.info("after fix: " + fixed_tree.raw)
+        return result
 
     def lint(self, backend: str):
         lint_result = []
         for step in self.step_list:
+            pre_check_result = self.preprocess_select_sql_for_template(step)
             step_lint_result = self.lint_step_sql(step, backend)
-            if step_lint_result:
-                log_result(step_lint_result)
-                lint_result = lint_result + step_lint_result
+            # if pre_check_result:
+            #     step_lint_result.append(pre_check_result)
+            log_result(step_lint_result)
+            lint_result = lint_result + step_lint_result
         return lint_result

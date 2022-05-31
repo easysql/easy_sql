@@ -50,6 +50,8 @@ from dims dim
     left join order_count oc on @{join_conditions(right_table=oc)}
     left join sales_amount sa on @{join_conditions(right_table=sa)}"""
         sql_linter=SqlLinter(sql)
+        sql_linter.set_check_all_rules()
+        sql_linter.set_exclude_rules(['L011'])
         sql_linter.lint("bigquery")
 
     def test_should_work_when_have_function(self):
