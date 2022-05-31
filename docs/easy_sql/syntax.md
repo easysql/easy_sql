@@ -14,8 +14,11 @@ Below is a list of these features:
 - A way to control whether a step should be executed.
 - Templates that could be reused in the same ETL file.
 - Include command that could be used to reuse code at file level.
-- Logging and assertion that could be used for debugging.
+- Debugging support: logging and assertion that could be used for debugging.
 - A debugger interface.
+- Other features：write data to tables; list variables; SQL actions.
+
+Let's have a look at the first four features.
 
 ## Syntax in Easy SQL
 
@@ -52,25 +55,25 @@ select 1 as a, '2' as b
 
 -- target=cache.table_a
 select
-	*
+    *
 from some_db.table_a
 
 -- target=temp.table_b
 select
-	*
+    *
 from some_db.table_b
 
 -- target=broadcast.table_c
 select
-	*
+    *
 from some_db.table_c
 
 -- target=output.some_db.some_table
 select 
-	*
+    *
 from table_a a 
-	left join table_b b on a.id=b.id
-	left join table_c c on a.id=c.id
+    left join table_b b on a.id=b.id
+    left join table_c c on a.id=c.id
 ```
 
 There is a SQL query under every `target` statement.
@@ -112,10 +115,10 @@ There is a simple example below:
 select 1 as a, '2' as b
 -- target=variables
 select 
-	${a} as a
-	, ${b} as b
-	, 1${a} as a1
-	, ${a} + ${b} as ab
+    ${a} as a
+    , ${b} as b
+    , 1${a} as a1
+    , ${a} + ${b} as ab
 ```
 
 When Easy SQL engine reaches the second step, it will do a variable lookup and simply replace the reference with the real value.
@@ -236,7 +239,7 @@ From the example, we know the following things about 'if' statement in Easy SQL:
 ### Debugging support
 
 In a complicated ETL, it is easy to introduce bugs.
-A general programming language usually provides some ways to help with debug.
+A general programming language usually provides some ways to help with debugging.
 The most commonly used way is about logging and assertion.
 
 Developers can log variables anywhere to provide information about the executing step.
@@ -289,7 +292,7 @@ Below is an example:
 
 ```sql
 -- target=temp.result
-select 1as a, '2' as b
+select 1 as a, '2' as b
 
 -- target=output.some_db.some_table
 select * from result
@@ -309,13 +312,13 @@ Things to note about 'output' target:
 
 ### Templates used to reuse code
 
-To support reusing of code, templates has been introduced in Easy SQL.
+To support reusing of code, templates have been introduced in Easy SQL.
 Templates are similar to functions in general programming languages.
 Functions could be called anywhere while templates could be used anywhere as well. This way, code is reused.
 
 Just like functions, there are name, parameters and body for a template as well.
 
-Below is a concret example of templates:
+Below is a concrete example of templates:
 
 ```sql
 -- target=template.dim_cols
@@ -346,7 +349,7 @@ There are two templates named 'dim_cols' and 'join_conditions' defined.
 One with no parameters and one with one parameter named 'right_table'.
 
 This example is about a very common case when we'd like to merge two tables with the same dimension columns.
-After template is used, the dimension column names and join conditions are reused, just like how we reuse functions in general programming language.
+After the template is used, the dimension column names and join conditions are reused, just like how we reuse functions in general programming language.
 
 From the example above, we could find a few things to note about templates:
 
@@ -355,7 +358,7 @@ From the example above, we could find a few things to note about templates:
 - If there are template parameters, no need to declare them, just use them by '#{PARAMETER_NAME}'. Easy SQL will extract these parameters for you at runtime.
 - Templates could be used in any target with syntax '@{TEMPLATE_NAME}'. If there are template parameters, we need to pass them as named parameters.
 
-Besides these, there are some other notes:
+Besides, there are some other notes:
 
 - Variables can be referenced in template body, and the resolution of variables happens at the resolution time of the template (when the step with template reference is executing). This is useful since we can change the value of some variable between two targets referencing the same template.
 - There should be no templates used in the body of templates. This is to make the resolution of templates to be simple. 
@@ -364,7 +367,7 @@ Besides these, there are some other notes:
 
 Template is designed for reusing code within one ETL. How to reuse code across ETLs?
 One common way to reuse code is to create a temporary mid-table.
-But it seems heavy since we need to create real table and there might be data copying.
+But it seems heavy since we need to create a real table and there might be data copying.
 
 Easy SQL provides a way to reuse code from some other ETL file. This is the 'include' command. 
 
@@ -372,11 +375,11 @@ Include looks similar to target. Below is an example:
 
 ```sql
 -- include=snippets/some_snippet.sql
-`````
+```
 
 The file path is a path relative to the current working directory.
 
-When Easy SQL processed this 'include' command, the content of the file will be expanded.
+When Easy SQL processed the 'include' command, the content of the file will be expanded.
 The result will be the same as when we write code in here directly.
 
 For the example above, if we have the following content in `some_snippets.sql`:
@@ -386,21 +389,123 @@ For the example above, if we have the following content in `some_snippets.sql`:
 select * from some_db.some_table
 -- target=template.some_columns
 a, b, c
-````
+```
 
-Then content of the ETL will be the same as the content of `some_snippets.sql` since there is only one include command there.
+Then the content of the ETL will be the same as the content of `some_snippets.sql` since there is only one include command there.
 
 Notes about 'include' command:
 
 - Include command could be used at any line of code.
 - When Easy SQL processed this 'include' command, the content of the file will simply be expanded.
 
+### Debugging support
+
+In a complicated ETL, it is easy to introduce bugs.
+A general programming language usually provides some ways to help with debugging.
+The most commonly used way is about logging and assertion.
+
+Developers can log variables anywhere to provide information about the executing step.
+They can also set an assertion if there is any important assumption made in the following code.
+
+To do logging and assertion in Python, the code looks like below:
+
+```python
+logger.info(f'some thing happened, check the variables: var_a={var_a}')
+assert var_a == 'something assumed', f'var_a is not as assumed: var_a={var_a}'
+```
+
+Easy SQL provides a similar way to do logging and assertion. They're both provided by a type of target.
+Check the example below to see its usage.
+
+```sql
+-- target=log.i_would_like_to_log_something
+select
+    1 as a
+    , 2 as b
+    , ${c} as c
+
+-- target=log.order_count
+select
+count(1)
+from sample.order_table
+
+-- target=check.order_count_must_be_equal_after_joined_product
+select
+    (select count(1) from sample.order_table) as expected
+    , (select count(1) from sample.order_table_after_joined) as actual
+
+-- target=check.equal(${c}, 3)
+```
+
+From the example above, we know that:
+
+- When using the 'log' target, we need to specify a message about what to log.
+- The log message format is the same as a variable. I.e. It should be composed of chars '0-9a-zA-Z_'.
+- There should be exactly one row returned from the query of some 'log' target. If there is more than one row returned, only the first row will be logged.
+- There are two formats of 'check' target. One is to specify a check message with a query. The other is to call a function, which returns a boolean value.
+- When the 'check' target is used as a message with a query, the returned value of the query must be one row with two columns named 'actual' and 'expected'.
+
+### Debugger interface
+
+There is a debugger interface provided by Easy SQL. It could be used with `Jupyter` to debug interactively. Follow the steps below to start debugging.
+
+1. Install `Jupyter` first with command `pip install jupyterlab`.
+2. Create a file named `debugger.py` with contents like below:
+(A more detailed sample could be found [here](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor_debugger/index.html).)
+
+```python
+from typing import Dict, Any
+
+def create_debugger(sql_file_path: str, vars: Dict[str, Any] = None, funcs: Dict[str, Any] = None):
+    from pyspark.sql import SparkSession
+    from easy_sql.sql_processor.backend import SparkBackend
+    from easy_sql.sql_processor_debugger import SqlProcessorDebugger
+    spark = SparkSession.builder.enableHiveSupport().getOrCreate()
+    backend = SparkBackend(spark)
+    debugger = SqlProcessorDebugger(sql_file_path, backend, vars, funcs)
+    return debugger
+```
+3. Create a file named `test.sql` with contents as [here](https://github.com/easysql/easy_sql/blob/main/test/sample_etl.spark.sql).
+4. Then start jupyter lab with command: `jupyter lab`.
+5. Start debugging like below:
+
+![ETL Debugging](https://raw.githubusercontent.com/easysql/easy_sql/main/debugger-usage.gif)
+
+For details of the APIs, we can refer to API doc [here](api/debugger.md).
+
+### Write data
+
+If we need to write data to some table, we could use another type of target. The name of the target is 'output'.
+There should be a query statement following the 'output' target. And the result of the query will be written to the output table.
+
+Below is an example:
+
+```sql
+-- target=temp.result
+select 1 as a, '2' as b
+
+-- target=output.some_db.some_table
+select * from result
+```
+
+After the execution of the ETL above, there will be one row written to table 'some_db.some_table'.
+
+Things to note about 'output' target:
+
+- There must be a full table name (both database name and table name specified) after the 'output' keyword in the target definition.
+- The table must be created before writing data.
+- If we'd like to create tables automatically, we need to define a special variable named '\_\_create_output_table\_\_' with value equals to 1.
+- If we'd like to write data to some static partition of the output table, we need to define a special variable named '\_\_partition\_\_' with partition column name followed by. An example could be '__partition__data_date'. Then the partition column is 'data_date'. The value of the variable will be the partition value when writing data.
+- If we'd like to write data to some static partition of the output table, we can only define one partition value at the moment.
+- If the query returns more columns than what is defined by the real table, the extra columns will be ignored.
+- If the query returns less columns than what is defined by the real table, an error will be raised.
+
 ### List variables
 
 There are list variables supported in Easy SQL as well.
 
 List variables are different from variables mentioned previously.
-The main difference is that the value of these variables are lists.
+The main difference is that the values of these variables are lists.
 So that list variables could not be used in SQL statements, since we cannot simply convert a list to a string and do variable resolution.
 
 List variables can only be used as function parameters right now.
@@ -426,7 +531,7 @@ Then the function output will be: `[1, 2, 3]`
 
 ### SQL actions
 
-There are some cases we'd like to just execute some SQL statement without anything to do about it's result. We can use 'action' in these cases.
+There are some cases where we'd like to just execute some SQL statement without anything to do about its result. We can use 'action' in these cases.
 
 This usually happens when we want to execute some DDL statement. Examples would be like to create table, to drop partition of some table etc.
 
@@ -435,12 +540,12 @@ Action is a type of target as well and it follows target syntax. Below is an exa
 ```sql
 -- target=action.create_some_table
 create table some_table (
-id int
-, value string
+    id int
+    , value string
 )
 ```
 
 Things to note about actions:
 
-- There should be an descriptive name for an action. The name should be composed of chars '0-9a-zA-Z_' and follow 'action' keyword.
+- There should be a descriptive name for an action. The name should be composed of chars '0-9a-zA-Z_' and follow the 'action' keyword.
 - In the body of an action target, templates and variables can be used as in any other target.
