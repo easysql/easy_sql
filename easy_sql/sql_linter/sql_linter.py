@@ -1,12 +1,11 @@
 import re
 
-from sqlfluff.core import Lexer, Parser, Linter, SQLLintError, SQLBaseError
+from sqlfluff.core import Lexer, Parser, Linter
 from sqlfluff.core.config import FluffConfig
 from sqlfluff.core.parser import CodeSegment
 
 from easy_sql.logger import logger
 from easy_sql.sql_linter.rules.bq_schema_rule import Rule_BigQuery_L001
-from easy_sql.sql_linter.rules.unparsable_rule import Rule_Common_L001
 from easy_sql.sql_processor.backend import Backend
 from easy_sql.sql_processor.funcs import FuncRunner
 from easy_sql.sql_processor.report import SqlProcessorReporter
@@ -31,6 +30,7 @@ class SqlLinter:
         self.include_rules = None
         self.exclude_rules = None
         self.context = self.get_context()
+        self.all_rule_check_flag = False
 
     def get_context(self, variables: Dict[str, Any] = None):
         log_var_tmpl_replace = False
@@ -39,6 +39,11 @@ class SqlLinter:
         vars_context.init(func_runner)
         return ProcessorContext(vars_context, TemplatesContext(debug_log=log_var_tmpl_replace, templates=None),
                                 extra_cols=[])
+
+    def set_check_all_rules(self):
+        # if set check all rules, the inclucde and exclude function will not work
+        # this is the first priority setting.
+        self.all_rule_check_flag = True
 
     def set_include_rules(self, rules: [str]):
         # Include have lower priority than exclude
@@ -94,16 +99,18 @@ class SqlLinter:
     def _update_included_rule_for_config(self, config, context: str = "all", rules=None):
         if rules is None:
             rules = []
-        if len(rules) > 0:
+        if len(rules) > 0 and not self.all_rule_check_flag:
             config['core']['rules'] = ",".join(rules)
+        elif self.all_rule_check_flag:
+            config['core']['rules'] = "all"
         else:
             config['core']['rules'] = context
 
     def _update_excluded_rule_for_config(self, config, rules: [str] = None):
-        if rules is not None:
+        if rules is not None and not self.all_rule_check_flag:
             config['core']['exclude_rules'] = ",".join(rules)
         else:
-            config['core']['exclude_rules'] = rules
+            config['core']['exclude_rules'] = None
 
     def check_lexable(self, tokens: Sequence[BaseSegment]):
         for token in tokens:
@@ -125,20 +132,30 @@ class SqlLinter:
                 find_as_statement_flag = True
         return variable_dict
 
-    def preprocess_select_sql_for_template(self, step) -> SQLBaseError:
+    def preprocess_select_sql_for_template(self, step: Step):
         try:
-            step.preprocess_select_sql(self.context)
+            step.replace_templates_and_mock_variables(self.context)
         except Exception as e:
-            rule = Rule_Common_L001(code="parse", description="")
-            lint_error = SQLLintError(description=str(e), rule=rule)
-            return lint_error
+            logger.warn("functions or variables replace fail is reasonable: " + str(e))
 
-    def lint_step_sql(self, step: Step, backend: str):
-        step.add_template_to_context(self.context)
-        sql = step.select_sql
-        logger.info("check sql :" + sql)
-        lexer = Lexer(dialect=self._get_dialect_from_backend(backend))
+    def lint_step_sql(self, step: Step, linter: Linter, backend: str):
+        self.preprocess_select_sql_for_template(step)
+        if step.check_if_template_statement():
+            step.add_template_to_context(self.context)
+        else:
+            sql = step.select_sql
+            logger.info("check sql :" + sql)
+            lexer = Lexer(dialect=self._get_dialect_from_backend(backend))
+            parser = Parser(dialect=self._get_dialect_from_backend(backend))
+            tokens, _ = lexer.lex(sql)
+            if self.check_lexable(tokens):
+                parsed = parser.parse(tokens)
+                result = linter.lint(parsed)
+                fixed_tree, violation = linter.fix(parsed)
+                logger.info("after fix: " + fixed_tree.raw)
+                return result
 
+    def prepare_linter(self, backend):
         default_config_dict = FluffConfig(require_dialect=False)._configs
         self._update_dialect_for_config(default_config_dict)
         self._update_included_rule_for_config(default_config_dict,
@@ -146,27 +163,15 @@ class SqlLinter:
                                               rules=self.include_rules)
         self._update_excluded_rule_for_config(default_config_dict, rules=self.exclude_rules)
         update_config = FluffConfig(configs=default_config_dict)
-        parser = Parser(config=update_config)
         linter = Linter(config=update_config, user_rules=[Rule_BigQuery_L001])
-
-        tokens, _ = lexer.lex(sql)
-        self.check_lexable(tokens)
-        # TODO：skip check for warning part> log all sql
-
-
-        parsed = parser.parse(tokens)
-        result = linter.lint(parsed)
-        fixed_tree, violation = linter.fix(parsed)
-        logger.info("after fix: " + fixed_tree.raw)
-        return result
+        return linter
 
     def lint(self, backend: str):
         lint_result = []
+        linter = self.prepare_linter(backend)
         for step in self.step_list:
-            pre_check_result = self.preprocess_select_sql_for_template(step)
-            step_lint_result = self.lint_step_sql(step, backend)
-            # if pre_check_result:
-            #     step_lint_result.append(pre_check_result)
-            log_result(step_lint_result)
-            lint_result = lint_result + step_lint_result
+            step_lint_result = self.lint_step_sql(step, linter, backend)
+            if step_lint_result:
+                log_result(step_lint_result)
+                lint_result = lint_result + step_lint_result
         return lint_result

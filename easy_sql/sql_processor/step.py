@@ -137,6 +137,11 @@ class Step:
         self.select_sql = context.replace_templates(self.select_sql)
         self.select_sql = context.replace_variables(self.select_sql)
 
+    def replace_templates_and_mock_variables(self, context):
+        self.select_sql = context.replace_templates(self.select_sql)
+        self.select_sql = context.replace_variables_with_variable_name(self.select_sql)
+
+
     def write(self, backend: Backend, table: Optional[BackendTable], context: ProcessorContext, dry_run: bool = False):
         variables: dict = context.vars_context.vars
 

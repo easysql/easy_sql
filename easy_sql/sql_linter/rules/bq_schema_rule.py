@@ -1,10 +1,11 @@
 """An example of a custom rule implemented through the plugin system."""
 
 from sqlfluff.core.rules.base import (
-    BaseRule,
+    BaseRule,LintFix,
     LintResult,
     RuleContext,
 )
+from sqlfluff.core.parser import CodeSegment
 
 class Rule_BigQuery_L001(BaseRule):
     """select from is compulsory to have schema
@@ -33,6 +34,12 @@ class Rule_BigQuery_L001(BaseRule):
             if len(context.segment.segments) != 3:
                 return LintResult(
                     anchor=context.segment,
+                    fixes=[
+                        LintFix.create_before(
+                            context.segment,
+                            [CodeSegment(raw="temp_db.")],
+                        )
+                    ],
                     description=f"select from `{context.segment.raw}` do not have schema in table.",
                 )
 

@@ -117,7 +117,27 @@ class VarsContext(VarsReplacer):
     def init(self, func_runner: 'FuncRunner'):
         self.func_runner = func_runner
 
+    def replace_variables_with_variable_name(self,text: str) -> str:
+        var_rex = re.compile(r'\${([^}]+)}')
+        text_parts = []
+        match = None
+        comment_substitutor = CommentSubstitutor()
+        while True:
+            start = match.end() if match is not None else 0
+            match = var_rex.search(text, start)
+            if match is None:
+                text_parts.append(text[start:])
+                break
+            text_parts.append(text[start:match.start()])
+            var_name = var_rex.match(match.group()).groups()[0]
+            text_parts.append(str(var_name))
+
+        text = ''.join(text_parts)
+        text = comment_substitutor.recover(text)
+        return text
+
     def replace_variables(self, text: str, include_funcs: bool = True) -> str:
+        print("currently check :" + text)
         m = re.match(r'^\${([^}]+)}$', text.strip())
         if m:
             return self.vars.get(m.group(1).strip(), self.vars.get(m.group(1).strip().lower()))
@@ -244,6 +264,9 @@ class ProcessorContext:
 
     def replace_variables(self, text: str) -> str:
         return self.vars_context.replace_variables(text)
+
+    def replace_variables_with_variable_name(self, text: str) -> str:
+        return self.vars_context.replace_variables_with_variable_name(text)
 
     @property
     def vars(self):

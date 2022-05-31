@@ -19,7 +19,8 @@ select * from sales_model_demo_with_label where date='${data_date_no_ds}'
 select * from ${temp_db}.model_data
 """
         sql_linter=SqlLinter(sql)
-        sql_linter.set_include_rules(['L039', 'L048', 'BigQuery_L001'])
+        # sql_linter.set_include_rules(['L039', 'L048', 'BigQuery_L001'])
+        sql_linter.set_check_all_rules()
         sql_linter.set_exclude_rules(['L006', 'L009'])
         sql_linter.lint("bigquery")
 
@@ -63,9 +64,11 @@ select ${plus(2, 2)} as a
 select * from order_count where value < ${a}
 """
         sql_linter=SqlLinter(sql)
+        sql_linter.set_check_all_rules()
         sql_linter.lint("bigquery")
 
 
 
 if __name__ == '__main__':
     unittest.main()
+
