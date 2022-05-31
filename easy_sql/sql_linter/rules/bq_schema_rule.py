@@ -26,11 +26,10 @@ class Rule_BigQuery_L001(BaseRule):
     def __init__(self, *args, **kwargs):
         """Overwrite __init__ to set config."""
         super().__init__(*args, **kwargs)
-        self.force_schema = True
 
     def _eval(self, context: RuleContext):
         """check from table have schema"""
-        if context.segment.is_type("table_reference") and self.force_schema:
+        if context.segment.is_type("table_reference"):
             if len(context.segment.segments) != 3:
                 return LintResult(
                     anchor=context.segment,

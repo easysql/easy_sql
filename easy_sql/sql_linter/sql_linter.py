@@ -5,7 +5,7 @@ from sqlfluff.core.config import FluffConfig
 from sqlfluff.core.parser import CodeSegment
 
 from easy_sql.logger import logger
-from easy_sql.sql_linter.rules.bq_schema_rule import Rule_BigQuery_L001
+from easy_sql.sql_linter.rules import __all__
 from easy_sql.sql_processor.backend import Backend
 from easy_sql.sql_processor.funcs import FuncRunner
 from easy_sql.sql_processor.report import SqlProcessorReporter
@@ -23,9 +23,10 @@ def log_result(lint_result):
 
 class SqlLinter:
     def __init__(self, sql: str):
-        self.sql = sql
+        self.origin_sql = sql
+        self.fixed_sql_list = []
         self.supported_backend = ['spark', 'postgres', 'clickhouse', 'bigquery']
-        self.backend = self._parse_backend(self.sql)
+        self.backend = self._parse_backend(self.origin_sql)
         self.step_list = self._get_step_list()
         self.include_rules = None
         self.exclude_rules = None
@@ -41,7 +42,7 @@ class SqlLinter:
                                 extra_cols=[])
 
     def set_check_all_rules(self):
-        # if set check all rules, the inclucde and exclude function will not work
+        # if set check all rules, to include and exclude function will not work
         # this is the first priority setting.
         self.all_rule_check_flag = True
 
@@ -77,7 +78,7 @@ class SqlLinter:
         reporter = SqlProcessorReporter(report_task_id='sql_linter')
         func_runner = FuncRunner()
         step_factory = StepFactory(reporter, func_runner)
-        step_list = step_factory.create_from_sql(self.sql)
+        step_list = step_factory.create_from_sql(self.origin_sql)
         return step_list
 
     def _get_dialect_from_backend(self, backend: str = None):
@@ -93,8 +94,8 @@ class SqlLinter:
             return "postgres"
         raise Exception("backend type so far is not supported for lint check")
 
-    def _update_dialect_for_config(self, config):
-        config['core']['dialect'] = self._get_dialect_from_backend()
+    def _update_dialect_for_config(self, config, backend: str):
+        config['core']['dialect'] = self._get_dialect_from_backend(backend)
 
     def _update_included_rule_for_config(self, config, context: str = "all", rules=None):
         if rules is None:
@@ -112,25 +113,13 @@ class SqlLinter:
         else:
             config['core']['exclude_rules'] = None
 
-    def check_lexable(self, tokens: Sequence[BaseSegment]):
+    @staticmethod
+    def check_lexable(tokens: Sequence[BaseSegment]):
         for token in tokens:
             if token.is_type("unlexable"):
                 logger.warn("Query have unlexable segment: " + str(token.raw_segments))
                 return False
         return True
-
-    def parse_variable(self, tokens: Sequence[BaseSegment]):
-        variable_dict = {}
-        find_as_statement_flag = False
-        for token in tokens:
-            if find_as_statement_flag and isinstance(token, CodeSegment):
-                find_as_statement_flag = False
-                variable = token.raw
-                variable_dict[variable] = variable
-
-            if token.raw == "as":
-                find_as_statement_flag = True
-        return variable_dict
 
     def preprocess_select_sql_for_template(self, step: Step):
         try:
@@ -138,7 +127,7 @@ class SqlLinter:
         except Exception as e:
             logger.warn("functions or variables replace fail is reasonable: " + str(e))
 
-    def lint_step_sql(self, step: Step, linter: Linter, backend: str):
+    def lint_step_sql(self, step: Step, linter: Linter, backend: str, log_error: bool):
         self.preprocess_select_sql_for_template(step)
         if step.check_if_template_statement():
             step.add_template_to_context(self.context)
@@ -151,27 +140,38 @@ class SqlLinter:
             if self.check_lexable(tokens):
                 parsed = parser.parse(tokens)
                 result = linter.lint(parsed)
+                if log_error:
+                    log_result(result)
                 fixed_tree, violation = linter.fix(parsed)
                 logger.info("after fix: " + fixed_tree.raw)
+                self.fixed_sql_list.append(fixed_tree.raw)
                 return result
 
     def prepare_linter(self, backend):
         default_config_dict = FluffConfig(require_dialect=False)._configs
-        self._update_dialect_for_config(default_config_dict)
+        self._update_dialect_for_config(default_config_dict, backend)
         self._update_included_rule_for_config(default_config_dict,
                                               context=self._get_dialect_from_backend(backend),
                                               rules=self.include_rules)
         self._update_excluded_rule_for_config(default_config_dict, rules=self.exclude_rules)
         update_config = FluffConfig(configs=default_config_dict)
-        linter = Linter(config=update_config, user_rules=[Rule_BigQuery_L001])
+        linter = Linter(config=update_config, user_rules=__all__)
         return linter
 
-    def lint(self, backend: str):
+    def lint(self, backend: str, log_error: bool = False):
         lint_result = []
         linter = self.prepare_linter(backend)
         for step in self.step_list:
-            step_lint_result = self.lint_step_sql(step, linter, backend)
-            if step_lint_result:
-                log_result(step_lint_result)
-                lint_result = lint_result + step_lint_result
+            step_result = self.lint_step_sql(step, linter, backend, log_error)
+            if step_result:
+                lint_result = lint_result + step_result
         return lint_result
+
+    def fix(self, backend: str, log_error: bool = False):
+        linter = self.prepare_linter(backend)
+        for step in self.step_list:
+            self.lint_step_sql(step, linter, backend, log_error)
+        delimeter = """
+-- reference=sqlfluff
+        """
+        return delimeter + delimeter.join(self.fixed_sql_list)
