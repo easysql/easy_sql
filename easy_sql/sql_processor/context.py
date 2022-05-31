@@ -137,7 +137,6 @@ class VarsContext(VarsReplacer):
         return text
 
     def replace_variables(self, text: str, include_funcs: bool = True) -> str:
-        print("currently check :" + text)
         m = re.match(r'^\${([^}]+)}$', text.strip())
         if m:
             return self.vars.get(m.group(1).strip(), self.vars.get(m.group(1).strip().lower()))

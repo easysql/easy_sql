@@ -2,7 +2,6 @@ import re
 
 from sqlfluff.core import Lexer, Parser, Linter
 from sqlfluff.core.config import FluffConfig
-from sqlfluff.core.parser import CodeSegment
 
 from easy_sql.logger import logger
 from easy_sql.sql_linter.rules import __all__
@@ -42,16 +41,14 @@ class SqlLinter:
                                 extra_cols=[])
 
     def set_check_all_rules(self):
-        # if set check all rules, to include and exclude function will not work
-        # this is the first priority setting.
+        # enable rules priority order is:
+        # Exclude > set_check_all > include > backend context implicit
         self.all_rule_check_flag = True
 
     def set_include_rules(self, rules: [str]):
-        # Include have lower priority than exclude
         self.include_rules = rules
 
     def set_exclude_rules(self, rules: [str]):
-        # Exclude have higher priority than include
         self.exclude_rules = rules
 
     def _parse_backend(self, sql: str):
@@ -108,7 +105,7 @@ class SqlLinter:
             config['core']['rules'] = context
 
     def _update_excluded_rule_for_config(self, config, rules: [str] = None):
-        if rules is not None and not self.all_rule_check_flag:
+        if rules is not None:
             config['core']['exclude_rules'] = ",".join(rules)
         else:
             config['core']['exclude_rules'] = None
@@ -122,10 +119,7 @@ class SqlLinter:
         return True
 
     def preprocess_select_sql_for_template(self, step: Step):
-        try:
-            step.replace_templates_and_mock_variables(self.context)
-        except Exception as e:
-            logger.warn("functions or variables replace fail is reasonable: " + str(e))
+        step.replace_templates_and_mock_variables(self.context)
 
     def lint_step_sql(self, step: Step, linter: Linter, backend: str, log_error: bool):
         self.preprocess_select_sql_for_template(step)
@@ -168,10 +162,7 @@ class SqlLinter:
         return lint_result
 
     def fix(self, backend: str, log_error: bool = False):
-        linter = self.prepare_linter(backend)
-        for step in self.step_list:
-            self.lint_step_sql(step, linter, backend, log_error)
-        delimeter = """
--- reference=sqlfluff
-        """
-        return delimeter + delimeter.join(self.fixed_sql_list)
+        self.lint(backend,log_error)
+        delimiter = """-- reference=sqlfluff
+"""
+        return delimiter + delimiter.join(self.fixed_sql_list)

@@ -2,10 +2,11 @@ import unittest
 
 from easy_sql.sql_linter.sql_linter import SqlLinter
 
+
 class SqlLinterTest(unittest.TestCase):
 
     def test_should_work_for_all_define_rule(self):
-        sql="""-- backend: bigquery
+        sql = """-- backend: bigquery
 -- target=variables
 select
     translate('${data_date}', '-', '')  as data_date_no_ds
@@ -18,16 +19,14 @@ select * from sales_model_demo_with_label where date='${data_date_no_ds}'
 -- target=temp.feature_stage_0_out
 select * from ${temp_db}.model_data
 """
-        sql_linter=SqlLinter(sql)
+        sql_linter = SqlLinter(sql)
         sql_linter.set_include_rules(['L019', 'L039', 'L048', 'BigQuery_L001'])
         sql_linter.set_exclude_rules(['L039'])
         result = sql_linter.lint("bigquery")
         assert (len(result) == 3)
 
-
-
     def test_should_work_when_have_template(self):
-        sql="""-- backend: bigquery
+        sql = """-- backend: bigquery
 -- target=template.dim_cols
 product_name
 , product_category
@@ -50,15 +49,12 @@ dim.product_name
 from dims dim 
 left join order_count oc 
 left join sales_amount sa on @{join_conditions(right_table=sa)} and  @{join_conditions(right_table=oc)} """
-        sql_linter=SqlLinter(sql)
-        sql_linter.set_check_all_rules()
-        sql_linter.set_exclude_rules(['L011'])
-        result = sql_linter.lint("bigquery")
-        assert (len(result) == 23)
-
+        sql_linter = SqlLinter(sql)
+        result = sql_linter.lint("bigquery", True)
+        assert (len(result) == 4)
 
     def test_should_work_when_given_diff_backend(self):
-        sql="""
+        sql = """
 -- target=template.dim_cols
 product_name
 , product_category
@@ -81,15 +77,12 @@ dim.product_name
 from dims dim 
 left join order_count oc 
 left join sales_amount sa on @{join_conditions(right_table=sa)} and  @{join_conditions(right_table=oc)} """
-        sql_linter=SqlLinter(sql)
-        sql_linter.set_include_rules(['L011'])
+        sql_linter = SqlLinter(sql)
         result = sql_linter.lint("spark", True)
-        assert (len(result) == 3)
-
-
+        assert (len(result) == 0)
 
     def test_should_work_when_have_function(self):
-        sql="""-- backend: bigquery
+        sql = """-- backend: bigquery
 -- target=variables
 select ${plus(2, 2)} as a
 
@@ -98,18 +91,15 @@ select * from order_count where value < ${a}
 
 -- target==func.plus(1, 1)
 
-
 """
-        sql_linter=SqlLinter(sql)
+        sql_linter = SqlLinter(sql)
         sql_linter.set_check_all_rules()
-        sql_linter.lint("bigquery")
-
-
-
-
+        sql_linter.set_exclude_rules(['L009'])
+        result = sql_linter.lint("bigquery", True)
+        assert (len(result) == 2)
 
     def test_should_work_for_fix(self):
-        sql="""-- backend: bigquery
+        sql = """-- backend: bigquery
 -- target=variables
 select
     translate('${data_date}', '-', '')  as data_date_no_ds
@@ -122,11 +112,20 @@ select * from sales_model_demo_with_label where date='${data_date_no_ds}'
 -- target=temp.feature_stage_0_out
 select * from ${temp_db}.model_data
 """
-        sql_linter=SqlLinter(sql)
+        correct_fix = """-- reference=sqlfluff
+select
+    true as __create_hive_table__,
+    translate('data_date', '-', '') as Data_date_no_ds
+-- reference=sqlfluff
+select * from temp_db.sales_model_demo_with_label where date = 'data_date_no_ds'
+-- reference=sqlfluff
+select * from temp_db.model_data
+"""
+        sql_linter = SqlLinter(sql)
         sql_linter.set_check_all_rules()
-        print(sql_linter.fix("bigquery"))
+        fixed_sql = sql_linter.fix("bigquery", True)
+        assert (correct_fix == fixed_sql)
 
 
 if __name__ == '__main__':
     unittest.main()
-
