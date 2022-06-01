@@ -36,6 +36,7 @@ class Rule_BigQuery_L001(BaseRule):
                     fixes=[
                         LintFix.create_before(
                             context.segment,
+                            # TODO: need dollars?
                             [CodeSegment(raw="temp_db.")],
                         )
                     ],

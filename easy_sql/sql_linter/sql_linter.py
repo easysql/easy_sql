@@ -29,10 +29,10 @@ class SqlLinter:
         self.step_list = self._get_step_list()
         self.include_rules = None
         self.exclude_rules = None
-        self.context = self.get_context()
+        self.context = self._get_context()
         self.all_rule_check_flag = False
 
-    def get_context(self, variables: Dict[str, Any] = None):
+    def _get_context(self, variables: Dict[str, Any] = None):
         log_var_tmpl_replace = False
         vars_context = VarsContext(debug_log=log_var_tmpl_replace, vars=variables)
         func_runner = FuncRunner.create(Backend())
@@ -42,9 +42,12 @@ class SqlLinter:
 
     def set_check_all_rules(self):
         # enable rules priority order is:
-        # Exclude > set_check_all > include > backend context implicit
+        # bigquery》 all+ bigquery
+        # TODO： set_check_all 默认 不需要设置 （传进来》parse/backend》all） >exclude>include>all
+        # Exclude  > include > backend context implicit
         self.all_rule_check_flag = True
 
+    # TODO :set method try to avoid 定义更少的接口面
     def set_include_rules(self, rules: [str]):
         self.include_rules = rules
 
@@ -111,18 +114,20 @@ class SqlLinter:
             config['core']['exclude_rules'] = None
 
     @staticmethod
-    def check_lexable(tokens: Sequence[BaseSegment]):
+    def _check_lexable(tokens: Sequence[BaseSegment]):
         for token in tokens:
             if token.is_type("unlexable"):
                 logger.warn("Query have unlexable segment: " + str(token.raw_segments))
                 return False
         return True
-
-    def preprocess_select_sql_for_template(self, step: Step):
+    # TODO:inner function all become protected _xxxx
+    def _preprocess_select_sql_for_template(self, step: Step):
+        # TODO: reuse the var context logic by sending into the dict
+        # TODO ： select 1+ a >> 其实不是合格sql，要数据类型。
         step.replace_templates_and_mock_variables(self.context)
 
-    def lint_step_sql(self, step: Step, linter: Linter, backend: str, log_error: bool):
-        self.preprocess_select_sql_for_template(step)
+    def _lint_step_sql(self, step: Step, linter: Linter, backend: str, log_error: bool):
+        self._preprocess_select_sql_for_template(step)
         if step.check_if_template_statement():
             step.add_template_to_context(self.context)
         else:
@@ -131,8 +136,10 @@ class SqlLinter:
             lexer = Lexer(dialect=self._get_dialect_from_backend(backend))
             parser = Parser(dialect=self._get_dialect_from_backend(backend))
             tokens, _ = lexer.lex(sql)
-            if self.check_lexable(tokens):
+            if self._check_lexable(tokens):
                 parsed = parser.parse(tokens)
+                # try to change the tree for the unparsable variables
+
                 result = linter.lint(parsed)
                 if log_error:
                     log_result(result)
@@ -141,7 +148,7 @@ class SqlLinter:
                 self.fixed_sql_list.append(fixed_tree.raw)
                 return result
 
-    def prepare_linter(self, backend):
+    def _prepare_linter(self, backend):
         default_config_dict = FluffConfig(require_dialect=False)._configs
         self._update_dialect_for_config(default_config_dict, backend)
         self._update_included_rule_for_config(default_config_dict,
@@ -154,15 +161,16 @@ class SqlLinter:
 
     def lint(self, backend: str, log_error: bool = False):
         lint_result = []
-        linter = self.prepare_linter(backend)
+        linter = self._prepare_linter(backend)
         for step in self.step_list:
-            step_result = self.lint_step_sql(step, linter, backend, log_error)
+            step_result = self._lint_step_sql(step, linter, backend, log_error)
             if step_result:
                 lint_result = lint_result + step_result
         return lint_result
 
-    def fix(self, backend: str, log_error: bool = False):
-        self.lint(backend,log_error)
+    def fix(self, backend: str, log_linter_error: bool = True):
+        self.lint(backend, log_linter_error)
         delimiter = """-- reference=sqlfluff
 """
+        # TODO: need all revert to previous logic
         return delimiter + delimiter.join(self.fixed_sql_list)
