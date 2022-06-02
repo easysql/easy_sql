@@ -23,11 +23,12 @@ class ReportCollector:
 class StepConfig:
     STEP_CONFIG_PATTERN = r'^-- target\s*=\s*(\w+)(.*)$'
 
-    def __init__(self, step_type: str, step_name: str, condition: str, line_no: int):
+    def __init__(self, step_type: str, step_name: str, condition: str, line_no: int, step_config_str: str = ""):
         self.step_type = step_type
         self.name = step_name
         self.condition = condition
         self.line_no = line_no
+        self.step_config_str = step_config_str
 
     def __str__(self):
         return f'StepConfig(target={self.step_type}.{self.name}, condition={self.condition}, line_no={self.line_no})'
@@ -63,7 +64,8 @@ class StepConfig:
                 raise SqlProcessorException(f'parse step config failed. condition must be like [a-zA-Z0-9_]*\([^()]*\), '
                                             f'but got {target_condition}. config_line={config_line}')
 
-        return StepConfig(step_name=target_name, step_type=target_type, condition=target_condition, line_no=line_no)
+        return StepConfig(step_name=target_name, step_type=target_type, condition=target_condition,
+                          line_no=line_no, step_config_str=config_line)
 
     def is_target_name_a_func(self):
         return '(' in self.name if self.name is not None else False
@@ -136,11 +138,6 @@ class Step:
     def preprocess_select_sql(self, context):
         self.select_sql = context.replace_templates(self.select_sql)
         self.select_sql = context.replace_variables(self.select_sql)
-
-    def replace_templates_and_mock_variables(self, context):
-        self.select_sql = context.replace_templates(self.select_sql)
-        self.select_sql = context.replace_variables_with_variable_name(self.select_sql)
-
 
     def write(self, backend: Backend, table: Optional[BackendTable], context: ProcessorContext, dry_run: bool = False):
         variables: dict = context.vars_context.vars

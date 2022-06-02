@@ -36,7 +36,8 @@ class CommentSubstitutor:
                     comment_start = m.start(1) + 1
                     left_of_comment = line[:current_index + comment_start]
                     if CommentSubstitutor.is_quote_closed(left_of_comment):
-                        lines.append(left_of_comment + CommentSubstitutor.COMMENT_IDENTIFIABLE_NAME + str(len(recognized_comment)) + '__')
+                        lines.append(left_of_comment + CommentSubstitutor.COMMENT_IDENTIFIABLE_NAME + str(
+                            len(recognized_comment)) + '__')
                         recognized_comment.append(line[current_index + comment_start:])
                         break
                     else:
@@ -96,7 +97,8 @@ class CommentSubstitutor:
             if identifiable_name_count > 1:
                 raise Exception(f'found multiple comment identifiable name {identifiable_name} in line: {line}')
             if identifiable_name_count == 1 and not line.endswith(identifiable_name):
-                raise Exception(f'found comment identifiable name {identifiable_name}, but is not at end in line: {line}')
+                raise Exception(
+                    f'found comment identifiable name {identifiable_name}, but is not at end in line: {line}')
             if identifiable_name_count == 1:
                 lines.append(line.replace(identifiable_name, self.recognized_comment[comment_index]))
                 comment_index += 1
@@ -116,25 +118,6 @@ class VarsContext(VarsReplacer):
 
     def init(self, func_runner: 'FuncRunner'):
         self.func_runner = func_runner
-
-    def replace_variables_with_variable_name(self,text: str) -> str:
-        var_rex = re.compile(r'\${([^}]+)}')
-        text_parts = []
-        match = None
-        comment_substitutor = CommentSubstitutor()
-        while True:
-            start = match.end() if match is not None else 0
-            match = var_rex.search(text, start)
-            if match is None:
-                text_parts.append(text[start:])
-                break
-            text_parts.append(text[start:match.start()])
-            var_name = var_rex.match(match.group()).groups()[0]
-            text_parts.append(str(var_name))
-
-        text = ''.join(text_parts)
-        text = comment_substitutor.recover(text)
-        return text
 
     def replace_variables(self, text: str, include_funcs: bool = True) -> str:
         m = re.match(r'^\${([^}]+)}$', text.strip())
@@ -174,7 +157,8 @@ class VarsContext(VarsReplacer):
             elif var_name.upper() in variables:
                 var_value = variables[var_name.upper()]
             else:
-                raise SqlProcessorException(f'unknown variable `{var_name}`. text={original_text}, known_vars={variables}')
+                raise SqlProcessorException(
+                    f'unknown variable `{var_name}`. text={original_text}, known_vars={variables}')
 
             text_parts.append(str(var_value))
             self._log_replace_process(f'var_value: {var_value}')
@@ -232,7 +216,8 @@ class TemplatesContext:
                     # fix for the last template parameter
                     if re.compile(r'\)}$').search(value):
                         value = value[:-2].strip()
-                    self._log_replace_process(f'template param matched: value_name={value_name}, value: {value}, template_name: {template_name}, template: {template}')
+                    self._log_replace_process(
+                        f'template param matched: value_name={value_name}, value: {value}, template_name: {template_name}, template: {template}')
                     template = re.sub(re.escape(f'#{{{value_name}}}'), value, template, flags=re.IGNORECASE)
                     index += 1
             text = re.sub(re.escape(template_define), template, text, flags=re.IGNORECASE)
@@ -263,9 +248,6 @@ class ProcessorContext:
 
     def replace_variables(self, text: str) -> str:
         return self.vars_context.replace_variables(text)
-
-    def replace_variables_with_variable_name(self, text: str) -> str:
-        return self.vars_context.replace_variables_with_variable_name(text)
 
     @property
     def vars(self):
