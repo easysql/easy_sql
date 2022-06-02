@@ -1,1 +1,2 @@
 click==6.7
+sqlfluff==0.13.2
