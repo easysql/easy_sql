@@ -54,7 +54,7 @@ left join order_count oc
 left join sales_amount sa on @{join_conditions(right_table=sa)} and  @{join_conditions(right_table=oc)} """
         sql_linter = SqlLinter(sql, variables=parse_variables(sql))
         result = sql_linter.lint("bigquery", True)
-        assert (len(result) == 23)
+        assert (len(result) == 19)
         print(sql_linter.fix("bigquery", False))
 
     def test_should_work_when_given_diff_backend(self):
