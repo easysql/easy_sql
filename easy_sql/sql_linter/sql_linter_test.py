@@ -5,6 +5,7 @@ from easy_sql.sql_linter.sql_linter import SqlLinter
 
 class SqlLinterTest(unittest.TestCase):
 
+
     def test_should_work_for_all_define_rule(self):
         sql = """-- backend: bigquery
 -- target=variables
@@ -25,7 +26,9 @@ select *
                                include_rules=None,
                                exclude_rules=None)
         result = sql_linter.lint("bigquery")
-        assert (len(result) == 10)
+        assert (len(result) == 8)
+        print("result")
+        print(result)
         print(sql_linter.fix("bigquery"))
 
     def test_should_work_when_have_template(self):

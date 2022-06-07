@@ -125,10 +125,12 @@ class SqlLinter:
             else:
                 sql = step.select_sql
                 lexer = Lexer(dialect=self._get_dialect_from_backend(backend))
-                easy_sql_regex = RegexLexer('easy_dollar_quote', r'\${.*}', CodeSegment)
-                at_sql_regex = RegexLexer('easy_at_quote', r'@{.*}', CodeSegment)
+                easy_sql_regex = RegexLexer('easy_dollar_quote', r'\${.*}\s', CodeSegment)
+                at_sql_regex = RegexLexer('easy_at_quote', r'@{.*}\s', CodeSegment)
+                # three_quote_regrex = RegexLexer('three_quote_regrex', r'""".*"""\s/', CodeSegment)
                 lexer.lexer_matchers.insert(0, easy_sql_regex)
                 lexer.lexer_matchers.insert(0, at_sql_regex)
+                # lexer.lexer_matchers.insert(0, three_quote_regrex)
                 parser = Parser(dialect=self._get_dialect_from_backend(backend))
                 tokens, _ = lexer.lex(sql)
                 if self._check_lexable(tokens):
