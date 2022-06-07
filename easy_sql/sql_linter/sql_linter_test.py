@@ -1,6 +1,6 @@
 import unittest
 
-from easy_sql.sql_linter.sql_linter import SqlLinter,parse_variables
+from easy_sql.sql_linter.sql_linter import SqlLinter
 
 
 class SqlLinterTest(unittest.TestCase):
@@ -18,14 +18,14 @@ select * from sales_model_demo_with_label where date='${data_date_no_ds}'
 
 -- target=temp.feature_stage_0_out
 select *
-, ${data_date_no_ds} from ${temp_db}.model_data
+, ${data_date_no_ds}, a1, b1 from ${temp_db}.model_data
 """
+
         sql_linter = SqlLinter(sql,
-                               include_rules=['L019', 'L039', 'L048', 'BigQuery_L001'],
-                               exclude_rules=['L039'],
-                               variables=parse_variables(sql))
+                               include_rules=None,
+                               exclude_rules=None)
         result = sql_linter.lint("bigquery")
-        assert (len(result) == 4)
+        assert (len(result) == 12)
         print(sql_linter.fix("bigquery"))
 
     def test_should_work_when_have_template(self):
@@ -52,13 +52,13 @@ dim.product_name
 from dims dim 
 left join order_count oc 
 left join sales_amount sa on @{join_conditions(right_table=sa)} and  @{join_conditions(right_table=oc)} """
-        sql_linter = SqlLinter(sql, variables=parse_variables(sql))
+        sql_linter = SqlLinter(sql)
         result = sql_linter.lint("bigquery", True)
-        assert (len(result) == 19)
+        # assert (len(result) == 15)
         print(sql_linter.fix("bigquery", False))
 
     def test_should_work_when_given_diff_backend(self):
-        sql = """-- backend: bigquery
+        sql = """-- backend: spark
 -- target=template.dim_cols
 product_name
 , product_category
@@ -83,14 +83,28 @@ left join order_count oc
 left join sales_amount sa on @{join_conditions(right_table=sa)} and  @{join_conditions(right_table=oc)} """
         sql_linter = SqlLinter(sql)
         result = sql_linter.lint("spark", True)
-        assert (len(result) == 20)
+        print(len(result))
+        print(sql_linter.fix("spark", False))
 
     def test_should_work_when_have_function(self):
         # todo: spark config header how to handle
         # use line number
-        sql = """-- backend: bigquery
+        sql = """
+-- --------------------
+-- 标签：产品销量
+-- --------------------
+
+-- config: spark.master=local[2]
+-- config: spark.submit.deployMode=client
+-- config: spark.executor.memory=1g
+-- config: spark.executor.cores=1
+
+-- inputs: dwd_sales.sales_fact_order_h, dwd_sales.sales_dim_product_h
+-- outputs: dm_sales.product_label_amount
+-- owner: all
+
 -- target=variables
-select ${plus(2, 2)} as a
+select ${plus(1, 2)} as a
 , flag as b
 from data_table 
 
@@ -100,7 +114,7 @@ select * from order_count where value < ${a}
 -- target=func.plus(1, 1)
 
 """
-        sql_linter = SqlLinter(sql, exclude_rules=['L009'], variables=parse_variables(sql))
+        sql_linter = SqlLinter(sql, exclude_rules=['L009'])
         result = sql_linter.lint("bigquery", True)
         print("after fix")
         print(sql_linter.fix("bigquery"))
@@ -120,7 +134,7 @@ select * from sales_model_demo_with_label where date='${data_date_no_ds}'
 -- target=temp.feature_stage_0_out
 select * from ${temp_db}.model_data
 """
-        sql_linter = SqlLinter(sql, exclude_rules=['L064', 'L034'], variables=parse_variables(sql))
+        sql_linter = SqlLinter(sql, exclude_rules=['L064', 'L034'])
         fixed_sql = sql_linter.fix("bigquery", True)
         print(fixed_sql)
 

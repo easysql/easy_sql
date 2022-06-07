@@ -12,37 +12,21 @@ from easy_sql.sql_processor.step import StepFactory, Step
 from typing import Sequence
 from sqlfluff.core.parser.segments import BaseSegment
 from easy_sql.sql_processor.context import ProcessorContext, VarsContext, TemplatesContext
-from typing import Dict, Any
+from sqlfluff.core.parser import RegexLexer,CodeSegment
+
 
 class VarNameDict(list):
     def __getitem__(self, item):
         return f'__{item}__'
+
 
 def log_result(lint_result):
     for stage_result in lint_result:
         logger.info(stage_result.__repr__())
 
 
-def parse_variables(sql: str):
-    variables = {}
-    var_rex = re.compile(r'\${([^}]+)}')
-    match = None
-    while True:
-        start = match.end() if match is not None else 0
-        match = var_rex.search(sql, start)
-        if match is None:
-            break
-        var_name = var_rex.match(match.group()).groups()[0]
-        variables[var_name] = "_" + var_name
-
-    print(variables)
-
-    return variables
-
-
 class SqlLinter:
-    def __init__(self, sql: str, include_rules: [str] = None, exclude_rules: [str] = None
-                 , variables: Dict[str, Any] = None):
+    def __init__(self, sql: str, include_rules: [str] = None, exclude_rules: [str] = None):
         self.origin_sql = sql
         self.fixed_sql_list = []
         self.supported_backend = ['spark', 'postgres', 'clickhouse', 'bigquery']
@@ -50,13 +34,12 @@ class SqlLinter:
         self.step_list = self._get_step_list()
         self.include_rules = include_rules
         self.exclude_rules = exclude_rules
-        self.context = self._get_context(variables)
-        self.variables = variables
+        self.context = self._get_context()
 
     @staticmethod
-    def _get_context(variables: Dict[str, Any] = None):
+    def _get_context():
         log_var_tmpl_replace = False
-        vars_context = VarsContext(debug_log=log_var_tmpl_replace, vars=variables)
+        vars_context = VarsContext(debug_log=log_var_tmpl_replace)
         func_runner = FuncRunner.create(Backend())
         vars_context.init(func_runner)
         return ProcessorContext(vars_context, TemplatesContext(debug_log=log_var_tmpl_replace, templates=None),
@@ -124,18 +107,17 @@ class SqlLinter:
     @staticmethod
     def _check_lexable(tokens: Sequence[BaseSegment]):
         for i, token in enumerate(tokens):
-            # tokens[i]=??
             # TODO:create new
             if token.is_type("unlexable"):
                 logger.warn("Query have unlexable segment，currently function are not support: "
                             + str(token.raw_segments))
                 return False
+            print(token)
         return True
 
     def _lint_step_sql(self, step: Step, linter: Linter, backend: str, log_error: bool):
         self.fixed_sql_list.append(step.target_config.step_config_str)
         if step.select_sql:
-            step.preprocess_select_sql(self.context)
             print("before: " + step.select_sql)
             if step.check_if_template_statement():
                 self.fixed_sql_list.append(step.select_sql)
@@ -143,6 +125,10 @@ class SqlLinter:
             else:
                 sql = step.select_sql
                 lexer = Lexer(dialect=self._get_dialect_from_backend(backend))
+                easy_sql_regex = RegexLexer('easy_dollar_quote', r'\${.*}', CodeSegment)
+                at_sql_regex = RegexLexer('easy_at_quote', r'@{.*}', CodeSegment)
+                lexer.lexer_matchers.insert(0, easy_sql_regex)
+                lexer.lexer_matchers.insert(0, at_sql_regex)
                 parser = Parser(dialect=self._get_dialect_from_backend(backend))
                 tokens, _ = lexer.lex(sql)
                 if self._check_lexable(tokens):
@@ -172,6 +158,7 @@ class SqlLinter:
         lint_result = []
         linter = self._prepare_linter(backend)
         step_count = 0
+        self.fixed_sql_list = self._parser_sql_header()
         for step in self.step_list:
             step_count = step_count + 1
             logger.info('currently check: ' + str(step_count))
@@ -181,6 +168,10 @@ class SqlLinter:
                 lint_result = lint_result + step_result
         return lint_result
 
+    def _parser_sql_header(self):
+        line_no = self.step_list[0].target_config.line_no
+        return self.origin_sql.split("\n")[:line_no - 1]
+
     def fix(self, backend: str, log_linter_error: bool = True):
         self.lint(backend, log_linter_error)
         delimiter = "\n"
@@ -188,7 +179,7 @@ class SqlLinter:
         reunion_sql = delimiter + delimiter.join(self.fixed_sql_list)
         var_dict = self.context.vars_context.vars
         print(var_dict)
-        for variable_key in var_dict:
-            replace_string = var_dict[variable_key]
-            reunion_sql = reunion_sql.replace(replace_string, "${"+variable_key+"}")
+        # for variable_key in var_dict:
+        #     replace_string = var_dict[variable_key]
+        #     reunion_sql = reunion_sql.replace(replace_string, "${"+variable_key+"}")
         return reunion_sql
