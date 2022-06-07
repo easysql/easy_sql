@@ -25,7 +25,7 @@ select *
                                include_rules=None,
                                exclude_rules=None)
         result = sql_linter.lint("bigquery")
-        assert (len(result) == 12)
+        assert (len(result) == 10)
         print(sql_linter.fix("bigquery"))
 
     def test_should_work_when_have_template(self):

@@ -145,6 +145,7 @@ class SqlLinter:
 
     def _prepare_linter(self, backend):
         default_config_dict = FluffConfig(require_dialect=False)._configs
+        default_config_dict['rules']['L019'] = {'comma_style': 'leading'}
         self._update_dialect_for_config(default_config_dict, backend)
         self._update_included_rule_for_config(default_config_dict,
                                               context=self._get_dialect_from_backend(backend),
