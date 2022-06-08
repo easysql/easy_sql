@@ -84,8 +84,8 @@ class SqlLinter:
             return "postgres"
         raise Exception("backend type so far is not supported for lint check")
 
-    def _update_dialect_for_config(self, config, backend: str):
-        config['core']['dialect'] = self._get_dialect_from_backend(backend)
+    def _update_dialect_for_config(self, config, dialect: str):
+        config['core']['dialect'] = dialect
 
     @staticmethod
     def _update_included_rule_for_config(config, context: str = "all", rules=None):
@@ -148,12 +148,12 @@ class SqlLinter:
                 else:
                     self.fixed_sql_list.append(step.select_sql)
 
-    def _prepare_linter(self, backend):
+    def prepare_linter(self, dialect):
         default_config_dict = FluffConfig(require_dialect=False)._configs
         default_config_dict['rules']['L019'] = {'comma_style': 'leading'}
-        self._update_dialect_for_config(default_config_dict, backend)
+        self._update_dialect_for_config(default_config_dict, dialect)
         self._update_included_rule_for_config(default_config_dict,
-                                              context=self._get_dialect_from_backend(backend),
+                                              context=dialect,
                                               rules=self.include_rules)
         self._update_excluded_rule_for_config(default_config_dict, rules=self.exclude_rules)
         update_config = FluffConfig(configs=default_config_dict)
@@ -162,7 +162,8 @@ class SqlLinter:
 
     def lint(self, backend: str, log_error: bool = True):
         lint_result = []
-        linter = self._prepare_linter(backend)
+        dialect = self._get_dialect_from_backend(backend)
+        linter = self.prepare_linter(dialect)
         step_count = 0
         self.fixed_sql_list = self._parser_sql_header()
         for step in self.step_list:

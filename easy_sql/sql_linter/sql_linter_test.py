@@ -9,7 +9,7 @@ class SqlLinterTest(unittest.TestCase):
         sql = '''-- backend: bigquery
 -- target=temp.feature_stage_0_out
 select  a,
-${date},${date2},
+${date},${date2},"""a""" abs
 ${${aa}}, ""a ,merge_cols_to_map('${all_cols_without_one_expr(check_result,table_name,fields,rule,scenario,description)}',
                       array(${all_cols_without_one_expr(check_result,table_name,fields,rule,scenario,description)}))
                                         result_detail
