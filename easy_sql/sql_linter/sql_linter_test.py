@@ -5,6 +5,25 @@ from easy_sql.sql_linter.sql_linter import SqlLinter
 
 class SqlLinterTest(unittest.TestCase):
 
+    def test_should_work_for_three_quote(self):
+        sql = '''-- backend: bigquery
+-- target=temp.feature_stage_0_out
+select  a,
+${date},${date2},
+${${aa}}, ""a ,merge_cols_to_map('${all_cols_without_one_expr(check_result,table_name,fields,rule,scenario,description)}',
+                      array(${all_cols_without_one_expr(check_result,table_name,fields,rule,scenario,description)}))
+                                        result_detail
+                                         from ${temp_db}.model_data
+'''
+
+        sql_linter = SqlLinter(sql,
+                               include_rules=None,
+                               exclude_rules=None)
+        result = sql_linter.lint("bigquery")
+        print("result")
+        print(result)
+        print(sql_linter.fix("bigquery"))
+
 
     def test_should_work_for_all_define_rule(self):
         sql = """-- backend: bigquery
@@ -26,7 +45,7 @@ select *
                                include_rules=None,
                                exclude_rules=None)
         result = sql_linter.lint("bigquery")
-        assert (len(result) == 8)
+        assert (len(result) == 13)
         print("result")
         print(result)
         print(sql_linter.fix("bigquery"))

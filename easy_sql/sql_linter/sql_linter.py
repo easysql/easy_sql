@@ -14,7 +14,6 @@ from sqlfluff.core.parser.segments import BaseSegment
 from easy_sql.sql_processor.context import ProcessorContext, VarsContext, TemplatesContext
 from sqlfluff.core.parser import RegexLexer,CodeSegment
 
-
 class VarNameDict(list):
     def __getitem__(self, item):
         return f'__{item}__'
@@ -112,7 +111,6 @@ class SqlLinter:
                 logger.warn("Query have unlexable segment，currently function are not support: "
                             + str(token.raw_segments))
                 return False
-            print(token)
         return True
 
     def _lint_step_sql(self, step: Step, linter: Linter, backend: str, log_error: bool):
@@ -125,13 +123,18 @@ class SqlLinter:
             else:
                 sql = step.select_sql
                 lexer = Lexer(dialect=self._get_dialect_from_backend(backend))
-                easy_sql_regex = RegexLexer('easy_dollar_quote', r'\${.*}\s', CodeSegment)
-                at_sql_regex = RegexLexer('easy_at_quote', r'@{.*}\s', CodeSegment)
-                # three_quote_regrex = RegexLexer('three_quote_regrex', r'""".*"""\s/', CodeSegment)
+                easy_sql_function = RegexLexer('easy_dollar_quote', r'\${[^\s,]+\(.+\)}', CodeSegment)
+                easy_sql_regex = RegexLexer('easy_dollar_quote', r'\${[^\s,]+}', CodeSegment)
+                at_sql_regex = RegexLexer('easy_at_quote', r'@{[^\s,]+}', CodeSegment)
+                three_quote_regrex = RegexLexer('three_quote_regrex', r'""".*"""/', CodeSegment)
                 lexer.lexer_matchers.insert(0, easy_sql_regex)
+                lexer.lexer_matchers.insert(0,easy_sql_function)
                 lexer.lexer_matchers.insert(0, at_sql_regex)
-                # lexer.lexer_matchers.insert(0, three_quote_regrex)
+                lexer.lexer_matchers.insert(0, three_quote_regrex)
                 parser = Parser(dialect=self._get_dialect_from_backend(backend))
+                identifier_segement = parser.config.get("dialect_obj")._library["NakedIdentifierSegment"]
+                identifier_segement.template = r"[\"@$A-Z_][\"${}A-Z0-9_]*"
+
                 tokens, _ = lexer.lex(sql)
                 if self._check_lexable(tokens):
                     parsed = parser.parse(tokens)
