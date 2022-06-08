@@ -124,12 +124,12 @@ class SqlLinter:
                 sql = step.select_sql
                 lexer = Lexer(dialect=self._get_dialect_from_backend(backend))
                 easy_sql_function = RegexLexer('easy_dollar_quote', r'\${[^\s,]+\(.+\)}', CodeSegment)
-                easy_sql_regex = RegexLexer('easy_dollar_quote', r'\${[^\s,]+}', CodeSegment)
-                at_sql_regex = RegexLexer('easy_at_quote', r'@{[^\s,]+}', CodeSegment)
-                three_quote_regrex = RegexLexer('three_quote_regrex', r'""".*"""/', CodeSegment)
-                lexer.lexer_matchers.insert(0, easy_sql_regex)
-                lexer.lexer_matchers.insert(0,easy_sql_function)
-                lexer.lexer_matchers.insert(0, at_sql_regex)
+                easy_sql_variable = RegexLexer('easy_dollar_quote', r'\${[^\s,]+}', CodeSegment)
+                easy_sql_template = RegexLexer('easy_at_quote', r'@{[^\s,]+}', CodeSegment)
+                three_quote_regrex = RegexLexer('three_quote_regrex', r'""".*"""', CodeSegment)
+                lexer.lexer_matchers.insert(0, easy_sql_variable)
+                lexer.lexer_matchers.insert(0, easy_sql_function)
+                lexer.lexer_matchers.insert(0, easy_sql_template)
                 lexer.lexer_matchers.insert(0, three_quote_regrex)
                 parser = Parser(dialect=self._get_dialect_from_backend(backend))
                 identifier_segement = parser.config.get("dialect_obj")._library["NakedIdentifierSegment"]
