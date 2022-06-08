@@ -208,6 +208,8 @@ class SparkBackend(Backend):
         df = self.exec_native_sql(f'desc {table.table_name}')
         column_list = df.select(df.col_name, df.data_type).rdd.map(lambda x: (x[0], x[1])).collect()
         partition_details = [column_list[index + 1:] for index, item in enumerate(column_list) if item[0] == '# col_name']
+        if len(partition_details) == 0:
+            return
         partitions = list(map(lambda x: Partition(x[0]), partition_details[0]))
         table.update_partitions([Partition(p.field, p.value) for p in partitions])
 
