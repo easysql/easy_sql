@@ -101,6 +101,19 @@ class SqlLinter:
             config['core']['exclude_rules'] = None
 
     @staticmethod
+    def _check_parsable(root_segment:BaseSegment):
+        segment_list=[root_segment]
+        while len(segment_list)>0:
+            check_segment=segment_list[0]
+            segment_list.remove(check_segment)
+            if check_segment.is_type("unparsable"):
+                logger.warn("Query have unparsable segment: "+check_segment.raw)
+                return False
+            elif check_segment.segments:
+                segment_list = segment_list+list(check_segment.segments)
+        return True
+
+    @staticmethod
     def _check_lexable(tokens: Sequence[BaseSegment]):
         for i, token in enumerate(tokens):
             if token.is_type("unlexable"):
@@ -132,8 +145,8 @@ class SqlLinter:
                 identifier_segement.template = r"[\"@$A-Z_][\"${}A-Z0-9_]*"
 
                 tokens, _ = lexer.lex(sql)
-                if self._check_lexable(tokens):
-                    parsed = parser.parse(tokens)
+                parsed = parser.parse(tokens)
+                if self._check_lexable(tokens) and self._check_parsable(parsed):
                     result = linter.lint(parsed)
                     if log_error:
                         log_result(result)
