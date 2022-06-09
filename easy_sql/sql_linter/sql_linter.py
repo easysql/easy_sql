@@ -12,11 +12,7 @@ from easy_sql.sql_processor.step import StepFactory, Step
 from typing import Sequence
 from sqlfluff.core.parser.segments import BaseSegment
 from easy_sql.sql_processor.context import ProcessorContext, VarsContext, TemplatesContext
-from sqlfluff.core.parser import RegexLexer,CodeSegment
-
-class VarNameDict(list):
-    def __getitem__(self, item):
-        return f'__{item}__'
+from sqlfluff.core.parser import RegexLexer, CodeSegment
 
 
 def log_result(lint_result):
@@ -84,7 +80,8 @@ class SqlLinter:
             return "postgres"
         raise Exception("backend type so far is not supported for lint check")
 
-    def _update_dialect_for_config(self, config, dialect: str):
+    @staticmethod
+    def _update_dialect_for_config(config, dialect: str):
         config['core']['dialect'] = dialect
 
     @staticmethod
@@ -106,7 +103,6 @@ class SqlLinter:
     @staticmethod
     def _check_lexable(tokens: Sequence[BaseSegment]):
         for i, token in enumerate(tokens):
-            # TODO:create new
             if token.is_type("unlexable"):
                 logger.warn("Query have unlexable segment，currently function are not support: "
                             + str(token.raw_segments))
@@ -123,9 +119,9 @@ class SqlLinter:
             else:
                 sql = step.select_sql
                 lexer = Lexer(dialect=self._get_dialect_from_backend(backend))
-                easy_sql_function = RegexLexer('easy_dollar_quote', r'\${[^\s,]+\(.+\)}', CodeSegment)
-                easy_sql_variable = RegexLexer('easy_dollar_quote', r'\${[^\s,]+}', CodeSegment)
-                easy_sql_template = RegexLexer('easy_at_quote', r'@{[^\s,]+}', CodeSegment)
+                easy_sql_function = RegexLexer('easy_sql_function', r'\${[^\s,]+\(.+\)}', CodeSegment)
+                easy_sql_variable = RegexLexer('easy_sql_variable', r'\${[^\s,]+}', CodeSegment)
+                easy_sql_template = RegexLexer('easy_sql_template', r'@{[^\s,]+}', CodeSegment)
                 three_quote_regrex = RegexLexer('three_quote_regrex', r'""".*"""', CodeSegment)
                 lexer.lexer_matchers.insert(0, easy_sql_variable)
                 lexer.lexer_matchers.insert(0, easy_sql_function)
@@ -182,11 +178,5 @@ class SqlLinter:
     def fix(self, backend: str, log_linter_error: bool = True):
         self.lint(backend, log_linter_error)
         delimiter = "\n"
-        # TODO: need all revert to previous logic
         reunion_sql = delimiter + delimiter.join(self.fixed_sql_list)
-        var_dict = self.context.vars_context.vars
-        print(var_dict)
-        # for variable_key in var_dict:
-        #     replace_string = var_dict[variable_key]
-        #     reunion_sql = reunion_sql.replace(replace_string, "${"+variable_key+"}")
         return reunion_sql
