@@ -12,7 +12,7 @@ from easy_sql.sql_processor.step import StepFactory, Step
 from typing import Sequence
 from sqlfluff.core.parser.segments import BaseSegment
 from easy_sql.sql_processor.context import ProcessorContext, VarsContext, TemplatesContext
-from sqlfluff.core.parser import RegexLexer, CodeSegment
+from sqlfluff.core.parser import RegexLexer,CodeSegment
 
 class VarNameDict(list):
     def __getitem__(self, item):
@@ -123,14 +123,14 @@ class SqlLinter:
             else:
                 sql = step.select_sql
                 lexer = Lexer(dialect=self._get_dialect_from_backend(backend))
-                easy_sql_variable = RegexLexer('easy_sql_variable', r'\${[^\s,]+}', CodeSegment)
-                easy_sql_function = RegexLexer('easy_sql_function', r'\${[^\s,]+\(.+\)}', CodeSegment)
-                easy_sql_temp = RegexLexer('easy_sql_temp', r'@{[^\s,]+}', CodeSegment)
-                easy_sql_three_quote = RegexLexer('three_quote_regrex', r'""".*"""', CodeSegment)
+                easy_sql_function = RegexLexer('easy_dollar_quote', r'\${[^\s,]+\(.+\)}', CodeSegment)
+                easy_sql_variable = RegexLexer('easy_dollar_quote', r'\${[^\s,]+}', CodeSegment)
+                easy_sql_template = RegexLexer('easy_at_quote', r'@{[^\s,]+}', CodeSegment)
+                three_quote_regrex = RegexLexer('three_quote_regrex', r'""".*"""', CodeSegment)
                 lexer.lexer_matchers.insert(0, easy_sql_variable)
                 lexer.lexer_matchers.insert(0, easy_sql_function)
-                lexer.lexer_matchers.insert(0, easy_sql_temp)
-                lexer.lexer_matchers.insert(0, easy_sql_three_quote)
+                lexer.lexer_matchers.insert(0, easy_sql_template)
+                lexer.lexer_matchers.insert(0, three_quote_regrex)
                 parser = Parser(dialect=self._get_dialect_from_backend(backend))
                 identifier_segement = parser.config.get("dialect_obj")._library["NakedIdentifierSegment"]
                 identifier_segement.template = r"[\"@$A-Z_][\"${}A-Z0-9_]*"
@@ -186,4 +186,7 @@ class SqlLinter:
         reunion_sql = delimiter + delimiter.join(self.fixed_sql_list)
         var_dict = self.context.vars_context.vars
         print(var_dict)
+        # for variable_key in var_dict:
+        #     replace_string = var_dict[variable_key]
+        #     reunion_sql = reunion_sql.replace(replace_string, "${"+variable_key+"}")
         return reunion_sql
