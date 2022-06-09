@@ -101,16 +101,16 @@ class SqlLinter:
             config['core']['exclude_rules'] = None
 
     @staticmethod
-    def _check_parsable(root_segment:BaseSegment):
-        segment_list=[root_segment]
-        while len(segment_list)>0:
-            check_segment=segment_list[0]
+    def _check_parsable(root_segment: BaseSegment):
+        segment_list = [root_segment]
+        while len(segment_list) > 0:
+            check_segment = segment_list[0]
             segment_list.remove(check_segment)
-            if check_segment.is_type("unparsable"):
-                logger.warn("Query have unparsable segment: "+check_segment.raw)
+            if check_segment.is_type("unparsable") :
+                logger.warn("Query have unparsable segment: " + check_segment.raw)
                 return False
             elif check_segment.segments:
-                segment_list = segment_list+list(check_segment.segments)
+                segment_list = segment_list + list(check_segment.segments)
         return True
 
     @staticmethod
@@ -142,8 +142,7 @@ class SqlLinter:
                 lexer.lexer_matchers.insert(0, three_quote_regrex)
                 parser = Parser(dialect=self._get_dialect_from_backend(backend))
                 identifier_segement = parser.config.get("dialect_obj")._library["NakedIdentifierSegment"]
-                identifier_segement.template = r"[\"@$A-Z_][\"${}A-Z0-9_]*"
-
+                identifier_segement.template = identifier_segement.template+r"|@{[^\s,]+}|[\$]{[\s\S]+}|\"[\s\S]+\""
                 tokens, _ = lexer.lex(sql)
                 parsed = parser.parse(tokens)
                 if self._check_lexable(tokens) and self._check_parsable(parsed):
