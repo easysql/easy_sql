@@ -106,8 +106,8 @@ class SqlLinter:
         while len(segment_list) > 0:
             check_segment = segment_list[0]
             segment_list.remove(check_segment)
-            if check_segment.is_type("unparsable") :
-                logger.warn("Query have unparsable segment: " + check_segment.raw)
+            if check_segment.is_type("unparsable"):
+                logger.warning("Query have unparsable segment: " + check_segment.raw)
                 return False
             elif check_segment.segments:
                 segment_list = segment_list + list(check_segment.segments)
@@ -117,7 +117,7 @@ class SqlLinter:
     def _check_lexable(tokens: Sequence[BaseSegment]):
         for i, token in enumerate(tokens):
             if token.is_type("unlexable"):
-                logger.warn("Query have unlexable segment，currently function are not support: "
+                logger.warning("Query have unlexable segment，currently function are not support: "
                             + str(token.raw_segments))
                 return False
         return True
