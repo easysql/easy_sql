@@ -75,7 +75,7 @@ class SqlLinter:
         if backend == "postgres":
             return "postgres"
         raise Exception("backend type so far is not supported for lint check")
-
+    # TODO: inline
     @staticmethod
     def _update_dialect_for_config(config, dialect: str):
         config['core']['dialect'] = dialect
@@ -114,8 +114,7 @@ class SqlLinter:
     def _check_lexable(self, tokens: Sequence[BaseSegment]):
         for i, token in enumerate(tokens):
             if token.is_type("unlexable"):
-                log_out_warning("Query have unlexable segment: "
-                                                   + str(token.raw_segments))
+                log_out_warning("Query have unlexable segment: " + str(token.raw_segments))
                 return False
         return True
 
@@ -125,18 +124,19 @@ class SqlLinter:
             if step.check_if_template_statement():
                 self.fixed_sql_list.append(step.select_sql)
                 step.add_template_to_context(self.context)
-                log_out_message("template sql skip")
+                log_out_message("Skip template sql for this step.")
             else:
                 sql = step.select_sql + "\n"
                 lexer = Lexer(dialect=self._get_dialect_from_backend(backend))
+                # TODO: comment
                 easy_sql_function = RegexLexer('easy_sql_function', r'\${[^\s,]+\(.+\)}', CodeSegment)
                 easy_sql_variable = RegexLexer('easy_sql_variable', r'\${[^\s,]+}', CodeSegment)
                 easy_sql_template = RegexLexer('easy_sql_template', r'@{[^\s,]+}', CodeSegment)
-                three_quote_regrex = RegexLexer('three_quote_regrex', r'""".*"""', CodeSegment)
+                three_quote_string = RegexLexer('three_quote_string', r'""".*"""', CodeSegment)
                 lexer.lexer_matchers.insert(0, easy_sql_variable)
                 lexer.lexer_matchers.insert(0, easy_sql_function)
                 lexer.lexer_matchers.insert(0, easy_sql_template)
-                lexer.lexer_matchers.insert(0, three_quote_regrex)
+                lexer.lexer_matchers.insert(0, three_quote_string)
                 parser = Parser(dialect=self._get_dialect_from_backend(backend))
                 identifier_segement = parser.config.get("dialect_obj")._library["NakedIdentifierSegment"]
                 identifier_segement.template = identifier_segement.template + r"|@{[^\s,]+}|[\$]{[\s\S]+}|\"[\s\S]+\""
@@ -145,13 +145,14 @@ class SqlLinter:
                 if self._check_lexable(tokens) and self._check_parsable(parsed):
                     result = linter.lint(parsed)
                     if log_error:
-                        log_out_list_of_violations(result)
+                        log_out_list_of_violations(result, step.target_config.line_no)
                     fixed_tree, violation = linter.fix(parsed)
                     self.fixed_sql_list.append(fixed_tree.raw)
                     return result
                 else:
                     self.fixed_sql_list.append(step.select_sql)
 
+    # TODO: double support for easy and normal >> args is_easy_sql
     def prepare_linter(self, dialect):
         default_config_dict = FluffConfig(require_dialect=False)._configs
         default_config_dict['rules']['L019'] = {'comma_style': 'leading'}
@@ -164,6 +165,8 @@ class SqlLinter:
         linter = Linter(config=update_config, user_rules=__all__)
         return linter
 
+
+
     def lint(self, backend: str, log_error: bool = True):
         lint_result = []
         dialect = self._get_dialect_from_backend(backend)
@@ -173,7 +176,7 @@ class SqlLinter:
         for step_no, step in enumerate(self.step_list):
             step_count = step_count + 1
             if log_error:
-                log_out_message("=== check step {} at line {} ===".format(step_no,step.target_config.line_no))
+                log_out_message("=== Check step {} at line {} ===".format(step_no + 1, step.target_config.line_no))
             step_result = self._lint_step_sql(step, linter, backend, log_error)
             self.fixed_sql_list.append("")
             if step_result:

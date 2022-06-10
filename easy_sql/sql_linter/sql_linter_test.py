@@ -66,15 +66,12 @@ dim.product_name <=> #{right_table}.product_name
 and dim.product_category <=> #{right_table}.product_category
 
 -- target=temp.joined_data
-select
-dim.product_name
-, dim.product_category
-, oc.order_count
-, sa.sales_amount 
-from dims dim 
-left join order_count oc 
-left join sales_amount sa on @{join_conditions(right_table=sa)} and  @{join_conditions(right_table=oc)} """
+@{transited_with_fk_inc_template(
+    source_table_name=transited, source_table_biz_key=product_id, result_col_name=product_id_key,
+    fk_table_name=dwd_sales.sales_dim_product_h, pk=product_key, fk_table_biz_key=id,
+    update_time_col_name=update_time, partition_col_name=di)} """
         sql_linter = SqlLinter(sql)
+        # TODO: test
         result = sql_linter.lint("bigquery", True)
         # assert (len(result) == 15)
         print(sql_linter.fix("bigquery", False))

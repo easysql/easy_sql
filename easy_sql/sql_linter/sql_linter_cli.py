@@ -4,6 +4,7 @@ import warnings
 from sqlfluff.core import Lexer, Parser
 import click
 from easy_sql.sql_linter.sql_linter_reportor import *
+
 default_dialect = "sparksql"
 
 
@@ -28,6 +29,7 @@ def parse_backend(sql: str):
     return parsed_backend
 
 
+# TODO: move to easy_sql linter
 def lint_for_normal_sql(easy_sql_linter: SqlLinter, sql: str):
     lexer = Lexer(dialect=default_dialect)
     parser = Parser(dialect=default_dialect)
@@ -40,6 +42,7 @@ def lint_for_normal_sql(easy_sql_linter: SqlLinter, sql: str):
     return lint_result, fixed_tree.raw
 
 
+# TODO :type of args
 def lint_process(check_sql_file_path, include, exclude):
     if not check_sql_file_path.endswith(".sql"):
         warnings.warn("file name:" + check_sql_file_path + " must end with .sql")
@@ -48,6 +51,9 @@ def lint_process(check_sql_file_path, include, exclude):
         sql = file.read()
     sql_linter = SqlLinter(sql, exclude_rules=split_rules_to_list(exclude),
                            include_rules=split_rules_to_list(include))
+    # TODO: do not have this limitation any  >> args
+    # TODO: check logic shou;ld include .table.sql/ _table.sql
+
     if not check_sql_file_path.endswith("table.sql"):
         backend = parse_backend(sql)
         result = sql_linter.lint(backend)
@@ -60,16 +66,11 @@ def lint_process(check_sql_file_path, include, exclude):
 
 
 def write_out_fixed(check_sql_file_path: str, fixed: str):
-    with open(check_sql_file_path, 'r') as file:
-        sql = file.read()
-    origin_with_fixed = sql + """
-        
-        --------------------------
-        ------After Fixed---------
-        --------------------------
-""" + fixed
+    # TODO: remove origin
+    # TODO: --inplace args directly overwrite previous
+    origin_with_fixed = fixed
 
-    write_out_file_path = check_sql_file_path.replace(".sql", ".sqlfixed")
+    write_out_file_path = check_sql_file_path.replace(".sql", ".fixed.sql")
     with open(write_out_file_path, 'w') as file:
         file.write(origin_with_fixed)
 
@@ -77,10 +78,13 @@ def write_out_fixed(check_sql_file_path: str, fixed: str):
 @click.group()
 def cli():
     """lint only check violations, fix auto fix the violation"""  # noqa D403
+    pass
 
+
+# TODO:help
 
 @cli.command(help='''fix and write out the info''')
-@click.option("--path", required=True, type=str)
+@click.option("--path", help="", required=True, type=str)
 @click.option("--exclude", default="", required=False, type=str)
 @click.option("--include", default="", required=False, type=str)
 def fix(path: str, exclude: str, include: str):
@@ -96,13 +100,8 @@ def lint(path: str, exclude: str, include: str):
     lint_process(path, include, exclude)
 
 
-#  python easy_sql/sql_linter/sql_linter_cmd.py fix --path
+#  python easy_sql/sql_linter/sql_linter_cli.py fix --path
 #
 
 if __name__ == "__main__":
-
-    import logging
-    logger = logging.getLogger('linter_logger')
-    handler = logging.StreamHandler(sys.stdout)
-    logger.addHandler(handler)
     cli.main(sys.argv[1:])
