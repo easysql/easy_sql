@@ -31,6 +31,8 @@ def _create_logger():
         sys.stdout.reconfigure(encoding='utf-8')
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(info_formater)
+    for existing_handler in logger.handlers:
+        logger.removeHandler(existing_handler)
     logger.addHandler(handler)
     return logger
 
