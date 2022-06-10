@@ -8,68 +8,64 @@ from sqlfluff.core import SQLBaseError
 LOG_LEVEL = logging.DEBUG
 
 
-class SqlLinterReporter:
-    def __init__(self):
-        self.logger = self.create_logger()
+def _get_extra_default_dict():
+    return {"pos_info": "",
+            "description": "", "warn": ""}
 
-    @staticmethod
-    def get_extra_default_dict():
-        return {"pos_info": "",
-                "description": "", "warn": ""}
 
-    @staticmethod
-    def create_logger():
-        logger = logging.getLogger('linter_logger')
-        logger.setLevel(LOG_LEVEL)
-        info_formater = colorlog.ColoredFormatter(
-            fmt=(
-                "%(white)s%(message)s"
-                "%(red)s%(warn)s "
-                "%(blue)s%(pos_info)s "
-                "%(white)s%(description)s "
-            )
+def _create_logger():
+    logger = logging.getLogger('linter_logger')
+    logger.setLevel(LOG_LEVEL)
+    info_formater = colorlog.ColoredFormatter(
+        fmt=(
+            "%(white)s%(message)s"
+            "%(red)s%(warn)s "
+            "%(blue)s%(pos_info)s "
+            "%(white)s%(description)s "
         )
-        python_version = sys.version_info
-        if python_version.major == 3 and python_version.minor == 6:
-            sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
-        elif hasattr(sys.stdout, 'reconfigure'):
-            sys.stdout.reconfigure(encoding='utf-8')
-        handler = logging.StreamHandler(sys.stdout)
-        handler.setFormatter(info_formater)
-        logger.addHandler(handler)
-        return logger
-
-    def log_out_violation(self, violation: SQLBaseError):
-        pos_info = "L: {} | P: {}: | {}  :".format(violation.line_pos,violation.line_pos,violation.rule_code())
-        extra_dict = self.get_extra_default_dict()
-        extra_dict["pos_info"] = pos_info
-        extra_dict["description"] = violation.desc()
-        self.logger.debug("", extra=extra_dict)
-
-    def log_out_list_of_violations(self, lint_result: List[SQLBaseError]):
-        if len(lint_result)>0:
-            self.log_out_warning("Fail")
-            for violation in lint_result:
-                self.log_out_violation(violation)
-        else:
-            self.log_out_warning("Pass")
-
-    def log_out_message(self, message):
-        self.logger.info(message, extra=self.get_extra_default_dict())
-
-    def log_out_message_with_conclude(self, message: str, conclude: str):
-        extra_dict = self.get_extra_default_dict()
-        extra_dict["warn"] = conclude
-        self.logger.info(message, extra=extra_dict)
-
-    def log_out_warning(self, conclude):
-        extra_dict = self.get_extra_default_dict()
-        extra_dict["warn"] = conclude
-        self.logger.warning("", extra=extra_dict)
+    )
+    python_version = sys.version_info
+    if python_version.major == 3 and python_version.minor == 6:
+        sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+    elif hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(info_formater)
+    logger.addHandler(handler)
+    return logger
 
 
-if __name__ == '__main__':
-    report_logger = SqlLinterReporter()
-    report_logger.log_out_message_with_conclude("=====file:test.sql start lint===== ", "pass")
-    report_logger.log_out_message("=====file:test.sql  end  lint===== ")
-    report_logger.log_out_warning("have unparsable element")
+def log_out_violation( violation: SQLBaseError):
+    pos_info = "L: {} | P: {}: | {}  :".format(violation.line_pos, violation.line_pos, violation.rule_code())
+    extra_dict = _get_extra_default_dict()
+    extra_dict["pos_info"] = pos_info
+    extra_dict["description"] = violation.desc()
+    sql_linter_log.debug("", extra=extra_dict)
+
+
+def log_out_list_of_violations( lint_result: List[SQLBaseError]):
+    if len(lint_result) > 0:
+        log_out_warning("Fail")
+        for violation in lint_result:
+            log_out_violation(violation)
+    else:
+        log_out_warning("Pass")
+
+
+def log_out_message( message):
+    sql_linter_log.info(message, extra=_get_extra_default_dict())
+
+
+def log_out_message_with_conclude( message: str, conclude: str):
+    extra_dict = _get_extra_default_dict()
+    extra_dict["warn"] = conclude
+    sql_linter_log.info(message, extra=extra_dict)
+
+
+def log_out_warning( conclude):
+    extra_dict = _get_extra_default_dict()
+    extra_dict["warn"] = conclude
+    sql_linter_log.warning("", extra=extra_dict)
+
+
+sql_linter_log = _create_logger()

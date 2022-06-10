@@ -5,7 +5,7 @@ from sqlfluff.core.config import FluffConfig
 
 from easy_sql.logger import logger
 from easy_sql.sql_linter.rules import __all__
-from easy_sql.sql_linter.sql_linter_reportor import SqlLinterReporter
+from easy_sql.sql_linter.sql_linter_reportor import *
 from easy_sql.sql_processor.backend import Backend
 from easy_sql.sql_processor.funcs import FuncRunner
 from easy_sql.sql_processor.report import SqlProcessorReporter
@@ -18,7 +18,6 @@ from sqlfluff.core.parser import RegexLexer, CodeSegment
 
 class SqlLinter:
     def __init__(self, sql: str, include_rules: [str] = None, exclude_rules: [str] = None):
-        self.report_logger = SqlLinterReporter()
         self.origin_sql = sql
         self.fixed_sql_list = []
         self.supported_backend = ['spark', 'postgres', 'clickhouse', 'bigquery']
@@ -103,7 +102,7 @@ class SqlLinter:
             check_segment = segment_list[0]
             segment_list.remove(check_segment)
             if check_segment.is_type("unparsable"):
-                self.report_logger.log_out_warning("Query have unparsable segment: " + check_segment.raw)
+                log_out_warning("Query have unparsable segment: " + check_segment.raw)
                 return False
             elif check_segment.segments:
                 segment_list = segment_list + list(check_segment.segments)
@@ -112,7 +111,7 @@ class SqlLinter:
     def _check_lexable(self, tokens: Sequence[BaseSegment]):
         for i, token in enumerate(tokens):
             if token.is_type("unlexable"):
-                self.report_logger.log_out_warning("Query have unlexable segment: "
+                log_out_warning("Query have unlexable segment: "
                                                    + str(token.raw_segments))
                 return False
         return True
@@ -123,7 +122,7 @@ class SqlLinter:
             if step.check_if_template_statement():
                 self.fixed_sql_list.append(step.select_sql)
                 step.add_template_to_context(self.context)
-                self.report_logger.log_out_message("template sql skip")
+                log_out_message("template sql skip")
             else:
                 sql = step.select_sql + "\n"
                 lexer = Lexer(dialect=self._get_dialect_from_backend(backend))
@@ -143,7 +142,7 @@ class SqlLinter:
                 if self._check_lexable(tokens) and self._check_parsable(parsed):
                     result = linter.lint(parsed)
                     if log_error:
-                        self.report_logger.log_out_list_of_violations(result)
+                        log_out_list_of_violations(result)
                     fixed_tree, violation = linter.fix(parsed)
                     self.fixed_sql_list.append(fixed_tree.raw)
                     return result
@@ -171,7 +170,7 @@ class SqlLinter:
         for step_no, step in enumerate(self.step_list):
             step_count = step_count + 1
             if log_error:
-                self.report_logger.log_out_message("=== check step {} at line {} ===".format(step_no,step.target_config.line_no))
+                log_out_message("=== check step {} at line {} ===".format(step_no,step.target_config.line_no))
             step_result = self._lint_step_sql(step, linter, backend, log_error)
             self.fixed_sql_list.append("")
             if step_result:
