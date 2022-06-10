@@ -20,7 +20,7 @@ def _create_logger():
         fmt=(
             "%(white)s%(message)s"
             "%(red)s%(warn)s "
-            "%(red)s%(pass)s "
+            "%(green)s%(pass)s "
             "%(blue)s%(pos_info)s "
             "%(white)s%(description)s "
         )

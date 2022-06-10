@@ -45,9 +45,9 @@ def lint_process(check_sql_file_path: str, include: str, exclude: str, easysql: 
 
 def write_out_fixed(check_sql_file_path: str, fixed: str, inplace: bool):
     if inplace:
-        write_out_file_path = check_sql_file_path.replace(".sql", ".fixed.sql")
-    else:
         write_out_file_path = check_sql_file_path
+    else:
+        write_out_file_path = check_sql_file_path.replace(".sql", ".fixed.sql")
     with open(write_out_file_path, 'w') as file:
         file.write(fixed)
 
