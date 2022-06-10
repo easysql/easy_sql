@@ -1,3 +1,4 @@
 numpy==1.21.6
 pyodps==0.10.7.1
 sqlfluff==0.13.2
+colorlog==4.0.2
