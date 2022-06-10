@@ -45,7 +45,7 @@ select *
                                include_rules=None,
                                exclude_rules=None)
         result = sql_linter.lint("bigquery")
-        assert (len(result) == 13)
+        assert (len(result) == 10)
         print("result")
         print(result)
         print(sql_linter.fix("bigquery"))

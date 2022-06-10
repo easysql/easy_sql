@@ -5,6 +5,7 @@ from sqlfluff.core.config import FluffConfig
 
 from easy_sql.logger import logger
 from easy_sql.sql_linter.rules import __all__
+from easy_sql.sql_linter.sql_linter_reportor import SqlLinterReporter
 from easy_sql.sql_processor.backend import Backend
 from easy_sql.sql_processor.funcs import FuncRunner
 from easy_sql.sql_processor.report import SqlProcessorReporter
@@ -15,13 +16,9 @@ from easy_sql.sql_processor.context import ProcessorContext, VarsContext, Templa
 from sqlfluff.core.parser import RegexLexer, CodeSegment
 
 
-def log_result(lint_result):
-    for stage_result in lint_result:
-        logger.info(stage_result.__repr__())
-
-
 class SqlLinter:
     def __init__(self, sql: str, include_rules: [str] = None, exclude_rules: [str] = None):
+        self.report_logger = SqlLinterReporter()
         self.origin_sql = sql
         self.fixed_sql_list = []
         self.supported_backend = ['spark', 'postgres', 'clickhouse', 'bigquery']
@@ -100,37 +97,35 @@ class SqlLinter:
         else:
             config['core']['exclude_rules'] = None
 
-    @staticmethod
-    def _check_parsable(root_segment: BaseSegment):
+    def _check_parsable(self, root_segment: BaseSegment):
         segment_list = [root_segment]
         while len(segment_list) > 0:
             check_segment = segment_list[0]
             segment_list.remove(check_segment)
             if check_segment.is_type("unparsable"):
-                logger.warning("Query have unparsable segment: " + check_segment.raw)
+                self.report_logger.log_out_warning("Query have unparsable segment: " + check_segment.raw)
                 return False
             elif check_segment.segments:
                 segment_list = segment_list + list(check_segment.segments)
         return True
 
-    @staticmethod
-    def _check_lexable(tokens: Sequence[BaseSegment]):
+    def _check_lexable(self, tokens: Sequence[BaseSegment]):
         for i, token in enumerate(tokens):
             if token.is_type("unlexable"):
-                logger.warning("Query have unlexable segment，currently function are not support: "
-                            + str(token.raw_segments))
+                self.report_logger.log_out_warning("Query have unlexable segment: "
+                                                   + str(token.raw_segments))
                 return False
         return True
 
     def _lint_step_sql(self, step: Step, linter: Linter, backend: str, log_error: bool):
         self.fixed_sql_list.append(step.target_config.step_config_str)
         if step.select_sql:
-            print("before: " + step.select_sql)
             if step.check_if_template_statement():
                 self.fixed_sql_list.append(step.select_sql)
                 step.add_template_to_context(self.context)
+                self.report_logger.log_out_message("template sql skip")
             else:
-                sql = step.select_sql
+                sql = step.select_sql + "\n"
                 lexer = Lexer(dialect=self._get_dialect_from_backend(backend))
                 easy_sql_function = RegexLexer('easy_sql_function', r'\${[^\s,]+\(.+\)}', CodeSegment)
                 easy_sql_variable = RegexLexer('easy_sql_variable', r'\${[^\s,]+}', CodeSegment)
@@ -142,16 +137,15 @@ class SqlLinter:
                 lexer.lexer_matchers.insert(0, three_quote_regrex)
                 parser = Parser(dialect=self._get_dialect_from_backend(backend))
                 identifier_segement = parser.config.get("dialect_obj")._library["NakedIdentifierSegment"]
-                identifier_segement.template = identifier_segement.template+r"|@{[^\s,]+}|[\$]{[\s\S]+}|\"[\s\S]+\""
+                identifier_segement.template = identifier_segement.template + r"|@{[^\s,]+}|[\$]{[\s\S]+}|\"[\s\S]+\""
                 tokens, _ = lexer.lex(sql)
                 parsed = parser.parse(tokens)
                 if self._check_lexable(tokens) and self._check_parsable(parsed):
                     result = linter.lint(parsed)
                     if log_error:
-                        log_result(result)
+                        self.report_logger.log_out_list_of_violations(result)
                     fixed_tree, violation = linter.fix(parsed)
                     self.fixed_sql_list.append(fixed_tree.raw)
-                    print("after: " + fixed_tree.raw)
                     return result
                 else:
                     self.fixed_sql_list.append(step.select_sql)
@@ -174,9 +168,9 @@ class SqlLinter:
         linter = self.prepare_linter(dialect)
         step_count = 0
         self.fixed_sql_list = self._parser_sql_header()
-        for step in self.step_list:
+        for step_no, step in enumerate(self.step_list):
             step_count = step_count + 1
-            logger.info('currently check: ' + str(step_count))
+            self.report_logger.log_out_message("=== check step {} at line {} ===".format(step_no,step.target_config.line_no))
             step_result = self._lint_step_sql(step, linter, backend, log_error)
             self.fixed_sql_list.append("")
             if step_result:
