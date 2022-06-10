@@ -15,7 +15,6 @@ from easy_sql.sql_processor.context import ProcessorContext, VarsContext, Templa
 from sqlfluff.core.parser import RegexLexer, CodeSegment
 
 
-
 class SqlLinter:
     def __init__(self, sql: str, include_rules: [str] = None, exclude_rules: [str] = None):
         self.origin_sql = sql
@@ -46,13 +45,13 @@ class SqlLinter:
 
         if backend is None:
             backend = "spark"
-            log_out_warning("Backend cannot be found in sql, will use default backend spark")
+            log_warning("Backend cannot be found in sql, will use default backend spark")
 
         if backend not in self.supported_backend:
             raise Exception(
                 f'Unsupported backend `${backend}`, all supported backends are: ' + ",".join(self.supported_backend))
 
-        log_out_message(f"Use backend: {backend}")
+        log_message(f"Use backend: {backend}")
         self.fixed_sql_list.append("-- backend: " + backend)
         return backend
 
@@ -75,10 +74,6 @@ class SqlLinter:
         if backend == "postgres":
             return "postgres"
         raise Exception("backend type so far is not supported for lint check")
-    # TODO: inline
-    @staticmethod
-    def _update_dialect_for_config(config, dialect: str):
-        config['core']['dialect'] = dialect
 
     @staticmethod
     def _update_included_rule_for_config(config, context: str = "all", rules=None):
@@ -99,22 +94,24 @@ class SqlLinter:
         else:
             config['core']['exclude_rules'] = None
 
-    def _check_parsable(self, root_segment: BaseSegment):
+    @staticmethod
+    def _check_parsable(root_segment: BaseSegment):
         segment_list = [root_segment]
         while len(segment_list) > 0:
             check_segment = segment_list[0]
             segment_list.remove(check_segment)
             if check_segment.is_type("unparsable"):
-                log_out_warning("Query have unparsable segment: " + check_segment.raw)
+                log_warning("Query have unparsable segment: " + check_segment.raw)
                 return False
             elif check_segment.segments:
                 segment_list = segment_list + list(check_segment.segments)
         return True
 
-    def _check_lexable(self, tokens: Sequence[BaseSegment]):
+    @staticmethod
+    def _check_lexable(tokens: Sequence[BaseSegment]):
         for i, token in enumerate(tokens):
             if token.is_type("unlexable"):
-                log_out_warning("Query have unlexable segment: " + str(token.raw_segments))
+                log_warning("Query have unlexable segment: " + str(token.raw_segments))
                 return False
         return True
 
@@ -124,7 +121,7 @@ class SqlLinter:
             if step.check_if_template_statement():
                 self.fixed_sql_list.append(step.select_sql)
                 step.add_template_to_context(self.context)
-                log_out_message("Skip template sql for this step.")
+                log_message("Skip template sql for this step.")
             else:
                 sql = step.select_sql + "\n"
                 lexer = Lexer(dialect=self._get_dialect_from_backend(backend))
@@ -145,18 +142,51 @@ class SqlLinter:
                 if self._check_lexable(tokens) and self._check_parsable(parsed):
                     result = linter.lint(parsed)
                     if log_error:
-                        log_out_list_of_violations(result, step.target_config.line_no)
+                        log_list_of_violations(result, step.target_config.line_no)
                     fixed_tree, violation = linter.fix(parsed)
                     self.fixed_sql_list.append(fixed_tree.raw)
                     return result
                 else:
                     self.fixed_sql_list.append(step.select_sql)
 
-    # TODO: double support for easy and normal >> args is_easy_sql
-    def prepare_linter(self, dialect):
+    def _lint_for_easy_sql(self, backend: str, log_error: bool = True):
+        lint_result = []
+        dialect = self._get_dialect_from_backend(backend)
+        linter = self._prepare_linter(dialect)
+        step_count = 0
+        self.fixed_sql_list = self._parser_sql_header()
+        for step_no, step in enumerate(self.step_list):
+            step_count = step_count + 1
+            if log_error:
+                log_message("=== Check step {} at line {} ===".format(step_no + 1, step.target_config.line_no))
+            step_result = self._lint_step_sql(step, linter, backend, log_error)
+            self.fixed_sql_list.append("")
+            if step_result:
+                lint_result = lint_result + step_result
+        return lint_result
+
+    def _lint_for_normal_sql(self, backend: str, log_error: bool = True):
+        dialect = self._get_dialect_from_backend(backend)
+        lexer = Lexer(dialect=dialect)
+        parser = Parser(dialect=dialect)
+        linter = self._prepare_linter(dialect)
+        tokens, _ = lexer.lex(self.origin_sql)
+        parsed = parser.parse(tokens)
+        lint_result = linter.lint(parsed)
+        fixed_tree, violation = linter.fix(parsed)
+        if log_error:
+            log_list_of_violations(lint_result)
+        self.fixed_sql_list.append(fixed_tree.raw)
+        return lint_result
+
+    def _parser_sql_header(self):
+        line_no = self.step_list[0].target_config.line_no
+        return self.origin_sql.split("\n")[:line_no - 1]
+
+    def _prepare_linter(self, dialect):
         default_config_dict = FluffConfig(require_dialect=False)._configs
         default_config_dict['rules']['L019'] = {'comma_style': 'leading'}
-        self._update_dialect_for_config(default_config_dict, dialect)
+        default_config_dict['core']['dialect'] = dialect
         self._update_included_rule_for_config(default_config_dict,
                                               context=dialect,
                                               rules=self.include_rules)
@@ -165,30 +195,14 @@ class SqlLinter:
         linter = Linter(config=update_config, user_rules=__all__)
         return linter
 
+    def lint(self, backend: str, log_error: bool = True, is_easy_sql: bool = True):
+        if is_easy_sql:
+            return self._lint_for_easy_sql(backend, log_error)
+        else:
+            return self._lint_for_normal_sql(backend, log_error)
 
-
-    def lint(self, backend: str, log_error: bool = True):
-        lint_result = []
-        dialect = self._get_dialect_from_backend(backend)
-        linter = self.prepare_linter(dialect)
-        step_count = 0
-        self.fixed_sql_list = self._parser_sql_header()
-        for step_no, step in enumerate(self.step_list):
-            step_count = step_count + 1
-            if log_error:
-                log_out_message("=== Check step {} at line {} ===".format(step_no + 1, step.target_config.line_no))
-            step_result = self._lint_step_sql(step, linter, backend, log_error)
-            self.fixed_sql_list.append("")
-            if step_result:
-                lint_result = lint_result + step_result
-        return lint_result
-
-    def _parser_sql_header(self):
-        line_no = self.step_list[0].target_config.line_no
-        return self.origin_sql.split("\n")[:line_no - 1]
-
-    def fix(self, backend: str, log_linter_error: bool = False):
-        self.lint(backend, log_linter_error)
+    def fix(self, backend: str, log_linter_error: bool = False, is_easy_sql: bool = True):
+        self.lint(backend, log_linter_error, is_easy_sql)
         delimiter = "\n"
         reunion_sql = delimiter + delimiter.join(self.fixed_sql_list)
         return reunion_sql

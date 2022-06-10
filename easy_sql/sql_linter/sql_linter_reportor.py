@@ -10,7 +10,7 @@ LOG_LEVEL = logging.DEBUG
 
 def _get_extra_default_dict():
     return {"pos_info": "",
-            "description": "", "warn": ""}
+            "description": "", "warn": "", "pass": ""}
 
 
 def _create_logger():
@@ -20,6 +20,7 @@ def _create_logger():
         fmt=(
             "%(white)s%(message)s"
             "%(red)s%(warn)s "
+            "%(red)s%(pass)s "
             "%(blue)s%(pos_info)s "
             "%(white)s%(description)s "
         )
@@ -37,7 +38,7 @@ def _create_logger():
     return logger
 
 
-def log_out_violation(violation: SQLBaseError, step_start_line=0):
+def log_violation(violation: SQLBaseError, step_start_line=0):
     pos_info = "L: {} | P: {}: | {}  :".format(violation.line_no + step_start_line,
                                                violation.line_pos, violation.rule_code())
     extra_dict = _get_extra_default_dict()
@@ -46,24 +47,28 @@ def log_out_violation(violation: SQLBaseError, step_start_line=0):
     sql_linter_log.info("", extra=extra_dict)
 
 
-def log_out_list_of_violations(lint_result: List[SQLBaseError], step_start_line=0):
+def log_list_of_violations(lint_result: List[SQLBaseError], step_start_line=0):
     if len(lint_result) > 0:
-        log_out_warning("Fail")
+        log_warning("Fail")
         for violation in lint_result:
-            log_out_violation(violation, step_start_line)
+            log_violation(violation, step_start_line)
     else:
-        # TODO:green
-        log_out_warning("Pass")
+        log_pass("Pass")
 
 
-def log_out_message(message):
+def log_message(message):
     sql_linter_log.info(message, extra=_get_extra_default_dict())
 
 
-# TODO: log not log_out
-def log_out_warning(conclude):
+def log_warning(warning: str):
     extra_dict = _get_extra_default_dict()
-    extra_dict["warn"] = conclude
+    extra_dict["warn"] = warning
+    sql_linter_log.warning("", extra=extra_dict)
+
+
+def log_pass(pass_info: str):
+    extra_dict = _get_extra_default_dict()
+    extra_dict["pass"] = pass_info
     sql_linter_log.warning("", extra=extra_dict)
 
 

@@ -33,12 +33,12 @@ def parse_backend(sql: str):
 def lint_for_normal_sql(easy_sql_linter: SqlLinter, sql: str):
     lexer = Lexer(dialect=default_dialect)
     parser = Parser(dialect=default_dialect)
-    linter = easy_sql_linter.prepare_linter(default_dialect)
+    linter = easy_sql_linter._prepare_linter(default_dialect)
     tokens, _ = lexer.lex(sql)
     parsed = parser.parse(tokens)
     lint_result = linter.lint(parsed)
     fixed_tree, violation = linter.fix(parsed)
-    log_out_list_of_violations(lint_result)
+    log_list_of_violations(lint_result)
     return lint_result, fixed_tree.raw
 
 
