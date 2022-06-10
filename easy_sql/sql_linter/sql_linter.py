@@ -2,8 +2,6 @@ import re
 
 from sqlfluff.core import Lexer, Parser, Linter
 from sqlfluff.core.config import FluffConfig
-
-from easy_sql.logger import logger
 from easy_sql.sql_linter.rules import __all__
 from easy_sql.sql_linter.sql_linter_reportor import *
 from easy_sql.sql_processor.backend import Backend
@@ -46,13 +44,13 @@ class SqlLinter:
 
         if backend is None:
             backend = "spark"
-            logger.warn("Backend cannot be found in sql, will use default backend spark")
+            log_out_warning("Backend cannot be found in sql, will use default backend spark")
 
         if backend not in self.supported_backend:
             raise Exception(
                 f'Unsupported backend `${backend}`, all supported backends are: ' + ",".join(self.supported_backend))
 
-        logger.info(f"Use backend: {backend}")
+        log_out_message(f"Use backend: {backend}")
         self.fixed_sql_list.append("-- backend: " + backend)
         return backend
 
