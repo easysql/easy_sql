@@ -42,7 +42,7 @@ def log_out_violation( violation: SQLBaseError):
     extra_dict = _get_extra_default_dict()
     extra_dict["pos_info"] = pos_info
     extra_dict["description"] = violation.desc()
-    sql_linter_log.debug("", extra=extra_dict)
+    sql_linter_log.info("", extra=extra_dict)
 
 
 def log_out_list_of_violations( lint_result: List[SQLBaseError]):

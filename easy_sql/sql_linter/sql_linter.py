@@ -16,7 +16,7 @@ from easy_sql.sql_processor.context import ProcessorContext, VarsContext, Templa
 from sqlfluff.core.parser import RegexLexer, CodeSegment
 
 import logging
-logging.basicConfig(level=logging.DEBUG)
+logging.getLogger("linter_logger").setLevel(logging.DEBUG)
 
 class SqlLinter:
     def __init__(self, sql: str, include_rules: [str] = None, exclude_rules: [str] = None):
@@ -89,7 +89,10 @@ class SqlLinter:
         if len(rules) > 0:
             config['core']['rules'] = ",".join(rules)
         else:
-            config['core']['rules'] = "core," + context
+            if context in ["bigquery"]:
+                config['core']['rules'] = "core," + context
+            else:
+                config['core']['rules'] = "core"
 
     @staticmethod
     def _update_excluded_rule_for_config(config, rules: [str] = None):
