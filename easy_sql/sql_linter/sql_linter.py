@@ -170,7 +170,8 @@ class SqlLinter:
         self.fixed_sql_list = self._parser_sql_header()
         for step_no, step in enumerate(self.step_list):
             step_count = step_count + 1
-            self.report_logger.log_out_message("=== check step {} at line {} ===".format(step_no,step.target_config.line_no))
+            if log_error:
+                self.report_logger.log_out_message("=== check step {} at line {} ===".format(step_no,step.target_config.line_no))
             step_result = self._lint_step_sql(step, linter, backend, log_error)
             self.fixed_sql_list.append("")
             if step_result:
@@ -181,7 +182,7 @@ class SqlLinter:
         line_no = self.step_list[0].target_config.line_no
         return self.origin_sql.split("\n")[:line_no - 1]
 
-    def fix(self, backend: str, log_linter_error: bool = True):
+    def fix(self, backend: str, log_linter_error: bool = False):
         self.lint(backend, log_linter_error)
         delimiter = "\n"
         reunion_sql = delimiter + delimiter.join(self.fixed_sql_list)

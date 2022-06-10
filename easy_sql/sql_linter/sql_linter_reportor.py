@@ -1,9 +1,8 @@
-import logging
 from typing import List
-
+import codecs
 import colorlog
 import logging
-
+import sys
 from sqlfluff.core import SQLBaseError
 
 LOG_LEVEL = logging.DEBUG
@@ -30,9 +29,14 @@ class SqlLinterReporter:
                 "%(white)s%(description)s "
             )
         )
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(info_formater)
-        logger.addHandler(console_handler)
+        python_version = sys.version_info
+        if python_version.major == 3 and python_version.minor == 6:
+            sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+        elif hasattr(sys.stdout, 'reconfigure'):
+            sys.stdout.reconfigure(encoding='utf-8')
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(info_formater)
+        logger.addHandler(handler)
         return logger
 
     def log_out_violation(self, violation: SQLBaseError):
