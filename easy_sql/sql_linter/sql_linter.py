@@ -195,14 +195,14 @@ class SqlLinter:
         linter = Linter(config=update_config, user_rules=__all__)
         return linter
 
-    def lint(self, backend: str, log_error: bool = True, is_easy_sql: bool = True):
-        if is_easy_sql:
+    def lint(self, backend: str, log_error: bool = True, easysql: bool = True):
+        if easysql:
             return self._lint_for_easy_sql(backend, log_error)
         else:
             return self._lint_for_normal_sql(backend, log_error)
 
-    def fix(self, backend: str, log_linter_error: bool = False, is_easy_sql: bool = True):
-        self.lint(backend, log_linter_error, is_easy_sql)
+    def fix(self, backend: str, log_linter_error: bool = False, easysql: bool = True):
+        self.lint(backend, log_linter_error, easysql)
         delimiter = "\n"
         reunion_sql = delimiter + delimiter.join(self.fixed_sql_list)
         return reunion_sql
