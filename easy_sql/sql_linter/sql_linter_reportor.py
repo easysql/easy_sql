@@ -38,7 +38,7 @@ def _create_logger():
 
 
 def log_out_violation( violation: SQLBaseError):
-    pos_info = "L: {} | P: {}: | {}  :".format(violation.line_pos, violation.line_pos, violation.rule_code())
+    pos_info = "L: {} | P: {}: | {}  :".format(violation.line_no, violation.line_pos, violation.rule_code())
     extra_dict = _get_extra_default_dict()
     extra_dict["pos_info"] = pos_info
     extra_dict["description"] = violation.desc()
