@@ -5,7 +5,6 @@ import click
 from easy_sql.sql_linter.sql_linter_reportor import *
 
 
-
 def split_rules_to_list(rule_description: str):
     if rule_description != "":
         return rule_description.split(",")
@@ -26,7 +25,7 @@ def parse_backend(sql: str):
     return parsed_backend
 
 
-def lint_process(check_sql_file_path: str, include: str, exclude: str, easysql: bool):
+def lint_process(check_sql_file_path: str, exclude: str, include: str, backend: str, easysql: bool):
     if not check_sql_file_path.endswith(".sql"):
         warnings.warn("file name:" + check_sql_file_path + " must end with .sql")
 
@@ -34,7 +33,7 @@ def lint_process(check_sql_file_path: str, include: str, exclude: str, easysql: 
         sql = file.read()
     sql_linter = SqlLinter(sql, exclude_rules=split_rules_to_list(exclude),
                            include_rules=split_rules_to_list(include))
-    backend = parse_backend(sql) if easysql else "ansi"
+    backend = backend if backend else parse_backend(sql)
     result = sql_linter.lint(backend, easysql=easysql)
     fixed = sql_linter.fix(backend, easysql=easysql)
 
@@ -56,28 +55,34 @@ def cli():
     pass
 
 
-def fix_process(path: str, easysql: bool, exclude: str, include: str, inplace: bool):
-    result, fixed = lint_process(path, include, exclude, easysql)
+def fix_process(path: str, exclude: str, include: str, backend: str, inplace: bool, easysql: bool):
+    result, fixed = lint_process(path, exclude, include, backend, easysql)
     write_out_fixed(path, fixed, inplace)
 
 
 @cli.command(help='''Fix and write out the info''')
 @click.option("--path", help="absolute path", required=True, type=str)
-@click.option("--easysql", help="easy sql or normal sql", default=True, required=False, type=bool)
 @click.option("--exclude", help="comma separated rule to be exclude", default="", required=False, type=str)
 @click.option("--include", help="comma separated rule to be exclude", default="", required=False, type=str)
+@click.option("--backend", help="running backend for this query, "
+                                "if easy sql it will parse from the sql file if not specify, "
+                                "if normal sql default is spark", default=None, required=False, type=str)
 @click.option("--inplace", help="fix replace checked file", default=False, required=False, type=bool)
-def fix(path: str, easysql: bool, exclude: str, include: str, inplace: bool):
-    fix_process(path, easysql, exclude, include, inplace)
+@click.option("--easysql", help="easy sql or normal sql", default=True, required=False, type=bool)
+def fix(path: str, exclude: str, include: str, backend: str, inplace: bool, easysql: bool):
+    fix_process(path, exclude, include, backend, inplace, easysql)
 
 
 @cli.command(help='''Check sql quality''')
 @click.option("--path", help="absolute path", required=True, type=str)
-@click.option("--easysql", help="easy sql or normal sql", default=True, required=False, type=bool)
 @click.option("--exclude", help="comma separated rule to be exclude", default="", required=False, type=str)
 @click.option("--include", help="comma separated rule to be exclude", default="", required=False, type=str)
-def lint(path: str, easysql: bool, exclude: str, include: str):
-    lint_process(path, include, exclude, easysql)
+@click.option("--backend", help="running backend for this query, "
+                                "if easy sql it will parse from the sql file if not specify, "
+                                "if normal sql default is spark", default=None, required=False, type=str)
+@click.option("--easysql", help="easy sql or normal sql", default=True, required=False, type=bool)
+def lint(path: str, exclude: str, include: str, backend:str, easysql: bool):
+    lint_process(path, exclude, include, backend, easysql)
 
 
 #  python easy_sql/sql_linter/sql_linter_cli.py fix --path
