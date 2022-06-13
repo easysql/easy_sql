@@ -4,7 +4,6 @@ import warnings
 import click
 from easy_sql.sql_linter.sql_linter_reportor import *
 
-default_dialect = "sparksql"
 
 
 def split_rules_to_list(rule_description: str):
@@ -35,8 +34,7 @@ def lint_process(check_sql_file_path: str, include: str, exclude: str, easysql: 
         sql = file.read()
     sql_linter = SqlLinter(sql, exclude_rules=split_rules_to_list(exclude),
                            include_rules=split_rules_to_list(include))
-    # TODO: check logic should include .table.sql/ _table.sql
-    backend = parse_backend(sql)
+    backend = parse_backend(sql) if easysql else "ansi"
     result = sql_linter.lint(backend, easysql=easysql)
     fixed = sql_linter.fix(backend, easysql=easysql)
 
@@ -58,6 +56,11 @@ def cli():
     pass
 
 
+def fix_process(path: str, easysql: bool, exclude: str, include: str, inplace: bool):
+    result, fixed = lint_process(path, include, exclude, easysql)
+    write_out_fixed(path, fixed, inplace)
+
+
 @cli.command(help='''Fix and write out the info''')
 @click.option("--path", help="absolute path", required=True, type=str)
 @click.option("--easysql", help="easy sql or normal sql", default=True, required=False, type=bool)
@@ -65,9 +68,7 @@ def cli():
 @click.option("--include", help="comma separated rule to be exclude", default="", required=False, type=str)
 @click.option("--inplace", help="fix replace checked file", default=False, required=False, type=bool)
 def fix(path: str, easysql: bool, exclude: str, include: str, inplace: bool):
-    print(inplace)
-    result, fixed = lint_process(path, include, exclude,easysql)
-    write_out_fixed(path, fixed, inplace)
+    fix_process(path, easysql, exclude, include, inplace)
 
 
 @cli.command(help='''Check sql quality''')
@@ -76,8 +77,7 @@ def fix(path: str, easysql: bool, exclude: str, include: str, inplace: bool):
 @click.option("--exclude", help="comma separated rule to be exclude", default="", required=False, type=str)
 @click.option("--include", help="comma separated rule to be exclude", default="", required=False, type=str)
 def lint(path: str, easysql: bool, exclude: str, include: str):
-    print(easysql)
-    lint_process(path, include, exclude,easysql)
+    lint_process(path, include, exclude, easysql)
 
 
 #  python easy_sql/sql_linter/sql_linter_cli.py fix --path
