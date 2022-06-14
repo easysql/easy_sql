@@ -136,11 +136,18 @@ product_name
 select @{dim_cols} from order_count
 union all
 select @{dim_cols} from sales_amount
+
+-- target=temp.result
+@{transited_with_fk_inc_template(
+    source_table_name=transited, source_table_biz_key=product_id, result_col_name=product_id_key,
+    fk_table_name=dwd_sales.sales_dim_product_h, pk=product_key, fk_table_biz_key=id,
+    update_time_col_name=update_time, partition_col_name=di)} 
 """
-        sql_linter = SqlLinter(sql)
+        sql_linter = SqlLinter(sql,exclude_rules=['L025'])
         result = sql_linter.lint("bigquery")
         assert (len(result) == 4)
         fixed = sql_linter.fix("bigquery")
+        print(fixed)
         expected = """-- backend: bigquery
 -- target=template.dim_cols
 product_name
@@ -150,7 +157,12 @@ product_name
 select @{dim_cols} from ${temp_db}.Order_count
 union all
 select @{dim_cols} from ${temp_db}.Sales_amount
-"""
+
+-- target=temp.result
+@{transited_with_fk_inc_template(
+    source_table_name=transited, source_table_biz_key=product_id, result_col_name=product_id_key,
+    fk_table_name=dwd_sales.sales_dim_product_h, pk=product_key, fk_table_biz_key=id,
+    update_time_col_name=update_time, partition_col_name=di)} """
         assert (expected == fixed)
 
     def test_should_work_when_given_diff_backend(self):

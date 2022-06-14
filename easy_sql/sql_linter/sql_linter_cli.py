@@ -86,7 +86,7 @@ def lint(path: str, exclude: str, include: str, backend:str, easysql: bool):
 
 
 #  python easy_sql/sql_linter/sql_linter_cli.py fix --path
-#
+# python easy_sql/sql_linter/sql_linter_cli.py fix --path /Users/qinke.yang/Documents/workbench/dataplat-framework/guide/workflow/sales/dwd/dealer/dealer_table.sql --backend bigquery
 
 if __name__ == "__main__":
     cli.main(sys.argv[1:])

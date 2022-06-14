@@ -127,7 +127,7 @@ class SqlLinter:
                 # Add regrex mather to lexer to enable easy sql
                 easy_sql_function = RegexLexer('easy_sql_function', r'\${[^\s,]+\(.+\)}', CodeSegment)
                 easy_sql_variable = RegexLexer('easy_sql_variable', r'\${[^\s,]+}', CodeSegment)
-                easy_sql_template = RegexLexer('easy_sql_template', r'@{[^\s,]+}', CodeSegment)
+                easy_sql_template = RegexLexer('easy_sql_template', r'@{[^{]+}', CodeSegment)
                 three_quote_string = RegexLexer('three_quote_string', r'""".*"""', CodeSegment)
                 lexer.lexer_matchers.insert(0, easy_sql_variable)
                 lexer.lexer_matchers.insert(0, easy_sql_function)
@@ -137,7 +137,7 @@ class SqlLinter:
                 # Let parser recognize all function/variables/template into nakedIdentifier
                 # which will be given grammar when given context
                 identifier_segement = parser.config.get("dialect_obj")._library["NakedIdentifierSegment"]
-                identifier_segement.template = identifier_segement.template + r"|@{[^\s,]+}|[\$]{[\s\S]+}|\"[\s\S]+\""
+                identifier_segement.template = identifier_segement.template + r"|@{[^{]+}|[\$]{[\s\S]+}|\"[\s\S]+\""
                 tokens, _ = lexer.lex(sql)
                 parsed = parser.parse(tokens)
                 if self._check_lexable(tokens) and self._check_parsable(parsed):

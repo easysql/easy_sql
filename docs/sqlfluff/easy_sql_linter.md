@@ -13,6 +13,7 @@ fix parameter:
 + path : the absolute location of the query 
 + include: comma separated rule id to be included
 + exclude: comma separated rule id to be excluded
++ backend: the special running backend for the query, it will impact the rules that take into action
 + easysql: bool value to infer whether it is easy sql grammar or normal grammar
 + inplace: bool value to infer whether overwrite the origin query file for the fixed output. If false it will write to new file with .fixed.sql 
 
@@ -20,6 +21,7 @@ lint parameter:
 + path : the absolute location of the query
 + include: comma separated rule id to be included
 + exclude: comma separated rule id to be excluded
++ backend: the special running backend for the query, it will impact the rules that take into action
 + easysql: bool value to infer whether it is easy sql grammar or normal grammar
 
 ## Code usage
@@ -39,5 +41,5 @@ The grammar also impact the applied rules. If define as bigquery, for all the se
 
 ```python
  # in self-define rule
- groups = ("all", "bigquery")
+groups = ("all", "bigquery")
 ```
