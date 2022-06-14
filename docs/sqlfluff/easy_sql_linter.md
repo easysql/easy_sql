@@ -1,45 +1,59 @@
-# Easy Sql Linter
-Easy sql is a powerful tool that can bring convenience to ETL developer. But so far we do not have a easy sql grammar supported compiler that can auto check sql quality and auto fix the violations. That is the reason why we develop such linter tool on sqlfluff. By use this linter, we can apply any easysql grammar query to it.
+# Easy SQL Linter
+
+Easy SQL is a powerful tool that can bring convenience to ETL developer.
+But so far we do not have an easy SQL grammar supported compiler that can auto-check SQL quality and auto fix the violations.
+It is the reason why we develop such linter tool on top of sqlfluff. With this linter, we can do static analysis and auto-fixing of ETL code written in Easy SQL.
 
 
 ## Command Line Interface
-The command line interface is by running the following :
+
+The command line interface usage is as follows:
+
 ```bash
-$ python easy_sql/sql_linter/sql_linter_cli.py fix --path ${path}
+$ python3 -m easy_sql.sql_linter.sql_linter_cli fix --path ${path}
 ```
-It has fix or lint mode, for lint it will only show the violation while for fix it will write out the fixed query. 
 
-fix parameter:
-+ path : the absolute location of the query 
-+ include: comma separated rule id to be included
-+ exclude: comma separated rule id to be excluded
-+ backend: the special running backend for the query, it will impact the rules that take into action
-+ easysql: bool value to infer whether it is easy sql grammar or normal grammar
-+ inplace: bool value to infer whether overwrite the origin query file for the fixed output. If false it will write to new file with .fixed.sql 
+There are fix and lint mode, for lint it will only show the rule violations while for fix it will auto-fix the query. 
 
-lint parameter:
-+ path : the absolute location of the query
-+ include: comma separated rule id to be included
-+ exclude: comma separated rule id to be excluded
-+ backend: the special running backend for the query, it will impact the rules that take into action
-+ easysql: bool value to infer whether it is easy sql grammar or normal grammar
+Fix mode parameters:
 
-## Code usage
+- path: The location of the ETL file.
+- include: Comma separated rule id to be included.
+- exclude: Comma separated rule id to be excluded.
+- backend: The backend of the ETL file, it will be used to find the correct rules.
+- easy_sql: Boolean value to indicate whether the ETL file is written in Easy SQL or normal SQL. Will default to true.
+- inplace: Boolean value to indicate whether to overwrite the origin file with the fixed output. If false the fixed output will be written to a new file with suffix `.fixed.sql`. 
+
+Lint mode  parameters:
+
+- path: The location of the ETL file.
+- include: Comma separated rule id to be included.
+- exclude: Comma separated rule id to be excluded.
+- backend: The backend of the ETL file, it will be used to find the correct rules.
+- easy_sql: Boolean value to indicate whether the ETL file is written in Easy SQL or normal SQL. Will default to true.
+
+## Programmatical usage
+
 ```python
 from easy_sql.sql_linter.sql_linter import SqlLinter
-sql= ""
-sql_linter = SqlLinter(sql,
-                       include_rules=None,
-                       exclude_rules=None)
-result = sql_linter.lint("bigquery",easysql=False)
-fixed = sql_linter.fix("bigquery",easysql=False)
 
+sql = ""
+sql_linter = SqlLinter(sql, include_rules=None, exclude_rules=None)
+result = sql_linter.lint("bigquery", easy_sql=True)
+fixed = sql_linter.fix("bigquery", easy_sql=True)
 ```
-You may find out that in the lint and fix command , we are given the sql grammar. This is to enable the swithc of grammar. If you do not provided the grammar and you are using easy sql, it will automatically detect the gramma from easysql, if you are using normal sql and do not provide grammar, it will bring bugs in the end.
 
-The grammar also impact the applied rules. If define as bigquery, for all the self-define rules that groups have bigquery and sqlfluff inbuild core rules will take into action. 
+You may find out that in the lint and fix command there is an option to specify which backend the ETL file is written to.
+If you do not provide the option, and you are using easy sql, it will automatically detect the backend from the file.
+Make sure you've specified the correct options, or it will generate unexpected output.
+
+(
+For developers:
+
+The backend impacts the applied rules. If defined as bigquery, all the customized rules with groups containing bigquery and sqlfluff built-in core rules will be applied.
 
 ```python
- # in self-define rule
+# groups in customized rules
 groups = ("all", "bigquery")
 ```
+)

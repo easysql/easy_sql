@@ -14,8 +14,8 @@ aa from sales_order
         sql_linter = SqlLinter(sql,
                                include_rules=None,
                                exclude_rules=None)
-        result = sql_linter.lint("bigquery",easysql=False)
-        fixed = sql_linter.fix("bigquery",easysql=False)
+        result = sql_linter.lint("bigquery", easysql=False)
+        fixed = sql_linter.fix("bigquery", easy_sql=False)
         assert (len(result) == 7)
         print(fixed)
         expected = '''select a
@@ -33,8 +33,8 @@ aa from sales_order
         sql_linter = SqlLinter(sql,
                                include_rules=None,
                                exclude_rules=['BigQuery_L001'])
-        result = sql_linter.lint("bigquery",easysql=False)
-        fixed = sql_linter.fix("bigquery",easysql=False)
+        result = sql_linter.lint("bigquery", easysql=False)
+        fixed = sql_linter.fix("bigquery", easy_sql=False)
         assert (len(result) == 6)
         print(fixed)
         expected = '''select a
@@ -42,9 +42,6 @@ aa from sales_order
     , aa from sales_order
 '''
         assert (expected == fixed)
-
-
-
 
     def test_should_work_for_variables(self):
         sql = '''-- backend: bigquery
@@ -143,7 +140,7 @@ select @{dim_cols} from sales_amount
     fk_table_name=dwd_sales.sales_dim_product_h, pk=product_key, fk_table_biz_key=id,
     update_time_col_name=update_time, partition_col_name=di)} 
 """
-        sql_linter = SqlLinter(sql,exclude_rules=['L025'])
+        sql_linter = SqlLinter(sql, exclude_rules=['L025'])
         result = sql_linter.lint("bigquery")
         assert (len(result) == 4)
         fixed = sql_linter.fix("bigquery")
@@ -237,7 +234,7 @@ select * from order_count where value < ${a}
         result = sql_linter.lint("bigquery", True)
         print("after fix")
         print(len(result))
-        fixed=sql_linter.fix("bigquery")
+        fixed = sql_linter.fix("bigquery")
         print(fixed)
         assert (len(result) == 8)
         expected = """-- backend: bigquery

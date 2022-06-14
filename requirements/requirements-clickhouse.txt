@@ -3,3 +3,4 @@ clickhouse-driver==0.2.3
 clickhouse-sqlalchemy==0.1.6
 sqlfluff==0.13.2
 colorlog==4.0.2
+regex==2022.6.2

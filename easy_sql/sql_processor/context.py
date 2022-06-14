@@ -36,8 +36,8 @@ class CommentSubstitutor:
                     comment_start = m.start(1) + 1
                     left_of_comment = line[:current_index + comment_start]
                     if CommentSubstitutor.is_quote_closed(left_of_comment):
-                        lines.append(left_of_comment + CommentSubstitutor.COMMENT_IDENTIFIABLE_NAME + str(
-                            len(recognized_comment)) + '__')
+                        lines.append(left_of_comment + CommentSubstitutor.COMMENT_IDENTIFIABLE_NAME
+                                     + str(len(recognized_comment)) + '__')
                         recognized_comment.append(line[current_index + comment_start:])
                         break
                     else:
@@ -97,8 +97,7 @@ class CommentSubstitutor:
             if identifiable_name_count > 1:
                 raise Exception(f'found multiple comment identifiable name {identifiable_name} in line: {line}')
             if identifiable_name_count == 1 and not line.endswith(identifiable_name):
-                raise Exception(
-                    f'found comment identifiable name {identifiable_name}, but is not at end in line: {line}')
+                raise Exception(f'found comment identifiable name {identifiable_name}, but is not at end in line: {line}')
             if identifiable_name_count == 1:
                 lines.append(line.replace(identifiable_name, self.recognized_comment[comment_index]))
                 comment_index += 1
@@ -157,8 +156,7 @@ class VarsContext(VarsReplacer):
             elif var_name.upper() in variables:
                 var_value = variables[var_name.upper()]
             else:
-                raise SqlProcessorException(
-                    f'unknown variable `{var_name}`. text={original_text}, known_vars={variables}')
+                raise SqlProcessorException(f'unknown variable `{var_name}`. text={original_text}, known_vars={variables}')
 
             text_parts.append(str(var_value))
             self._log_replace_process(f'var_value: {var_value}')

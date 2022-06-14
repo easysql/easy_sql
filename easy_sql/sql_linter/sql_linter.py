@@ -1,18 +1,15 @@
 import re
-
-from sqlfluff.core import Lexer, Parser, Linter
-from sqlfluff.core.config import FluffConfig
+from typing import Sequence, Dict, Any
 
 from easy_sql.sql_linter.rules import __all__
 from easy_sql.sql_linter.sql_linter_reportor import *
-from easy_sql.sql_processor.backend import Backend
 from easy_sql.sql_processor.funcs import FuncRunner
 from easy_sql.sql_processor.report import SqlProcessorReporter
 from easy_sql.sql_processor.step import StepFactory, Step
-from typing import Sequence
-from sqlfluff.core.parser.segments import BaseSegment
-from easy_sql.sql_processor.context import ProcessorContext, VarsContext, TemplatesContext
+from sqlfluff.core import Lexer, Parser, Linter
+from sqlfluff.core.config import FluffConfig
 from sqlfluff.core.parser import RegexLexer, CodeSegment
+from sqlfluff.core.parser.segments import BaseSegment
 
 
 class SqlLinter:
@@ -23,16 +20,6 @@ class SqlLinter:
         self.step_list = self._get_step_list()
         self.include_rules = include_rules
         self.exclude_rules = exclude_rules
-        self.context = self._get_context()
-
-    @staticmethod
-    def _get_context():
-        log_var_tmpl_replace = False
-        vars_context = VarsContext(debug_log=log_var_tmpl_replace)
-        func_runner = FuncRunner.create(Backend())
-        vars_context.init(func_runner)
-        return ProcessorContext(vars_context, TemplatesContext(debug_log=log_var_tmpl_replace, templates=None),
-                                extra_cols=[])
 
     def _parse_backend(self, sql: str):
         sql_lines = sql.split('\n')
@@ -75,7 +62,7 @@ class SqlLinter:
         raise Exception("backend type so far is not supported for lint check")
 
     @staticmethod
-    def _update_included_rule_for_config(config, context: str = "all", rules=None):
+    def _update_included_rule_for_config(config: Dict[str, Any], context: str = "all", rules=None):
         if rules is None:
             rules = []
         if len(rules) > 0:
@@ -87,14 +74,14 @@ class SqlLinter:
                 config['core']['rules'] = "core"
 
     @staticmethod
-    def _update_excluded_rule_for_config(config, rules: [str] = None):
+    def _update_excluded_rule_for_config(config: Dict[str, Any], rules: [str] = None):
         if rules is not None:
             config['core']['exclude_rules'] = ",".join(rules)
         else:
             config['core']['exclude_rules'] = None
 
     @staticmethod
-    def _check_parsable(root_segment: BaseSegment):
+    def _check_parsable(root_segment: BaseSegment) -> bool:
         segment_list = [root_segment]
         while len(segment_list) > 0:
             check_segment = segment_list[0]
@@ -107,7 +94,7 @@ class SqlLinter:
         return True
 
     @staticmethod
-    def _check_lexable(tokens: Sequence[BaseSegment]):
+    def _check_lexable(tokens: Sequence[BaseSegment]) -> bool:
         for i, token in enumerate(tokens):
             if token.is_type("unlexable"):
                 log_warning("Query have unlexable segment: " + str(token.raw_segments))
@@ -117,13 +104,13 @@ class SqlLinter:
     def _lint_step_sql(self, step: Step, linter: Linter, backend: str, log_error: bool):
         self.fixed_sql_list.append(step.target_config.step_config_str)
         if step.select_sql:
-            if step.check_if_template_statement():
-                self.fixed_sql_list.append(step.select_sql+"\n")
-                step.add_template_to_context(self.context)
+            if step.is_template_statement():
+                self.fixed_sql_list.append(step.select_sql + "\n")
                 log_message("Skip template sql for this step.")
             else:
                 sql = step.select_sql + "\n"
                 lexer = Lexer(dialect=self._get_dialect_from_backend(backend))
+
                 # Add regrex mather to lexer to enable easy sql
                 easy_sql_function = RegexLexer('easy_sql_function', r'\${[^\s,]+\(.+\)}', CodeSegment)
                 easy_sql_variable = RegexLexer('easy_sql_variable', r'\${[^\s,]+}', CodeSegment)
@@ -133,13 +120,16 @@ class SqlLinter:
                 lexer.lexer_matchers.insert(0, easy_sql_function)
                 lexer.lexer_matchers.insert(0, easy_sql_template)
                 lexer.lexer_matchers.insert(0, three_quote_string)
+
                 parser = Parser(dialect=self._get_dialect_from_backend(backend))
                 # Let parser recognize all function/variables/template into nakedIdentifier
                 # which will be given grammar when given context
                 identifier_segement = parser.config.get("dialect_obj")._library["NakedIdentifierSegment"]
                 identifier_segement.template = identifier_segement.template + r"|@{[^{]+}|[\$]{[\s\S]+}|\"[\s\S]+\""
+
                 tokens, _ = lexer.lex(sql)
                 parsed = parser.parse(tokens)
+
                 if self._check_lexable(tokens) and self._check_parsable(parsed):
                     result = linter.lint(parsed)
                     if log_error:
@@ -202,8 +192,8 @@ class SqlLinter:
         else:
             return self._lint_for_normal_sql(backend, log_error)
 
-    def fix(self, backend: str, log_linter_error: bool = False, easysql: bool = True):
-        self.lint(backend, log_linter_error, easysql)
+    def fix(self, backend: str, log_linter_error: bool = False, easy_sql: bool = True):
+        self.lint(backend, log_linter_error, easy_sql)
         delimiter = "\n"
         reunion_sql = delimiter.join(self.fixed_sql_list)
         return reunion_sql

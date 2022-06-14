@@ -5,3 +5,4 @@ pymongo==3.10.1
 xlrd==1.2.0
 sqlfluff==0.13.2
 colorlog==4.0.2
+regex==2022.6.2

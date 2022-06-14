@@ -1,8 +1,9 @@
-from typing import List
 import codecs
-import colorlog
 import logging
 import sys
+from typing import List
+
+import colorlog
 from sqlfluff.core import SQLBaseError
 
 LOG_LEVEL = logging.DEBUG
