@@ -24,7 +24,9 @@ class LocalSpark:
                 'hive.exec.dynamic.partition.mode': 'nonstrict',
                 'spark.sql.warehouse.dir': '/tmp/spark-warehouse-localdw-ut',
                 'spark.driver.extraJavaOptions': "-Dderby.system.home=/tmp/spark-warehouse-metastore-ut "
-                                                 "-Dderby.stream.error.file=/tmp/spark-warehouse-metastore-ut.log"
+                                                 "-Dderby.stream.error.file=/tmp/spark-warehouse-metastore-ut.log",
+                'spark.sql.session.timeZone': 'UTC'
+
             }
             default_conf.update(conf)
             conf = default_conf
