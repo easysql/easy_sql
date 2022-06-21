@@ -36,6 +36,10 @@ class Backend:
         return str(self.__class__) == "<class 'easy_sql.sql_processor.backend.rdb.RdbBackend'>" \
                and self.is_bq
 
+    @property
+    def is_rdb_backend(self):
+        return self.is_postgres_backend or self.is_clickhouse_backend or self.is_bigquery_backend
+
     def reset(self):
         raise NotImplementedError()
 
