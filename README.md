@@ -5,10 +5,11 @@ With Easy SQL, you can develop your ETL in SQL in an imperative way.
 It defines a few simple syntax on top of standard SQL, with which SQL could be executed one by one.
 Easy SQL also provides a processor to handle all the new syntax.
 Since this is SQL agnostic, any SQL engine could be plugged-in as a backend.
-There are built-in supported for several popular SQL engines, including SparkSQL, PostgreSQL, Clickhouse, Aliyun Maxcompute, Google BigQuery.
+There are built-in support for several popular SQL engines, including SparkSQL, PostgreSQL, Clickhouse, Aliyun Maxcompute, Google BigQuery.
 More will be added in the near future.
 
-<https://easy-sql.readthedocs.io/>
+- Docs: <https://easy-sql.readthedocs.io/>
+- Enterprise extended product: <https://data-workbench.com/>
 
 [![GitHub Action Build](https://github.com/easysql/easy_sql/actions/workflows/build.yaml/badge.svg?branch=main&event=push)](https://github.com/easysql/easy_sql/actions/workflows/build.yaml?query=branch%3Amain+event%3Apush)
 [![Docs Build](https://readthedocs.org/projects/easy-sql/badge/?version=latest)](https://easy-sql.readthedocs.io/en/latest/?badge=latest)
