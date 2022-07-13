@@ -80,7 +80,7 @@ class SparkBackend(Backend):
     def reset(self):
         pass
 
-    def init_udfs(self, scala_udf_initializer: str, *args, **kwargs):
+    def init_udfs(self, scala_udf_initializer: str = None, *args, **kwargs):
         scala_udf_initializer = scala_udf_initializer or self.scala_udf_initializer
         if scala_udf_initializer:
             from py4j.java_gateway import java_import
