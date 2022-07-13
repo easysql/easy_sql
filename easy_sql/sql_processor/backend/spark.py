@@ -72,14 +72,16 @@ class SparkTable(Table):
 
 class SparkBackend(Backend):
 
-    def __init__(self, spark):
+    def __init__(self, spark, scala_udf_initializer: str = None):
         from pyspark.sql import SparkSession
         self.spark: SparkSession = spark
+        self.scala_udf_initializer = scala_udf_initializer
 
     def reset(self):
         pass
 
     def init_udfs(self, scala_udf_initializer: str, *args, **kwargs):
+        scala_udf_initializer = scala_udf_initializer or self.scala_udf_initializer
         if scala_udf_initializer:
             from py4j.java_gateway import java_import
             gw = self.spark.sparkContext._gateway
