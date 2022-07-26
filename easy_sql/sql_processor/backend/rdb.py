@@ -110,13 +110,13 @@ class RdbTable(Table):
                     newcol_table_name = f'{prefix}_newcol_{name[:30]}'
                     if self._is_simple_query(self.sql):
                         temp_table_name = self._table_name_of_simple_query(self.sql)
-                        field_names = self._field_names(f"select * from {temp_table_name}")
+                        field_names = self._field_names(temp_table_name)
                         select_sql = f'select {", ".join(field_names)}, {value} as {name} from {temp_table_name}'
                     else:
                         # for pg: max table name chars allowed is 63, the max length is 62 for newcol_table_name
                         temp_table_name = f'{prefix}_newcol_{name[:30]}_source'
                         self._exec_sql(self.db_config.create_view_sql(temp_table_name, self.sql))
-                        field_names = self._field_names(f"select * from {self.backend.temp_schema}.{temp_table_name}")
+                        field_names = self._field_names(f"{self.backend.temp_schema}.{temp_table_name}")
                         select_sql = f'select {", ".join(field_names)}, {value} as {name} from {self.backend.temp_schema}.{temp_table_name}'
 
                     self._exec_sql(self.db_config.create_view_sql(newcol_table_name, select_sql))
@@ -130,11 +130,17 @@ class RdbTable(Table):
 
     def field_names(self) -> List[str]:
         self._execute_actions()
-        return self._field_names(self.sql)
+        if self._is_simple_query(self.sql):
+            temp_table_name = self._table_name_of_simple_query(self.sql)
+            return self._field_names(temp_table_name)
+        prefix = f'{self._temp_table_time_prefix()}'
+        field_names_result_table_name = f'{prefix}_field_names'
+        self._exec_sql(self.backend.sql_dialect.create_view_sql(field_names_result_table_name, self.sql))
+        return self._field_names(f'{self.backend.temp_schema}.{field_names_result_table_name}')  
 
-    def _field_names(self, sql: str) -> List[str]:
+    def _field_names(self, table_name: str) -> List[str]:
         from sqlalchemy.engine.result import ResultProxy
-        result: ResultProxy = self._exec_sql(sql)
+        result: ResultProxy = self._exec_sql(f'select * from {table_name} limit 0')
         result.close()
         return result.keys()
 
