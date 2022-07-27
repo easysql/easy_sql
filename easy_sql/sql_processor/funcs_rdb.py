@@ -102,14 +102,24 @@ class ModelFuncs:
         spark = get_spark("ml_local", spark_config_settings_dict)
         gw = spark.sparkContext._gateway
         java_import(gw.jvm, "common.dataplat.sparkutils")
-        data = spark.read.format("jdbc") \
-            .option("driver", "com.github.housepower.jdbc.ClickHouseDriver") \
-            .option("url", "jdbc:clickhouse://backend-ch:32123") \
-            .option("user", "default") \
-            .option("password", "") \
-            .option("dbtable", input_table_name) \
-            .load()
 
+        if self.backend.is_clickhouse_backend: 
+            data = spark.read.format("jdbc") \
+                .option("driver", "com.github.housepower.jdbc.ClickHouseDriver") \
+                .option("url", "jdbc:clickhouse://backend-ch:32123") \
+                .option("user", "default") \
+                .option("password", "") \
+                .option("dbtable", input_table_name) \
+                .load()
+
+        if self.backend.is_postgres_backend:
+            data = spark.read.format("jdbc") \
+                .option("driver", "org.postgresql.Driver") \
+                .option("url", "jdbc:postgresql://testpg:15432/postgres") \
+                .option("user", "postgres") \
+                .option("password", "123456") \
+                .option("dbtable", input_table_name) \
+                .load()
         output_ref_cols = [col.strip() for col in output_ref_cols.split(',') if col.strip()]
         model = PipelineModel.load(model_save_path)
 
@@ -121,26 +131,38 @@ class ModelFuncs:
         predictions = model.transform(data)
         output = predictions.select(output_ref_cols + [id_col, 'prediction'])
 
-        _data_type_map = {
-            'int': 'Int64',
-            'string': 'String',
-            'double': 'Float64'
-        }
-        columns_def = ', '.join([f'{col} {_data_type_map[col_type]}' for col, col_type in output.dtypes])
-        ddl = f"""CREATE TABLE IF NOT EXISTS {output_table_name} ({columns_def}) engine = MergeTree
-PRIMARY KEY {id_col}
-ORDER BY {id_col}"""
-        self.backend.exec_native_sql(ddl)
-        self.backend.exec_native_sql(f"truncate table {output_table_name}")
-        output.write.format('jdbc') \
-            .mode("append") \
-            .option("driver", "com.github.housepower.jdbc.ClickHouseDriver") \
-            .option("truncate", "true") \
-            .option("url", "jdbc:clickhouse://backend-ch:32123") \
-            .option("user", "default") \
-            .option("password", "") \
-            .option("dbtable", output_table_name) \
-            .save()
+        if self.backend.is_clickhouse_backend:
+            _data_type_map = {
+                'int': 'Int64',
+                'string': 'String',
+                'double': 'Float64'
+            }
+            columns_def = ', '.join([f'{col} {_data_type_map[col_type]}' for col, col_type in output.dtypes])
+            ddl = f"""CREATE TABLE IF NOT EXISTS {output_table_name} ({columns_def}) engine = MergeTree
+    PRIMARY KEY {id_col}
+    ORDER BY {id_col}"""
+            self.backend.exec_native_sql(ddl)
+            self.backend.exec_native_sql(f"truncate table {output_table_name}")
+            output.write.format('jdbc') \
+                .mode("append") \
+                .option("driver", "com.github.housepower.jdbc.ClickHouseDriver") \
+                .option("truncate", "true") \
+                .option("url", "jdbc:clickhouse://backend-ch:32123") \
+                .option("user", "default") \
+                .option("password", "") \
+                .option("dbtable", output_table_name) \
+                .save()
+        
+        if self.backend.is_postgres_backend:
+            output.write.format('jdbc') \
+                .mode("append") \
+                .option("driver", "org.postgresql.Driver") \
+                .option("url", "jdbc:postgresql://testpg:15432/postgres") \
+                .option("user", "postgres") \
+                .option("password", "123456") \
+                .option("dbtable", output_table_name) \
+                .save()
+
 
 
 class PartitionFuncs(PartitionFuncsBase):
