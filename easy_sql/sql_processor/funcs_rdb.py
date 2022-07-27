@@ -1,4 +1,5 @@
-from typing import List
+from ast import Str
+from typing import Dict, List
 
 
 
@@ -47,7 +48,6 @@ class ModelFuncs:
         spark._jsc.hadoopConfiguration().set('fs.gs.auth.service.account.enable', 'true')
         spark._jsc.hadoopConfiguration().set('google.cloud.auth.service.account.json.keyfile',
                                              f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-prod.json")
-
         spark.read.format('bigquery') \
             .option("parentProject", 'data-dev-workbench-prod-3fd9') \
             .option("table", input_table_name) \
@@ -103,23 +103,16 @@ class ModelFuncs:
         gw = spark.sparkContext._gateway
         java_import(gw.jvm, "common.dataplat.sparkutils")
 
-        if self.backend.is_clickhouse_backend: 
-            data = spark.read.format("jdbc") \
-                .option("driver", "com.github.housepower.jdbc.ClickHouseDriver") \
-                .option("url", "jdbc:clickhouse://backend-ch:32123") \
-                .option("user", "default") \
-                .option("password", "") \
-                .option("dbtable", input_table_name) \
-                .load()
+        connection_options = self.__get_backend_connection_options()
 
-        if self.backend.is_postgres_backend:
-            data = spark.read.format("jdbc") \
-                .option("driver", "org.postgresql.Driver") \
-                .option("url", "jdbc:postgresql://testpg:15432/postgres") \
-                .option("user", "postgres") \
-                .option("password", "123456") \
-                .option("dbtable", input_table_name) \
-                .load()
+        data = spark.read.format("jdbc") \
+            .option("driver", f"{connection_options['driver']}") \
+            .option("url", f"{connection_options['url']}") \
+            .option("user", f"{connection_options['user']}") \
+            .option("password", f"{connection_options['password']}") \
+            .option("dbtable", input_table_name) \
+            .load()
+
         output_ref_cols = [col.strip() for col in output_ref_cols.split(',') if col.strip()]
         model = PipelineModel.load(model_save_path)
 
@@ -131,38 +124,64 @@ class ModelFuncs:
         predictions = model.transform(data)
         output = predictions.select(output_ref_cols + [id_col, 'prediction'])
 
-        if self.backend.is_clickhouse_backend:
+        ddl = self.__get_ddl_by_backend(output_table_name, id_col, output.dtypes)
+        
+        self.backend.exec_native_sql(ddl)
+        self.backend.exec_native_sql(f"truncate table {output_table_name}")
+        output.write.format('jdbc') \
+            .mode("append") \
+            .option("driver", f"{connection_options['driver']}") \
+            .option("truncate", "true") \
+            .option("url", f"{connection_options['url']}") \
+            .option("user", f"{connection_options['user']}") \
+            .option("password", f"{connection_options['password']}") \
+            .option("dbtable", output_table_name) \
+            .save()
+        
+    def __get_backend_connection_options(self) -> Dict:
+        if self.backend.is_postgres_backend:
+            return {
+                "driver": "org.postgresql.Driver",
+                "url": "jdbc:postgresql://testpg:15432/postgres",
+                "user": "postgres",
+                "password": "123456",
+                "truncate": "true",
+            }
+        elif self.backend.is_clickhouse_backend:
+            return {
+                "driver": "com.github.housepower.jdbc.ClickHouseDriver",
+                "url": "jdbc:clickhouse://backend-ch:32123",
+                "user": "default",
+                "password": "",
+                "truncate": "true",
+            } 
+        else:
+            return Dict()
+
+    def __get_ddl_by_backend(self, output_table_name, id_col, output_dtypes) -> Str:
+
+        if self.backend.is_postgres_backend:
+            _data_type_map = {
+                'int': 'int',
+                'string': 'text',
+                'double': 'float'
+                }
+            columns_def = ', '.join([f'{col} {_data_type_map[col_type]}' for col, col_type in output_dtypes]) 
+            return f"""CREATE TABLE IF NOT EXISTS {output_table_name} ({columns_def})
+            PRIMARY KEY {id_col}
+            ORDER BY {id_col}""" 
+        elif self.backend.is_clickhouse_backend:
             _data_type_map = {
                 'int': 'Int64',
                 'string': 'String',
                 'double': 'Float64'
-            }
-            columns_def = ', '.join([f'{col} {_data_type_map[col_type]}' for col, col_type in output.dtypes])
-            ddl = f"""CREATE TABLE IF NOT EXISTS {output_table_name} ({columns_def}) engine = MergeTree
-    PRIMARY KEY {id_col}
-    ORDER BY {id_col}"""
-            self.backend.exec_native_sql(ddl)
-            self.backend.exec_native_sql(f"truncate table {output_table_name}")
-            output.write.format('jdbc') \
-                .mode("append") \
-                .option("driver", "com.github.housepower.jdbc.ClickHouseDriver") \
-                .option("truncate", "true") \
-                .option("url", "jdbc:clickhouse://backend-ch:32123") \
-                .option("user", "default") \
-                .option("password", "") \
-                .option("dbtable", output_table_name) \
-                .save()
-        
-        if self.backend.is_postgres_backend:
-            output.write.format('jdbc') \
-                .mode("append") \
-                .option("driver", "org.postgresql.Driver") \
-                .option("url", "jdbc:postgresql://testpg:15432/postgres") \
-                .option("user", "postgres") \
-                .option("password", "123456") \
-                .option("dbtable", output_table_name) \
-                .save()
-
+                }
+            columns_def = ', '.join([f'{col} {_data_type_map[col_type]}' for col, col_type in output_dtypes]) 
+            return f"""CREATE TABLE IF NOT EXISTS {output_table_name} ({columns_def}) engine = MergeTree
+            PRIMARY KEY {id_col}
+            ORDER BY {id_col}"""
+        else:
+            return ""
 
 
 class PartitionFuncs(PartitionFuncsBase):
