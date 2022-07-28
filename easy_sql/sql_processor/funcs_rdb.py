@@ -1,3 +1,4 @@
+import json
 from typing import Dict, List
 
 
@@ -81,6 +82,7 @@ class ModelFuncs:
                     "/tmp/app/dataplat/lib/scala/lib_spark3/clickhouse-native-jdbc-shaded-2.5.4.jar," \
                     "/tmp/app/dataplat/lib/scala/lib_spark3/mysql-connector-java-8.0.20.jar," \
                     "/tmp/app/dataplat/lib/scala/lib_spark3/postgresql-42.2.19.jar,"
+        dataplat_settings = "/tmp/app/dataplat/settings.json"
 
         file_dir = os.path.dirname(os.path.abspath(__file__))
         spark_config_settings_dict = {
@@ -96,14 +98,15 @@ class ModelFuncs:
 
         }
 
+        with open(dataplat_settings) as json_file:
+            connection_options = json.load(json_file)["spark_connection_options"]
+
         from py4j.java_gateway import java_import
         spark = get_spark("ml_local", spark_config_settings_dict)
         gw = spark.sparkContext._gateway
         java_import(gw.jvm, "common.dataplat.sparkutils")
 
-        connection_options = self.__get_backend_connection_options()
-
-        data = spark.read.format("jdbc") \
+        data = spark.read.format(f"{connection_options['format']}") \
             .option("driver", f"{connection_options['driver']}") \
             .option("url", f"{connection_options['url']}") \
             .option("user", f"{connection_options['user']}") \
@@ -126,7 +129,7 @@ class ModelFuncs:
         
         self.backend.exec_native_sql(ddl)
         self.backend.exec_native_sql(f"truncate table {output_table_name}")
-        output.write.format('jdbc') \
+        output.write.format(f"{connection_options['format']}") \
             .mode("append") \
             .option("driver", f"{connection_options['driver']}") \
             .option("truncate", "true") \
@@ -136,25 +139,6 @@ class ModelFuncs:
             .option("dbtable", output_table_name) \
             .save()
         
-    def __get_backend_connection_options(self) -> Dict:
-        if self.backend.is_postgres_backend:
-            return {
-                "driver": "org.postgresql.Driver",
-                "url": "jdbc:postgresql://testpg:15432/postgres",
-                "user": "postgres",
-                "password": "123456",
-                "truncate": "true",
-            }
-        elif self.backend.is_clickhouse_backend:
-            return {
-                "driver": "com.github.housepower.jdbc.ClickHouseDriver",
-                "url": "jdbc:clickhouse://backend-ch:32123",
-                "user": "default",
-                "password": "",
-                "truncate": "true",
-            } 
-        else:
-            return Dict()
 
     def __get_ddl_by_backend(self, output_table_name, id_col, output_dtypes) -> str:
 
@@ -164,10 +148,8 @@ class ModelFuncs:
                 'string': 'text',
                 'double': 'float'
                 }
-            columns_def = ', '.join([f'{col} {_data_type_map[col_type]}' for col, col_type in output_dtypes]) 
-            return f"""CREATE TABLE IF NOT EXISTS {output_table_name} ({columns_def})
-            PRIMARY KEY {id_col}
-            ORDER BY {id_col}""" 
+            columns_def = ', '.join([f'{col} {_data_type_map[col_type]} {"PRIMARY KEY" if col == id_col else "" }' for col, col_type in output_dtypes]) 
+            return f"CREATE TABLE IF NOT EXISTS {output_table_name} ({columns_def})" 
         elif self.backend.is_clickhouse_backend:
             _data_type_map = {
                 'int': 'Int64',
