@@ -1,6 +1,4 @@
-from ast import Str
 from typing import Dict, List
-
 
 
 from .backend.rdb import RdbBackend
@@ -158,7 +156,7 @@ class ModelFuncs:
         else:
             return Dict()
 
-    def __get_ddl_by_backend(self, output_table_name, id_col, output_dtypes) -> Str:
+    def __get_ddl_by_backend(self, output_table_name, id_col, output_dtypes) -> str:
 
         if self.backend.is_postgres_backend:
             _data_type_map = {
@@ -181,7 +179,9 @@ class ModelFuncs:
             PRIMARY KEY {id_col}
             ORDER BY {id_col}"""
         else:
-            return ""
+            msg = f'Backend of type {type(self.backend)}-{self.backend.backend_type if isinstance(self.backend, RdbBackend) else ""} ' \
+                  f'is not supported yet'
+            raise Exception(msg)
 
 
 class PartitionFuncs(PartitionFuncsBase):
