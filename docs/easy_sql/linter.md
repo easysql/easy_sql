@@ -1,7 +1,7 @@
 # Easy SQL Linter
 
 Easy SQL is a powerful tool that can bring convenience to ETL developer.
-But so far we do not have an easy SQL grammar supported compiler that can auto-check SQL quality and auto fix the violations.
+But so far we do not have an Easy-SQL grammar supported compiler that can auto-check SQL quality and auto fix the violations.
 It is the reason why we develop such linter tool on top of sqlfluff. With this linter, we can do static analysis and auto-fixing of ETL code written in Easy SQL.
 
 
@@ -20,7 +20,7 @@ Fix mode parameters:
 - path: The location of the ETL file.
 - include: Comma separated rule id to be included.
 - exclude: Comma separated rule id to be excluded.
-- backend: The backend of the ETL file, it will be used to find the correct rules.
+- backend: The backend of the ETL file. Will be used to find the correct rules.
 - easy_sql: Boolean value to indicate whether the ETL file is written in Easy SQL or normal SQL. Will default to true.
 - inplace: Boolean value to indicate whether to overwrite the origin file with the fixed output. If false the fixed output will be written to a new file with suffix `.fixed.sql`. 
 
@@ -29,7 +29,7 @@ Lint mode  parameters:
 - path: The location of the ETL file.
 - include: Comma separated rule id to be included.
 - exclude: Comma separated rule id to be excluded.
-- backend: The backend of the ETL file, it will be used to find the correct rules.
+- backend: The backend of the ETL file. Will be used to find the correct rules.
 - easy_sql: Boolean value to indicate whether the ETL file is written in Easy SQL or normal SQL. Will default to true.
 
 ## Programmatical usage
