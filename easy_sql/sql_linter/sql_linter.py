@@ -50,7 +50,7 @@ class SqlLinter:
         step_list = step_factory.create_from_sql(self.origin_sql)
         return step_list
 
-    def _get_dialect_from_backend(self, backend: str = None):
+    def _get_dialect_from_backend(self, backend: str = None) -> str:
         backend = backend or self._parse_backend(self.origin_sql)
         if backend == "spark":
             return "sparksql"
@@ -64,14 +64,14 @@ class SqlLinter:
         raise Exception("backend type so far is not supported for lint check")
 
     @staticmethod
-    def _update_included_rule_for_config(config: Dict[str, Any], context: str = "all", rules=None):
+    def _update_included_rule_for_config(config: Dict[str, Any], dialect: str = None, rules=None):
         if rules is None:
             rules = []
         if len(rules) > 0:
             config['core']['rules'] = ",".join(rules)
         else:
-            if context in ["bigquery"]:
-                config['core']['rules'] = "core," + context
+            if dialect in ["bigquery"]:
+                config['core']['rules'] = "core," + dialect
             else:
                 config['core']['rules'] = "core"
 
@@ -88,7 +88,7 @@ class SqlLinter:
             check_segment = segment_list[0]
             segment_list.remove(check_segment)
             if check_segment.is_type("unparsable"):
-                self.reporter.report_warning("Query have unparsable segment: " + check_segment.raw)
+                self.reporter.report_warning("Unparsable segment found: " + check_segment.raw)
                 return False
             elif check_segment.segments:
                 segment_list = segment_list + list(check_segment.segments)
@@ -97,7 +97,7 @@ class SqlLinter:
     def _check_lexable(self, tokens: Sequence[BaseSegment]) -> bool:
         for i, token in enumerate(tokens):
             if token.is_type("unlexable"):
-                self.reporter.report_warning("Query have unlexable segment: " + str(token.raw_segments))
+                self.reporter.report_warning("Unlexable segment found: " + str(token.raw_segments))
                 return False
         return True
 
@@ -111,7 +111,7 @@ class SqlLinter:
                 sql = step.select_sql + "\n"
                 lexer = Lexer(dialect=self._get_dialect_from_backend(backend))
 
-                # Add regrex mather to lexer to enable easy sql
+                # Add regex mather to lexer to enable easy sql
                 easy_sql_function = RegexLexer('easy_sql_function', r'\${[^\s,]+\(.+\)}', CodeSegment)
                 easy_sql_variable = RegexLexer('easy_sql_variable', r'\${[^\s,]+}', CodeSegment)
                 easy_sql_template = RegexLexer('easy_sql_template', r'@{[^{]+}', CodeSegment)
@@ -174,13 +174,12 @@ class SqlLinter:
         line_no = self.step_list[0].target_config.line_no
         return self.origin_sql.split("\n")[:line_no - 1]
 
-    def _prepare_linter(self, dialect):
+    def _prepare_linter(self, dialect: str):
         default_config_dict = FluffConfig(require_dialect=False)._configs
         default_config_dict['rules']['L019'] = {'comma_style': 'leading'}
+        default_config_dict['rules']['L014'] = {'extended_capitalisation_policy': 'lower'}
         default_config_dict['core']['dialect'] = dialect
-        self._update_included_rule_for_config(default_config_dict,
-                                              context=dialect,
-                                              rules=self.include_rules)
+        self._update_included_rule_for_config(default_config_dict, dialect=dialect, rules=self.include_rules)
         self._update_excluded_rule_for_config(default_config_dict, rules=self.exclude_rules)
         update_config = FluffConfig(configs=default_config_dict)
         linter = Linter(config=update_config, user_rules=__all__)
