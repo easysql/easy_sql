@@ -1,6 +1,7 @@
 import re
 from typing import Sequence, Dict, Any, List
 
+import regex
 from sqlfluff.core import Lexer, Parser, Linter, SQLBaseError
 from sqlfluff.core.config import FluffConfig
 from sqlfluff.core.parser import RegexLexer, CodeSegment
@@ -141,7 +142,11 @@ class SqlLinter:
         # Let parser recognize all function/variables/template into nakedIdentifier
         # which will be given grammar when given context
         identifier_segement = parser.config.get("dialect_obj")._library["NakedIdentifierSegment"]
-        identifier_segement.template = identifier_segement.template + r"|@{[^{]+}|[\$]{[\s\S]+}|\"[\s\S]+\""
+        template = identifier_segement.template + r"|@{[^{]+}|[\$]{[\s\S]+}|\"[\s\S]+\""
+        identifier_segement.template = template
+        # For sqlfluff > 1.0, template is compiled and cached, so we need to update it as well.
+        if identifier_segement._template is not None:
+            identifier_segement._template = regex.compile(template, regex.IGNORECASE)
         return parser
 
     def _lint_for_easy_sql(self, backend: str, log_error: bool = True, config_path: str = None) -> List[SQLBaseError]:
