@@ -101,7 +101,7 @@ class SqlLinter:
                 return False
         return True
 
-    def _lint_step_sql(self, step: Step, linter: Linter, backend: str, log_error: bool):
+    def _lint_step_sql(self, step: Step, lexer: Lexer, parser: Parser, linter: Linter, log_error: bool):
         self.fixed_sql_list.append(step.target_config.step_config_str)
         if step.select_sql:
             if step.is_template_statement():
@@ -109,24 +109,6 @@ class SqlLinter:
                 self.reporter.report_message("Skip template sql for this step.")
             else:
                 sql = step.select_sql + "\n"
-                lexer = Lexer(dialect=self._get_dialect_from_backend(backend))
-
-                # Add regex mather to lexer to enable easy sql
-                easy_sql_function = RegexLexer('easy_sql_function', r'\${[^\s,]+\(.+\)}', CodeSegment)
-                easy_sql_variable = RegexLexer('easy_sql_variable', r'\${[^\s,]+}', CodeSegment)
-                easy_sql_template = RegexLexer('easy_sql_template', r'@{[^{]+}', CodeSegment)
-                three_quote_string = RegexLexer('three_quote_string', r'""".*"""', CodeSegment)
-                lexer.lexer_matchers.insert(0, easy_sql_variable)
-                lexer.lexer_matchers.insert(0, easy_sql_function)
-                lexer.lexer_matchers.insert(0, easy_sql_template)
-                lexer.lexer_matchers.insert(0, three_quote_string)
-
-                parser = Parser(dialect=self._get_dialect_from_backend(backend))
-                # Let parser recognize all function/variables/template into nakedIdentifier
-                # which will be given grammar when given context
-                identifier_segement = parser.config.get("dialect_obj")._library["NakedIdentifierSegment"]
-                identifier_segement.template = identifier_segement.template + r"|@{[^{]+}|[\$]{[\s\S]+}|\"[\s\S]+\""
-
                 tokens, _ = lexer.lex(sql)
                 parsed = parser.parse(tokens)
 
@@ -140,9 +122,33 @@ class SqlLinter:
                 else:
                     self.fixed_sql_list.append(step.select_sql)
 
+    def _prepare_lexer(self, dialect: str):
+        lexer = Lexer(dialect=dialect)
+
+        # Add regex mather to lexer to enable easy sql
+        easy_sql_function = RegexLexer('easy_sql_function', r'\${[^\s,]+\(.+\)}', CodeSegment)
+        easy_sql_variable = RegexLexer('easy_sql_variable', r'\${[^\s,]+}', CodeSegment)
+        easy_sql_template = RegexLexer('easy_sql_template', r'@{[^{]+}', CodeSegment)
+        three_quote_string = RegexLexer('three_quote_string', r'""".*"""', CodeSegment)
+        lexer.lexer_matchers.insert(0, easy_sql_variable)
+        lexer.lexer_matchers.insert(0, easy_sql_function)
+        lexer.lexer_matchers.insert(0, easy_sql_template)
+        lexer.lexer_matchers.insert(0, three_quote_string)
+        return lexer
+
+    def _prepare_parser(self, dialect: str):
+        parser = Parser(dialect=dialect)
+        # Let parser recognize all function/variables/template into nakedIdentifier
+        # which will be given grammar when given context
+        identifier_segement = parser.config.get("dialect_obj")._library["NakedIdentifierSegment"]
+        identifier_segement.template = identifier_segement.template + r"|@{[^{]+}|[\$]{[\s\S]+}|\"[\s\S]+\""
+        return parser
+
     def _lint_for_easy_sql(self, backend: str, log_error: bool = True):
         lint_result = []
         dialect = self._get_dialect_from_backend(backend)
+        lexer = self._prepare_lexer(dialect)
+        parser = self._prepare_parser(dialect)
         linter = self._prepare_linter(dialect)
         step_count = 0
         self.fixed_sql_list = self._parser_sql_header()
@@ -150,7 +156,7 @@ class SqlLinter:
             step_count = step_count + 1
             if log_error:
                 self.reporter.report_message("=== Check step {} at line {} ===".format(step_no + 1, step.target_config.line_no))
-            step_result = self._lint_step_sql(step, linter, backend, log_error)
+            step_result = self._lint_step_sql(step, lexer, parser, linter, log_error)
             if step_result:
                 lint_result = lint_result + step_result
         return lint_result
@@ -193,6 +199,4 @@ class SqlLinter:
 
     def fix(self, backend: str, log_linter_error: bool = False, easy_sql: bool = True):
         self.lint(backend, log_linter_error, easy_sql)
-        delimiter = "\n"
-        reunion_sql = delimiter.join(self.fixed_sql_list)
-        return reunion_sql
+        return "\n".join(self.fixed_sql_list)
