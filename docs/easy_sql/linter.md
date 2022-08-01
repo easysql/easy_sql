@@ -18,6 +18,7 @@ There are fix and lint mode, for lint it will only show the rule violations whil
 Fix mode parameters:
 
 - path: The location of the ETL file.
+- config-path: Sql fluff config file path, must be named `.sqlfluff`. Used to customize lint rules. There are some customization introduced by Easy SQL. If this is specified, the customization will be lost.
 - include: Comma separated rule id to be included.
 - exclude: Comma separated rule id to be excluded.
 - backend: The backend of the ETL file. Will be used to find the correct rules.
@@ -28,6 +29,7 @@ Lint mode  parameters:
 
 - path: The location of the ETL file.
 - include: Comma separated rule id to be included.
+- config-path: Sql fluff config file path, must be named `.sqlfluff`. Used to customize lint rules. There are some customization introduced by Easy SQL. If this is specified, the customization will be lost.
 - exclude: Comma separated rule id to be excluded.
 - backend: The backend of the ETL file. Will be used to find the correct rules.
 - easy_sql: Boolean value to indicate whether the ETL file is written in Easy SQL or normal SQL. Will default to true.
