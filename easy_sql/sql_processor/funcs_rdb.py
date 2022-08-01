@@ -80,18 +80,22 @@ class ModelFuncs:
         from pyspark.sql.functions import expr
         from ..spark_optimizer import get_spark
 
-        exec_dir = os.environ.get('PWD')
-        dataplat_settings_dir = os.path.dirname(exec_dir)
+        workdir = os.path.dirname(os.environ.get('PWD'))
+        local_settings_dir = f"{workdir}/settings.local.json"
+        settings_dir = f"{workdir}/settings.json"
 
-        SPARK_JARS = f"{dataplat_settings_dir}/lib/scala/lib_spark3/clickhouse-integration-spark_2.12-2.5.4.jar," \
-                    f"{dataplat_settings_dir}/lib/scala/lib_spark3/clickhouse-native-jdbc-shaded-2.5.4.jar," \
-                    f"{dataplat_settings_dir}/lib/scala/lib_spark3/mysql-connector-java-8.0.20.jar," \
-                    f"{dataplat_settings_dir}/lib/scala/lib_spark3/postgresql-42.2.19.jar,"
+        with open(settings_dir, 'r') as json_file:
+            settings = json.load(json_file)
+            data_source_load_options = settings["ml_model"]["data_source_load_options"]
+            data_type_map = settings["ml_model"]["data_type_map"]
+            SPARK_JARS = "".join(settings["ml_model"]["spark_jars"])
         
-        
-        
-        dataplat_local_settings = f"{dataplat_settings_dir}/settings.local.json"
+        with open(local_settings_dir, 'r') as json_file:
+            local_settings = json.load(json_file)
+            local_data_source_load_options = local_settings["ml_model"]["data_source_load_options"]
+
         file_dir = os.path.dirname(os.path.abspath(__file__))
+        
         spark_config_settings_dict = {
             'spark.jars': SPARK_JARS,
             'spark.master': 'local[2]',
@@ -105,11 +109,6 @@ class ModelFuncs:
 
         }
 
-        with open(dataplat_local_settings, 'r') as json_file:
-            local_settings = json.load(json_file)
-            data_source_load_options = local_settings["ml_model"]["data_source_load_options"]
-            data_type_map = local_settings["ml_model"]["data_type_map"]
-
         from py4j.java_gateway import java_import
         spark = get_spark("ml_local", spark_config_settings_dict)
         gw = spark.sparkContext._gateway
@@ -119,7 +118,7 @@ class ModelFuncs:
             .option("driver", f"{data_source_load_options['driver']}") \
             .option("url", f"{data_source_load_options['url']}") \
             .option("user", f"{data_source_load_options['user']}") \
-            .option("password", f"{data_source_load_options['password']}") \
+            .option("password", f"{local_data_source_load_options['password']}") \
             .option("dbtable", input_table_name) \
             .load()
 
@@ -144,7 +143,7 @@ class ModelFuncs:
             .option("truncate", f"{data_source_load_options['truncate']}") \
             .option("url", f"{data_source_load_options['url']}") \
             .option("user", f"{data_source_load_options['user']}") \
-            .option("password", f"{data_source_load_options['password']}") \
+            .option("password", f"{local_data_source_load_options['password']}") \
             .option("dbtable", output_table_name) \
             .save()
 
