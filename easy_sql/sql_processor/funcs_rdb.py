@@ -1,5 +1,6 @@
 import json
-from typing import Dict, List
+from typing import List
+
 
 
 from .backend.rdb import RdbBackend
@@ -47,6 +48,7 @@ class ModelFuncs:
         spark._jsc.hadoopConfiguration().set('fs.gs.auth.service.account.enable', 'true')
         spark._jsc.hadoopConfiguration().set('google.cloud.auth.service.account.json.keyfile',
                                              f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-prod.json")
+
         spark.read.format('bigquery') \
             .option("parentProject", 'data-dev-workbench-prod-3fd9') \
             .option("table", input_table_name) \
@@ -78,12 +80,17 @@ class ModelFuncs:
         from pyspark.sql.functions import expr
         from ..spark_optimizer import get_spark
 
-        SPARK_JARS = "/tmp/app/dataplat/lib/scala/lib_spark3/clickhouse-integration-spark_2.12-2.5.4.jar," \
-                    "/tmp/app/dataplat/lib/scala/lib_spark3/clickhouse-native-jdbc-shaded-2.5.4.jar," \
-                    "/tmp/app/dataplat/lib/scala/lib_spark3/mysql-connector-java-8.0.20.jar," \
-                    "/tmp/app/dataplat/lib/scala/lib_spark3/postgresql-42.2.19.jar,"
-        dataplat_settings = "/tmp/app/dataplat/settings.json"
+        exec_dir = os.environ.get('PWD')
+        dataplat_settings_dir = os.path.dirname(exec_dir)
 
+        SPARK_JARS = f"{dataplat_settings_dir}/lib/scala/lib_spark3/clickhouse-integration-spark_2.12-2.5.4.jar," \
+                    f"{dataplat_settings_dir}/lib/scala/lib_spark3/clickhouse-native-jdbc-shaded-2.5.4.jar," \
+                    f"{dataplat_settings_dir}/lib/scala/lib_spark3/mysql-connector-java-8.0.20.jar," \
+                    f"{dataplat_settings_dir}/lib/scala/lib_spark3/postgresql-42.2.19.jar,"
+        
+        
+        
+        dataplat_local_settings = f"{dataplat_settings_dir}/settings.local.json"
         file_dir = os.path.dirname(os.path.abspath(__file__))
         spark_config_settings_dict = {
             'spark.jars': SPARK_JARS,
@@ -98,19 +105,21 @@ class ModelFuncs:
 
         }
 
-        with open(dataplat_settings) as json_file:
-            connection_options = json.load(json_file)["spark_connection_options"]
+        with open(dataplat_local_settings, 'r') as json_file:
+            local_settings = json.load(json_file)
+            data_source_load_options = local_settings["ml_model"]["data_source_load_options"]
+            data_type_map = local_settings["ml_model"]["data_type_map"]
 
         from py4j.java_gateway import java_import
         spark = get_spark("ml_local", spark_config_settings_dict)
         gw = spark.sparkContext._gateway
         java_import(gw.jvm, "common.dataplat.sparkutils")
 
-        data = spark.read.format(f"{connection_options['format']}") \
-            .option("driver", f"{connection_options['driver']}") \
-            .option("url", f"{connection_options['url']}") \
-            .option("user", f"{connection_options['user']}") \
-            .option("password", f"{connection_options['password']}") \
+        data = spark.read.format(f"{data_source_load_options['format']}") \
+            .option("driver", f"{data_source_load_options['driver']}") \
+            .option("url", f"{data_source_load_options['url']}") \
+            .option("user", f"{data_source_load_options['user']}") \
+            .option("password", f"{data_source_load_options['password']}") \
             .option("dbtable", input_table_name) \
             .load()
 
@@ -125,38 +134,26 @@ class ModelFuncs:
         predictions = model.transform(data)
         output = predictions.select(output_ref_cols + [id_col, 'prediction'])
 
-        ddl = self.__get_ddl_by_backend(output_table_name, id_col, output.dtypes)
-        
+        ddl = self.__get_ddl_by_backend(data_type_map, output_table_name, id_col, output.dtypes)
+
         self.backend.exec_native_sql(ddl)
         self.backend.exec_native_sql(f"truncate table {output_table_name}")
-        output.write.format(f"{connection_options['format']}") \
+        output.write.format(f"{data_source_load_options['format']}") \
             .mode("append") \
-            .option("driver", f"{connection_options['driver']}") \
-            .option("truncate", "true") \
-            .option("url", f"{connection_options['url']}") \
-            .option("user", f"{connection_options['user']}") \
-            .option("password", f"{connection_options['password']}") \
+            .option("driver", f"{data_source_load_options['driver']}") \
+            .option("truncate", f"{data_source_load_options['truncate']}") \
+            .option("url", f"{data_source_load_options['url']}") \
+            .option("user", f"{data_source_load_options['user']}") \
+            .option("password", f"{data_source_load_options['password']}") \
             .option("dbtable", output_table_name) \
             .save()
-        
 
-    def __get_ddl_by_backend(self, output_table_name, id_col, output_dtypes) -> str:
-
+    def __get_ddl_by_backend(self, data_type_map, output_table_name, id_col, output_dtypes) -> str:
         if self.backend.is_postgres_backend:
-            _data_type_map = {
-                'int': 'int',
-                'string': 'text',
-                'double': 'float'
-                }
-            columns_def = ', '.join([f'{col} {_data_type_map[col_type]} {"PRIMARY KEY" if col == id_col else "" }' for col, col_type in output_dtypes]) 
-            return f"CREATE TABLE IF NOT EXISTS {output_table_name} ({columns_def})" 
+            columns_def = ', '.join([f'{col} {data_type_map[col_type]} {"PRIMARY KEY" if col == id_col else "" }' for col, col_type in output_dtypes])
+            return f"CREATE TABLE IF NOT EXISTS {output_table_name} ({columns_def})"
         elif self.backend.is_clickhouse_backend:
-            _data_type_map = {
-                'int': 'Int64',
-                'string': 'String',
-                'double': 'Float64'
-                }
-            columns_def = ', '.join([f'{col} {_data_type_map[col_type]}' for col, col_type in output_dtypes]) 
+            columns_def = ', '.join([f'{col} {data_type_map[col_type]}' for col, col_type in output_dtypes])
             return f"""CREATE TABLE IF NOT EXISTS {output_table_name} ({columns_def}) engine = MergeTree
             PRIMARY KEY {id_col}
             ORDER BY {id_col}"""
