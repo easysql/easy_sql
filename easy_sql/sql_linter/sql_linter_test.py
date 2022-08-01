@@ -16,13 +16,13 @@ aa from sales_order
                                exclude_rules=None)
         result = sql_linter.lint("bigquery", easysql=False)
         fixed = sql_linter.fix("bigquery", easy_sql=False)
-        assert (len(result) == 7)
+        self.assertEqual(len(result), 7)
         print(fixed)
         expected = '''select a
     , date, date2
     , aa from ${temp_db}.sales_order
 '''
-        assert (expected == fixed)
+        self.assertEqual(expected, fixed)
 
     def test_should_work_for_exclude_rules(self):
         sql = '''select  a,
@@ -35,13 +35,13 @@ aa from sales_order
                                exclude_rules=['BigQuery_L001'])
         result = sql_linter.lint("bigquery", easysql=False)
         fixed = sql_linter.fix("bigquery", easy_sql=False)
-        assert (len(result) == 6)
+        self.assertEqual(len(result), 6)
         print(fixed)
         expected = '''select a
     , date, date2
     , aa from sales_order
 '''
-        assert (expected == fixed)
+        self.assertEqual(expected, fixed)
 
     def test_should_work_for_variables(self):
         sql = '''-- backend: bigquery
@@ -56,14 +56,14 @@ ${${aa}} from sales_order
                                exclude_rules=None)
         result = sql_linter.lint("bigquery")
         fixed = sql_linter.fix("bigquery")
-        assert (len(result) == 7)
+        self.assertEqual(len(result), 7)
         expected = '''-- backend: bigquery
 -- target=temp.feature_stage_0_out
 select a
     , ${date}, ${date2}
     , ${${aa}} from ${temp_db}.sales_order
 '''
-        assert (expected == fixed)
+        self.assertEqual(expected, fixed)
 
     def test_should_work_when_have_three_quote(self):
         sql = '''-- backend: bigquery
@@ -76,12 +76,12 @@ select  a,"""hh"""ab, "" ac from table
                                exclude_rules=None)
         result = sql_linter.lint("bigquery")
         fixed = sql_linter.fix("bigquery")
-        assert (len(result) == 5)
+        self.assertEqual(len(result), 5)
         expected = '''-- backend: bigquery
 -- target=temp.feature_stage_0_out
 select a, """hh""" as ab, "" as ac from ${temp_db}.table
 '''
-        assert (expected == fixed)
+        self.assertEqual(expected, fixed)
 
     def test_should_work_for_multiple_step(self):
         sql = """-- backend: bigquery
@@ -103,7 +103,7 @@ select *
                                include_rules=None,
                                exclude_rules=None)
         result = sql_linter.lint("bigquery")
-        assert (len(result) == 10)
+        self.assertEqual(len(result), 10)
         fixed = sql_linter.fix("bigquery")
         expected = """-- backend: bigquery
 -- target=variables
@@ -120,7 +120,7 @@ from ${temp_db}.sales_model_demo_with_label where date = '${data_date_no_ds}'
 select *
     , ${data_date_no_ds}, A1, B1 from ${temp_db}.Model_data
 """
-        assert (fixed == expected)
+        self.assertEqual(fixed, expected)
 
     def test_should_work_when_have_template(self):
         # bigquery union must be union all
@@ -142,7 +142,7 @@ select @{dim_cols} from sales_amount
 """
         sql_linter = SqlLinter(sql, exclude_rules=['L025'])
         result = sql_linter.lint("bigquery")
-        assert (len(result) == 4)
+        self.assertEqual(len(result), 4)
         fixed = sql_linter.fix("bigquery")
         print(fixed)
         expected = """-- backend: bigquery
@@ -160,7 +160,7 @@ select @{dim_cols} from ${temp_db}.Sales_amount
     source_table_name=transited, source_table_biz_key=product_id, result_col_name=product_id_key,
     fk_table_name=dwd_sales.sales_dim_product_h, pk=product_key, fk_table_biz_key=id,
     update_time_col_name=update_time, partition_col_name=di)} """
-        assert (expected == fixed)
+        self.assertEqual(expected, fixed)
 
     def test_should_work_when_given_diff_backend(self):
         # spark can only use union
@@ -189,7 +189,7 @@ select @{dim_cols} from sales_amount
 """
         sql_linter = SqlLinter(sql)
         result = sql_linter.lint("spark", True)
-        assert (len(result) == 3)
+        self.assertEqual(len(result), 3)
         fixed = sql_linter.fix("spark")
         expected = """-- backend: spark
 -- --------------------
@@ -214,7 +214,7 @@ select @{dim_cols} from Order_count
 union
 select @{dim_cols} from Sales_amount
 """
-        assert (fixed == expected)
+        self.assertEqual(fixed, expected)
 
     def test_should_work_when_have_functions(self):
         sql = """-- backend: bigquery
@@ -236,7 +236,7 @@ select * from order_count where value < ${a}
         print(len(result))
         fixed = sql_linter.fix("bigquery")
         print(fixed)
-        assert (len(result) == 8)
+        self.assertEqual(len(result), 8)
         expected = """-- backend: bigquery
 
 -- target=variables
@@ -248,7 +248,7 @@ from ${temp_db}.Data_table
 select * from ${temp_db}.order_count where value < ${a}
 
 -- target=func.plus(1, 1)"""
-        assert (expected == fixed)
+        self.assertEqual(expected, fixed)
 
 
 if __name__ == '__main__':

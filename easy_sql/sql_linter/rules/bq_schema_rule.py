@@ -1,21 +1,25 @@
-"""An example of a custom rule implemented through the plugin system."""
-
+from sqlfluff.core.parser import CodeSegment
 from sqlfluff.core.rules.base import (
-    BaseRule,LintFix,
+    BaseRule, LintFix,
     LintResult,
     RuleContext,
 )
-from sqlfluff.core.parser import CodeSegment
+
 
 class Rule_BigQuery_L001(BaseRule):
-    """select from is compulsory to have schema
+    """
+    Table schema is required for queries in BigQuery.
+
     **Anti-pattern**
-    use select from table without schema
+    Select from some table without schema.
+
     .. code-block:: sql
         SELECT *
         FROM foo
+
     **Best practice**
-    Do not order by these columns.
+    Select from some table with schema.
+
     .. code-block:: sql
         SELECT *
         FROM test.foo
@@ -39,6 +43,5 @@ class Rule_BigQuery_L001(BaseRule):
                             [CodeSegment(raw="${temp_db}.")],
                         )
                     ],
-                    description=f"select from `{context.segment.raw}` do not have schema in table.",
+                    description=f"No schema found when select from table `{context.segment.raw}`.",
                 )
-

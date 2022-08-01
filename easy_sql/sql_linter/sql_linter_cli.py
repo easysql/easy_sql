@@ -1,10 +1,10 @@
 import re
+import sys
 import warnings
 
 import click
 
 from easy_sql.sql_linter.sql_linter import SqlLinter
-from easy_sql.sql_linter.sql_linter_reportor import *
 
 
 def split_rules_to_list(rule_description: str):
@@ -36,6 +36,7 @@ def lint_process(check_sql_file_path: str, exclude: str, include: str, backend: 
     sql_linter = SqlLinter(sql, exclude_rules=split_rules_to_list(exclude),
                            include_rules=split_rules_to_list(include))
     backend = backend if backend else parse_backend(sql)
+    print('using backend:', backend)
     result = sql_linter.lint(backend, easysql=easy_sql)
     fixed = sql_linter.fix(backend, easy_sql=easy_sql)
 
