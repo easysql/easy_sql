@@ -103,7 +103,7 @@ select *
                                include_rules=None,
                                exclude_rules=None)
         result = sql_linter.lint("bigquery")
-        self.assertEqual(len(result), 10)
+        self.assertEqual(len(result), 7)
         fixed = sql_linter.fix("bigquery")
         expected = """-- backend: bigquery
 -- target=variables
@@ -118,7 +118,7 @@ from ${temp_db}.sales_model_demo_with_label where date = '${data_date_no_ds}'
 
 -- target=temp.feature_stage_0_out
 select *
-    , ${data_date_no_ds}, A1, B1 from ${temp_db}.Model_data
+    , ${data_date_no_ds}, a1, b1 from ${temp_db}.model_data
 """
         self.assertEqual(fixed, expected)
 
@@ -142,7 +142,7 @@ select @{dim_cols} from sales_amount
 """
         sql_linter = SqlLinter(sql, exclude_rules=['L025'])
         result = sql_linter.lint("bigquery")
-        self.assertEqual(len(result), 4)
+        self.assertEqual(len(result), 2)
         fixed = sql_linter.fix("bigquery")
         print(fixed)
         expected = """-- backend: bigquery
@@ -151,9 +151,9 @@ product_name
 , product_category
 
 -- target=temp.dims
-select @{dim_cols} from ${temp_db}.Order_count
+select @{dim_cols} from ${temp_db}.order_count
 union all
-select @{dim_cols} from ${temp_db}.Sales_amount
+select @{dim_cols} from ${temp_db}.sales_amount
 
 -- target=temp.result
 @{transited_with_fk_inc_template(
@@ -189,7 +189,7 @@ select @{dim_cols} from sales_amount
 """
         sql_linter = SqlLinter(sql)
         result = sql_linter.lint("spark", True)
-        self.assertEqual(len(result), 3)
+        self.assertEqual(len(result), 1)
         fixed = sql_linter.fix("spark")
         expected = """-- backend: spark
 -- --------------------
@@ -210,9 +210,9 @@ product_name
 , product_category
 
 -- target=temp.dims
-select @{dim_cols} from Order_count
+select @{dim_cols} from order_count
 union
-select @{dim_cols} from Sales_amount
+select @{dim_cols} from sales_amount
 """
         self.assertEqual(fixed, expected)
 
@@ -236,13 +236,13 @@ select * from order_count where value < ${a}
         print(len(result))
         fixed = sql_linter.fix("bigquery")
         print(fixed)
-        self.assertEqual(len(result), 8)
+        self.assertEqual(len(result), 4)
         expected = """-- backend: bigquery
 
 -- target=variables
-select ${plus(1, 2)} as A
-    , Flag as B
-from ${temp_db}.Data_table
+select ${plus(1, 2)} as a
+    , flag as b
+from ${temp_db}.data_table
 
 -- target=temp.dims
 select * from ${temp_db}.order_count where value < ${a}
