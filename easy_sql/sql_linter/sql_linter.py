@@ -1,7 +1,7 @@
 import re
-from typing import Sequence, Dict, Any
+from typing import Sequence, Dict, Any, List
 
-from sqlfluff.core import Lexer, Parser, Linter
+from sqlfluff.core import Lexer, Parser, Linter, SQLBaseError
 from sqlfluff.core.config import FluffConfig
 from sqlfluff.core.parser import RegexLexer, CodeSegment
 from sqlfluff.core.parser.segments import BaseSegment
@@ -101,7 +101,7 @@ class SqlLinter:
                 return False
         return True
 
-    def _lint_step_sql(self, step: Step, lexer: Lexer, parser: Parser, linter: Linter, log_error: bool):
+    def _lint_step_sql(self, step: Step, lexer: Lexer, parser: Parser, linter: Linter, log_error: bool) -> List[SQLBaseError]:
         self.fixed_sql_list.append(step.target_config.step_config_str)
         if step.select_sql:
             if step.is_template_statement():
@@ -144,12 +144,12 @@ class SqlLinter:
         identifier_segement.template = identifier_segement.template + r"|@{[^{]+}|[\$]{[\s\S]+}|\"[\s\S]+\""
         return parser
 
-    def _lint_for_easy_sql(self, backend: str, log_error: bool = True):
+    def _lint_for_easy_sql(self, backend: str, log_error: bool = True, config_path: str = None) -> List[SQLBaseError]:
         lint_result = []
         dialect = self._get_dialect_from_backend(backend)
         lexer = self._prepare_lexer(dialect)
         parser = self._prepare_parser(dialect)
-        linter = self._prepare_linter(dialect)
+        linter = self._prepare_linter(dialect, config_path)
         step_count = 0
         self.fixed_sql_list = self._parser_sql_header()
         for step_no, step in enumerate(self.step_list):
@@ -161,12 +161,12 @@ class SqlLinter:
                 lint_result = lint_result + step_result
         return lint_result
 
-    def _lint_for_normal_sql(self, backend: str, log_error: bool = True):
+    def _lint_for_normal_sql(self, backend: str, log_error: bool = True, config_path: str = None) -> List[SQLBaseError]:
         self.fixed_sql_list = []
         dialect = self._get_dialect_from_backend(backend)
         lexer = Lexer(dialect=dialect)
         parser = Parser(dialect=dialect)
-        linter = self._prepare_linter(dialect)
+        linter = self._prepare_linter(dialect, config_path=config_path)
         tokens, _ = lexer.lex(self.origin_sql)
         parsed = parser.parse(tokens)
         lint_result = linter.lint(parsed)
@@ -180,23 +180,26 @@ class SqlLinter:
         line_no = self.step_list[0].target_config.line_no
         return self.origin_sql.split("\n")[:line_no - 1]
 
-    def _prepare_linter(self, dialect: str):
-        default_config_dict = FluffConfig(require_dialect=False)._configs
-        default_config_dict['rules']['L019'] = {'comma_style': 'leading'}
-        default_config_dict['rules']['L014'] = {'extended_capitalisation_policy': 'lower'}
-        default_config_dict['core']['dialect'] = dialect
-        self._update_included_rule_for_config(default_config_dict, dialect=dialect, rules=self.include_rules)
-        self._update_excluded_rule_for_config(default_config_dict, rules=self.exclude_rules)
-        update_config = FluffConfig(configs=default_config_dict)
-        linter = Linter(config=update_config, user_rules=__all__)
+    def _prepare_linter(self, dialect: str, config_path: str = None):
+        if config_path:
+            config = FluffConfig.from_path(config_path)
+        else:
+            default_config_dict = FluffConfig(require_dialect=False)._configs
+            default_config_dict['rules']['L019'] = {'comma_style': 'leading'}
+            default_config_dict['rules']['L014'] = {'extended_capitalisation_policy': 'lower'}
+            default_config_dict['core']['dialect'] = dialect
+            self._update_included_rule_for_config(default_config_dict, dialect=dialect, rules=self.include_rules)
+            self._update_excluded_rule_for_config(default_config_dict, rules=self.exclude_rules)
+            config = FluffConfig(configs=default_config_dict)
+        linter = Linter(config=config, user_rules=__all__)
         return linter
 
-    def lint(self, backend: str, log_error: bool = True, easysql: bool = True):
+    def lint(self, backend: str, log_error: bool = True, easysql: bool = True, config_path: str = None) -> List[SQLBaseError]:
         if easysql:
-            return self._lint_for_easy_sql(backend, log_error)
+            return self._lint_for_easy_sql(backend, log_error, config_path=config_path)
         else:
-            return self._lint_for_normal_sql(backend, log_error)
+            return self._lint_for_normal_sql(backend, log_error, config_path=config_path)
 
-    def fix(self, backend: str, log_linter_error: bool = False, easy_sql: bool = True):
-        self.lint(backend, log_linter_error, easy_sql)
+    def fix(self, backend: str, log_linter_error: bool = False, easy_sql: bool = True, config_path: str = None):
+        self.lint(backend, log_linter_error, easy_sql, config_path=config_path)
         return "\n".join(self.fixed_sql_list)
