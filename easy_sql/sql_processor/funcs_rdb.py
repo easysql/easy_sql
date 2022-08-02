@@ -15,8 +15,8 @@ class ModelFuncs:
     def __init__(self, backend: RdbBackend):
         self.backend = backend
 
-    def bq_model_predict_with_tmp_spark(self, model_save_path: str, input_table_name: str, output_table_name: str,
-                                        feature_cols: str, id_col: str, output_ref_cols: str):
+    def bq_model_predict_with_local_spark(self, model_save_path: str, input_table_name: str, output_table_name: str,
+                                          feature_cols: str, id_col: str, output_ref_cols: str):
         from pyspark.ml import PipelineModel
         from pyspark.sql.functions import expr
         from ..spark_optimizer import get_spark
