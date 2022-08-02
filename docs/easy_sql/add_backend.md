@@ -1,8 +1,10 @@
 # Add Backend
 
 ##Introduction
-Easy-sql is designed as a tool to quick implement with different kind of sql backend. 
-So far supported backend is:
+
+Easy-sql is designed as a tool to quick implement with different kind of sql backend.
+
+So far supported backends are:
 
 + spark sql(spark engine)
 + bigquery(sqlalchemy engine)

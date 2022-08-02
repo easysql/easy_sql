@@ -29,6 +29,7 @@ Contents
    easy_sql/debug.md
    easy_sql/testing.md
    easy_sql/linter.md
+   easy_sql/functions.md
    autoapi/index
 
 

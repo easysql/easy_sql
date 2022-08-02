@@ -1,11 +1,8 @@
-import json
+import os
 from typing import List
-
-
 
 from .backend.rdb import RdbBackend
 from .funcs_common import ColumnFuncs, TableFuncs, PartitionFuncs as PartitionFuncsBase, AlertFunc
-import os
 
 __all__ = [
     'PartitionFuncs', 'ColumnFuncs', 'AlertFunc', 'TableFuncs'
@@ -89,13 +86,13 @@ class ModelFuncs:
             data_source_load_options = settings["ml_model"]["data_source_load_options"]
             data_type_map = settings["ml_model"]["data_type_map"]
             SPARK_JARS = "".join(settings["ml_model"]["spark_jars"])
-        
+
         with open(local_settings_dir, 'r') as json_file:
             local_settings = json.load(json_file)
             local_data_source_load_options = local_settings["ml_model"]["data_source_load_options"]
 
         file_dir = os.path.dirname(os.path.abspath(__file__))
-        
+
         spark_config_settings_dict = {
             'spark.jars': SPARK_JARS,
             'spark.master': 'local[2]',
