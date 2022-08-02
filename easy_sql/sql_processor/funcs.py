@@ -45,7 +45,7 @@ class FuncRunner:
 
     @staticmethod
     def _get_rdb_funcs(backend) -> Dict[str, Callable]:
-        from easy_sql.sql_processor.funcs_rdb import PartitionFuncs, ColumnFuncs, TableFuncs,ModelFuncs
+        from easy_sql.sql_processor.funcs_rdb import PartitionFuncs, ColumnFuncs, TableFuncs, ModelFuncs
         partition_funcs = PartitionFuncs(backend)
         col_funcs = ColumnFuncs(backend)
         table_funcs = TableFuncs(backend)

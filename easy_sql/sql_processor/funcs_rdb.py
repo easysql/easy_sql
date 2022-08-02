@@ -5,7 +5,7 @@ from .backend.rdb import RdbBackend
 from .funcs_common import ColumnFuncs, TableFuncs, PartitionFuncs as PartitionFuncsBase, AlertFunc
 
 __all__ = [
-    'PartitionFuncs', 'ColumnFuncs', 'AlertFunc', 'TableFuncs'
+    'PartitionFuncs', 'ColumnFuncs', 'AlertFunc', 'TableFuncs', 'ModelFuncs'
 ]
 
 

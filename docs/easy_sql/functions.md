@@ -126,3 +126,9 @@ Below are a list of them for referencing.
 - [`ensure_no_null_data_in_table(step: easy_sql.sql_processor.step.Step, table_name: str, query: str = None) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.TableFuncs.ensure_no_null_data_in_table)
 
 
+#### Model functions
+
+- [`bq_model_predict_with_tmp_spark(model_save_path: str, input_table_name: str, output_table_name: str, feature_cols: str, id_col: str, output_ref_cols: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_rdb/index.html#easy_sql.sql_processor.funcs_rdb.ModelFuncs.bq_model_predict_with_tmp_spark)
+- [`model_predict_with_local_spark(model_save_path: str, input_table_name: str, output_table_name: str, feature_cols: str, id_col: str, output_ref_cols: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_rdb/index.html#easy_sql.sql_processor.funcs_rdb.ModelFuncs.model_predict_with_local_spark)
+
+
