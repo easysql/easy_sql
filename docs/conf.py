@@ -17,7 +17,6 @@
 
 # -- Project information -----------------------------------------------------
 import os.path
-import sys
 
 project = 'Easy SQL'
 copyright = '2022, easysql'
@@ -77,9 +76,3 @@ html_theme = 'sphinx_rtd_theme'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
-
-# -- generate doc --
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scripts'))
-doc_generator = getattr(__import__('update_function_doc'), 'update_func_doc')
-doc_generator()

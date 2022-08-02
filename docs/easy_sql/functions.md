@@ -1,3 +1,5 @@
+<!-- Notes: this doc need to be updated manually -->
+
 # Functions
 
 While most of the ETL code is SQL, sometimes we would like to do things that are difficult to implement in SQL.
