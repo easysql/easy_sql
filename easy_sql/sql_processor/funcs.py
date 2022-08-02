@@ -112,7 +112,6 @@ class FuncRunner:
             'write_json_local': io_funcs.write_json_local,
             'update_json_local': io_funcs.update_json_local,
             'model_predict': model_funcs.model_predict,
-            'parentProject': 'data-dev-workbench-prod-3fd9',
         }
 
     def run_func(self, func_def: str, vars_replacer: VarsReplacer) -> bool:
