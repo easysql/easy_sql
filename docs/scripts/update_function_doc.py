@@ -37,7 +37,7 @@ def _render_doc_modules_functions(backend: str):
     return "\n".join(groups_doc)
 
 
-def update_function_doc(doc_tpl_file: str, doc_file: str):
+def _update_function_doc(doc_tpl_file: str, doc_file: str):
     with open(doc_tpl_file, 'r') as f:
         doc_tpl = f.read()
     lines = doc_tpl.split('\n')
@@ -62,7 +62,11 @@ def update_function_doc(doc_tpl_file: str, doc_file: str):
         print('updated file:', doc_file)
 
 
-if __name__ == '__main__':
+def update_func_doc():
     doc_tpl_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../easy_sql/functions.tpl.md')
     doc_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../easy_sql/functions.md')
-    update_function_doc(doc_tpl_file, doc_file)
+    _update_function_doc(doc_tpl_file, doc_file)
+
+
+if __name__ == '__main__':
+    update_func_doc()
