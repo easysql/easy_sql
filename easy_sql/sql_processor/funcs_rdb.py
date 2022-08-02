@@ -1,3 +1,4 @@
+import json
 import os
 from typing import List
 
@@ -72,7 +73,7 @@ class ModelFuncs:
             .save()
 
     def model_predict_with_local_spark(self, model_save_path: str, input_table_name: str, output_table_name: str,
-                                        feature_cols: str, id_col: str, output_ref_cols: str):
+                                       feature_cols: str, id_col: str, output_ref_cols: str):
         from pyspark.ml import PipelineModel
         from pyspark.sql.functions import expr
         from ..spark_optimizer import get_spark
@@ -146,7 +147,7 @@ class ModelFuncs:
 
     def __get_ddl_by_backend(self, data_type_map, output_table_name, id_col, output_dtypes) -> str:
         if self.backend.is_postgres_backend:
-            columns_def = ', '.join([f'{col} {data_type_map[col_type]} {"PRIMARY KEY" if col == id_col else "" }' for col, col_type in output_dtypes])
+            columns_def = ', '.join([f'{col} {data_type_map[col_type]} {"PRIMARY KEY" if col == id_col else ""}' for col, col_type in output_dtypes])
             return f"CREATE TABLE IF NOT EXISTS {output_table_name} ({columns_def})"
         elif self.backend.is_clickhouse_backend:
             columns_def = ', '.join([f'{col} {data_type_map[col_type]}' for col, col_type in output_dtypes])
