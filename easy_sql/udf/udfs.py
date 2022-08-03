@@ -1,31 +1,39 @@
 from typing import Callable, Dict, Any, Union, List
 
 
-def remove_all_whitespaces(value: str):
-    return "".join(value.split()) if value is not None else None
-
-
-def trim_all(value: str):
-    return value.strip() if value is not None else None
-
-
-def all_udfs(cls: Any):
+def _all_udfs(cls: Any):
     return dict([(attr, getattr(cls, attr)) for attr in dir(cls) if callable(getattr(cls, attr)) and not attr.startswith('_') and attr != 'all'])
 
 
-def get_udfs(type: str) -> Dict[str, Callable[[], Union[str, List[str]]]]:
+def get_udfs(type: str) -> Union[Dict[str, Callable[[], Union[str, List[str]]]], Dict[str, Callable]]:
     if type == 'pg':
         return PgUdfs.all()
     elif type == 'ch':
         return ChUdfs.all()
+    elif type == 'spark':
+        return SparkUdfs.all()
     else:
         return {}
+
+
+class SparkUdfs:
+    @staticmethod
+    def all() -> Dict[str, Callable]:
+        return _all_udfs(SparkUdfs)
+
+    @staticmethod
+    def remove_all_whitespaces(value: str) -> str:
+        return "".join(value.split()) if value is not None else None
+
+    @staticmethod
+    def trim_all(value: str) -> str:
+        return value.strip() if value is not None else None
 
 
 class PgUdfs:
     @staticmethod
     def all() -> Dict[str, Callable[[], str]]:
-        return all_udfs(PgUdfs)
+        return _all_udfs(PgUdfs)
 
     @staticmethod
     def trim_all():
@@ -96,12 +104,10 @@ class ChUdfs:
     """
     @staticmethod
     def all() -> Dict[str, Callable[[], str]]:
-        return all_udfs(ChUdfs)
+        return _all_udfs(ChUdfs)
 
     @staticmethod
     def translate():
         return """
 CREATE FUNCTION IF NOT EXISTS translate AS (input, from, to) -> replaceAll(input, from, to)
         """
-
-

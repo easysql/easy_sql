@@ -1,4 +1,4 @@
-<!-- Notes: this doc need to be updated manually with script: update_function_doc.py -->
+<!-- Notes: this doc need to be updated manually with script: update_doc.py -->
 
 # Functions
 

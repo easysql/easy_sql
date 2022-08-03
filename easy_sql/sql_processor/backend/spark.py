@@ -89,8 +89,7 @@ class SparkBackend(Backend):
             initUdfs = eval(f'gw.jvm.{scala_udf_initializer}.initUdfs', {'gw': gw})
             initUdfs(self.spark._jsparkSession)
 
-        self.register_udfs({"remove_all_whitespaces": udfs.remove_all_whitespaces,
-                            "trim_all": udfs.trim_all})
+        self.register_udfs(udfs.get_udfs('spark'))
 
     def register_udfs(self, funcs: Dict[str, Callable]):
         for key in funcs:

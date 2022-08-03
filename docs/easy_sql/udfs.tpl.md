@@ -201,26 +201,8 @@ messages:
 
 There are several UDFs implemented in Easy SQL. Below are a list of them for referencing.
 
+{{ spark UDFs }}
 
-### Spark UDFs
+{{ pg UDFs }}
 
-- [`remove_all_whitespaces(value: str) -> str`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/udf/udfs/index.html#easy_sql.udf.udfs.SparkUdfs.remove_all_whitespaces)
-- [`trim_all(value: str) -> str`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/udf/udfs/index.html#easy_sql.udf.udfs.SparkUdfs.trim_all)
-        
-
-
-### PostgreSQL UDFs
-
-- [`date_format()`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/udf/udfs/index.html#easy_sql.udf.udfs.PgUdfs.date_format)
-- [`from_unixtime()`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/udf/udfs/index.html#easy_sql.udf.udfs.PgUdfs.from_unixtime)
-- [`get_json_object()`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/udf/udfs/index.html#easy_sql.udf.udfs.PgUdfs.get_json_object)
-- [`sha1()`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/udf/udfs/index.html#easy_sql.udf.udfs.PgUdfs.sha1)
-- [`split()`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/udf/udfs/index.html#easy_sql.udf.udfs.PgUdfs.split)
-- [`trim_all()`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/udf/udfs/index.html#easy_sql.udf.udfs.PgUdfs.trim_all)
-        
-
-
-### Clickhouse UDFs
-
-- [`translate()`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/udf/udfs/index.html#easy_sql.udf.udfs.ChUdfs.translate)
-        
+{{ ch UDFs }}

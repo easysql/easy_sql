@@ -69,7 +69,7 @@ def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], pr
                           for v in vars.split(',') if v.strip()] if vars else [])
         variables.update(vars_dict)
 
-        sql_processor = SqlProcessor(backend, config.sql, variables=variables)
+        sql_processor = SqlProcessor(backend, config.sql, variables=variables, scala_udf_initializer=config.scala_udf_initializer)
         if config.udf_file_path:
             sql_processor.register_udfs_from_pyfile(resolve_file(config.udf_file_path) if '/' in config.udf_file_path else config.udf_file_path)
         if config.func_file_path:
@@ -128,12 +128,13 @@ def create_sql_processor_backend(backend: str, sql: str, task_name: str) -> 'Bac
 class EasySqlConfig:
 
     def __init__(self, sql_file: str, sql: str, backend: str, customized_backend_conf: List[str], customized_easy_sql_conf: List[str],
-                 udf_file_path: str, func_file_path: str):
+                 udf_file_path: str, func_file_path: str, scala_udf_initializer: str):
         self.sql_file = sql_file
         self.sql = sql
         self.backend = backend
         self.customized_backend_conf, self.customized_easy_sql_conf = customized_backend_conf, customized_easy_sql_conf
         self.udf_file_path, self.func_file_path = udf_file_path, func_file_path
+        self.scala_udf_initializer = scala_udf_initializer
 
     @staticmethod
     def from_sql(sql_file: str = None, sql: str = None) -> 'EasySqlConfig':
@@ -153,13 +154,16 @@ class EasySqlConfig:
                 else:
                     customized_backend_conf += [config_value]
 
-        udf_file_path, func_file_path = None, None
+        udf_file_path, func_file_path, scala_udf_initializer = None, None, None
         for c in customized_easy_sql_conf:
             if c.startswith('udf_file_path'):
                 udf_file_path = c[c.index('=') + 1:].strip()
             if c.startswith('func_file_path'):
                 func_file_path = c[c.index('=') + 1:].strip()
-        return EasySqlConfig(sql_file, sql, backend, customized_backend_conf, customized_easy_sql_conf, udf_file_path, func_file_path)
+            if c.startswith('scala_udf_initializer'):
+                scala_udf_initializer = c[c.index('=') + 1:].strip()
+        return EasySqlConfig(sql_file, sql, backend, customized_backend_conf, customized_easy_sql_conf,
+                             udf_file_path, func_file_path, scala_udf_initializer)
 
     @property
     def spark_submit(self):
