@@ -30,6 +30,7 @@ Contents
    easy_sql/testing.md
    easy_sql/linter.md
    easy_sql/functions.md
+   easy_sql/udfs.md
    autoapi/index
 
 
