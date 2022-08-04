@@ -1,4 +1,4 @@
-<!-- Notes: this doc need to be updated manually with script: update_function_doc.py -->
+<!-- Notes: this doc need to be updated manually with script: update_doc.py -->
 
 # Functions
 
@@ -144,9 +144,9 @@ For convenience, there are several utility functions implemented as well:
 Below are a list of them for referencing.
 
 
-### Functions for spark backend
+        ### Functions for spark backend
 
-
+        
 #### Partition functions
 
 - [`ensure_dwd_partition_exists(step, *args) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_dwd_partition_exists)
@@ -210,12 +210,12 @@ Below are a list of them for referencing.
 
 - [`model_predict(model_save_path: str, table_name: str, feature_cols: str, id_col: str, output_ref_cols: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_spark/index.html#easy_sql.sql_processor.funcs_spark.ModelFuncs.model_predict)
 
+        
 
 
+        ### Functions for rdb backend (PostgreSQL Clickhouse BigQuery)
 
-### Functions for rdb backend (PostgreSQL Clickhouse BigQuery)
-
-
+        
 #### Partition functions
 
 - [`ensure_dwd_partition_exists(step, *args) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_dwd_partition_exists)
@@ -259,4 +259,4 @@ Below are a list of them for referencing.
 - [`bq_model_predict_with_local_spark(model_save_path: str, input_table_name: str, output_table_name: str, feature_cols: str, id_col: str, output_ref_cols: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_rdb/index.html#easy_sql.sql_processor.funcs_rdb.ModelFuncs.bq_model_predict_with_local_spark)
 - [`model_predict_with_local_spark(model_save_path: str, input_table_name: str, output_table_name: str, feature_cols: str, id_col: str, output_ref_cols: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_rdb/index.html#easy_sql.sql_processor.funcs_rdb.ModelFuncs.model_predict_with_local_spark)
 
-
+        

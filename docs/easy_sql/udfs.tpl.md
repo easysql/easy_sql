@@ -197,6 +197,31 @@ messages:
   + For Clickhouse, we can refer to the doc [here](https://clickhouse.com/docs/en/sql-reference/statements/create/function/).
   + For BigQuery, we can refer to the doc [here](https://cloud.google.com/bigquery/docs/reference/standard-sql/user-defined-functions).
 
+## Register and use UDF programmatically
+
+We can register and use UDF in a programmatic manner as well. Below is an example of some sample code:
+
+```python
+from pyspark.sql import SparkSession
+
+from easy_sql.sql_processor import SqlProcessor
+from easy_sql.sql_processor.backend import SparkBackend
+
+if __name__ == '__main__':
+    spark = SparkSession.builder.enableHiveSupport().getOrCreate()
+    backend = SparkBackend(spark)
+    sql = '''
+-- target=log.test_udf
+select string_set(array("a", "a", "b")) as stringset
+    '''
+    sql_processor = SqlProcessor(backend, sql, scala_udf_initializer='your.company.udfs')
+    sql_processor.register_udfs_from_pyfile('udf.py')
+    sql_processor.run()
+```
+
+For a detailed sample implementation and other backends,
+please refer to the implementation of [data_process module](https://github.com/easysql/easy_sql/blob/main/easy_sql/data_process.py). 
+
 ## UDF reference
 
 There are several UDFs implemented in Easy SQL. Below are a list of them for referencing.
