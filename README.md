@@ -38,7 +38,7 @@ For spark, you need to install some version of `pyspark`.
 
 For other backends, install the dependencies as listed below:
 ```
-# for pg/clickhouse backend only
+# for pg/clickhouse/bigquery backend only
 SQLAlchemy==1.3.23
 # for pg backend only
 psycopg2-binary==2.8.6

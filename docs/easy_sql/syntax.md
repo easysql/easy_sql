@@ -127,7 +127,7 @@ It will replace it with the string value of the variable and converts types when
 The above example will result in variables: `a=1, b=2, a1=11, ab=3`.
 
 Besides the user-defined variables, there are a few useful system-defined variables.
-When we need to implement some complicated functions, we can use them. A list of these variables could be found [here](functions.md).
+When we need to implement some complicated functions, we can use them. A list of these variables could be found [here](variables.md).
 
 Other things to note about variables:
 
@@ -204,6 +204,8 @@ def do_some_thing():
 
 And then after the execution of the ETL, the value of the variables will be: `a=4, b=6`.
 
+For the usage of function in Easy SQL and a list of useful built-in functions in Easy SQL. Please view [functions](functions.md) for more information.
+
 ### Control execution flow
 
 For an imperative language, providing a way to control execution flow is important. 
@@ -235,53 +237,6 @@ From the example, we know the following things about 'if' statement in Easy SQL:
 - There must be a function call following the 'if' statement.
 - The function call must return a boolean value to indicate if the step needs to be executed.
 - Any step could be controlled by a 'if' statement, including 'func' 'temp' 'variables' and so on.
-
-### Debugging support
-
-In a complicated ETL, it is easy to introduce bugs.
-A general programming language usually provides some ways to help with debugging.
-The most commonly used way is about logging and assertion.
-
-Developers can log variables anywhere to provide information about the executing step.
-They can also set an assertion if there is any important assumption made in the following code.
-
-To do logging and assertion in Python, the code looks like below:
-
-```python
-logger.info(f'some thing happened, check the variables: var_a={var_a}')
-assert var_a == 'something assumed', f'var_a is not as assumed: var_a={var_a}'
-```
-
-Easy SQL provides a similar way to do logging and assertion. They're both provided by a type of target.
-Check the example below to see its usage.
-
-```sql
--- target=log.i_would_like_to_log_something
-select
-    1 as a
-    , 2 as b
-    , ${c} as c
-
--- target=log.order_count
-select
-count(1)
-from sample.order_table
-
--- target=check.order_count_must_be_equal_after_joined_product
-select
-    (select count(1) from sample.order_table) as expected
-    , (select count(1) from sample.order_table_after_joined) as actual
-
--- target=check.equal(${c}, 3)
-```
-
-From the example above, we know that:
-
-- When use 'log' target, we need to specify a message about what to log.
-- The log message format is the same as a variable. I.e. It should be composed of chars '0-9a-zA-Z_'.
-- There should be exactly one row returned from the query of some 'log' target. If there is more than one row returned, only the first row will be logged.
-- There are two formats of 'check' target. One is to specify a check message with a query. The other is to call a function, which returns a boolean value.
-- When 'check' target is used as a message with a query, the returned value of the query must be one row with two columns named 'actual' and 'expected'.
 
 ### Write data
 
@@ -471,7 +426,9 @@ def create_debugger(sql_file_path: str, vars: Dict[str, Any] = None, funcs: Dict
 
 ![ETL Debugging](https://raw.githubusercontent.com/easysql/easy_sql/main/debugger-usage.gif)
 
-For details of the APIs, we can refer to API doc [here](api/debugger.md).
+For details of how to debug interactively, please view the [debug](debug.md) page.
+
+For details of the APIs, we can refer to API doc [here](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor_debugger/index.html).
 
 ### Write data
 

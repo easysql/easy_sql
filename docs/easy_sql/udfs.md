@@ -220,7 +220,7 @@ select string_set(array("a", "a", "b")) as stringset
 ```
 
 For a detailed sample implementation and other backends,
-please refer to the implementation of [data_process module](https://github.com/easysql/easy_sql/blob/main/easy_sql/data_process.py). 
+please refer to the implementation of [data_process](https://github.com/easysql/easy_sql/blob/main/easy_sql/data_process.py) module. 
 
 ## UDF reference
 
