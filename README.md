@@ -51,6 +51,17 @@ sqlalchemy-bigquery==1.4.3
 pyodps==0.10.7.1
 ```
 
+To use other tools / functionalities, install the dependencies as listed below: 
+
+```
+# for Linter only
+sqlfluff==1.2.1
+colorlog==4.0.2
+regex==2022.6.2
+# for command line tools only
+click==6.7
+```
+
 ## First ETL with Easy SQL
 
 (You need to install click package (by command `python3 -m pip install click==6.7`) before run the command below.)
