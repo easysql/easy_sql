@@ -85,6 +85,7 @@ class SqlProcessor:
             # add meta vars to support step information retrieving in functions
             self.context.add_vars({'__step__': step})
             self.context.add_vars({'__context__': self.context})
+            self.context.add_vars({'__backend__': self.backend})
             if not step.should_run(self.context):
                 self.reporter.collect_report(step, status=StepStatus.SKIPPED)
                 return

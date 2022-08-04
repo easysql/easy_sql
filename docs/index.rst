@@ -31,6 +31,7 @@ Contents
    easy_sql/linter.md
    easy_sql/functions.md
    easy_sql/udfs.md
+   easy_sql/variables.md
    autoapi/index
 
 
