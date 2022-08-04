@@ -1,6 +1,6 @@
 <!-- Notes: this doc need to be updated manually with script: update_doc.py -->
 
-# SQL user defined functions
+# UDFs
 
 User-defined function is a widely used concept in SQL world. It is a user-programmable routine to extend SQL.
 

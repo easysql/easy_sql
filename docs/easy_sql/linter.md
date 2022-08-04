@@ -1,4 +1,4 @@
-# Easy SQL Linter
+# Linter
 
 Easy SQL is a powerful tool that can bring convenience to ETL developer.
 But so far we do not have an Easy-SQL grammar supported compiler that can auto-check SQL quality and auto fix the violations.
