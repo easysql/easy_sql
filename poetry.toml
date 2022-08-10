@@ -1,0 +1,3 @@
+[repositories]
+[repositories.aliyun]
+url = "https://mirrors.aliyun.com/pypi/simple/"
