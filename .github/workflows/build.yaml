@@ -42,7 +42,11 @@ jobs:
         java-version: ${{ matrix.java-version }}
     - name: Setup Poetry
       uses: Gr1N/setup-poetry@v7
-    - run: poetry install
+    - uses: actions/cache@v2
+      with:
+        path: ~/.cache/pypoetry/virtualenvs
+        key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
+    - run: poetry install -E "spark linter"
     - run: make unit-test
     - run: make test-coverage
   
