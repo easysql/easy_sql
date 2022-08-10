@@ -9,19 +9,19 @@ on:
   pull_request: {}
 
 jobs:
-  package:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.7', '3.8']
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 1
-    - uses: actions/setup-python@v3
-      with:
-        python-version: ${{ matrix.python-version }}
-    - run: make package-pip
+  # package:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       python-version: ['3.7', '3.8']
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #     with:
+  #       fetch-depth: 1
+  #   - uses: actions/setup-python@v3
+  #     with:
+  #       python-version: ${{ matrix.python-version }}
+  #   - run: make package-pip
   
   unit-test:
     runs-on: ubuntu-latest
@@ -52,121 +52,121 @@ jobs:
     - run: make unit-test
     - run: make test-coverage
   
-  e2e-test-spark:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [ '3.7', '3.8']
-        java-version: ['8', '11']
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 1
-    - uses: actions/setup-python@v3
-      with:
-        python-version: ${{ matrix.python-version }}
-    - uses: actions/setup-java@v3
-      with:
-        distribution: 'adopt'
-        java-version: ${{ matrix.java-version }}
-    - run: pip install -r requirements/requirements.txt -r requirements/requirements-spark.txt
-    - run: make e2e-test-spark
+  # e2e-test-spark:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       python-version: [ '3.7', '3.8']
+  #       java-version: ['8', '11']
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #     with:
+  #       fetch-depth: 1
+  #   - uses: actions/setup-python@v3
+  #     with:
+  #       python-version: ${{ matrix.python-version }}
+  #   - uses: actions/setup-java@v3
+  #     with:
+  #       distribution: 'adopt'
+  #       java-version: ${{ matrix.java-version }}
+  #   - run: pip install -r requirements/requirements.txt -r requirements/requirements-spark.txt
+  #   - run: make e2e-test-spark
 
-  e2e-test-postgres:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:14-alpine
-        env:
-          POSTGRES_PASSWORD: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-    strategy:
-      matrix:
-        python-version: ['3.7', '3.8']
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 1
-    - uses: actions/setup-python@v3
-      with:
-        python-version: ${{ matrix.python-version }}
-    - run: pip install -r requirements/requirements.txt -r requirements/requirements-postgres.txt
-    - run: make e2e-test-postgres
-      env:
-        PG_URL: postgresql://postgres:postgres@localhost/postgres
+  # e2e-test-postgres:
+  #   runs-on: ubuntu-latest
+  #   services:
+  #     postgres:
+  #       image: postgres:14-alpine
+  #       env:
+  #         POSTGRES_PASSWORD: postgres
+  #       options: >-
+  #         --health-cmd pg_isready
+  #         --health-interval 10s
+  #         --health-timeout 5s
+  #         --health-retries 5
+  #       ports:
+  #         - 5432:5432
+  #   strategy:
+  #     matrix:
+  #       python-version: ['3.7', '3.8']
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #     with:
+  #       fetch-depth: 1
+  #   - uses: actions/setup-python@v3
+  #     with:
+  #       python-version: ${{ matrix.python-version }}
+  #   - run: pip install -r requirements/requirements.txt -r requirements/requirements-postgres.txt
+  #   - run: make e2e-test-postgres
+  #     env:
+  #       PG_URL: postgresql://postgres:postgres@localhost/postgres
 
-  e2e-test-clickhouse:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [ '3.7', '3.8']
-        clickhouse-version: ['21', '22']
-    services:
-      clickhouse:
-        image: yandex/clickhouse-server:${{ matrix.clickhouse-version }}
-        ports:
-          - 8123:8123
-          - 9000:9000
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 1
-    - uses: actions/setup-python@v3
-      with:
-        python-version: ${{ matrix.python-version }}
-    - run: pip install -r requirements/requirements.txt -r requirements/requirements-clickhouse.txt
-    - run: make e2e-test-clickhouse
-      env:
-        CLICKHOUSE_URL: clickhouse+native://default@localhost:9000
+  # e2e-test-clickhouse:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       python-version: [ '3.7', '3.8']
+  #       clickhouse-version: ['21', '22']
+  #   services:
+  #     clickhouse:
+  #       image: yandex/clickhouse-server:${{ matrix.clickhouse-version }}
+  #       ports:
+  #         - 8123:8123
+  #         - 9000:9000
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #     with:
+  #       fetch-depth: 1
+  #   - uses: actions/setup-python@v3
+  #     with:
+  #       python-version: ${{ matrix.python-version }}
+  #   - run: pip install -r requirements/requirements.txt -r requirements/requirements-clickhouse.txt
+  #   - run: make e2e-test-clickhouse
+  #     env:
+  #       CLICKHOUSE_URL: clickhouse+native://default@localhost:9000
 
-  test-coverage-all:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.8']
-        java-version: ['8']
-    services:
-      clickhouse:
-        image: yandex/clickhouse-server:21
-        ports:
-          - 8123:8123
-          - 9000:9000
-      postgres:
-        image: postgres:14-alpine
-        env:
-          POSTGRES_PASSWORD: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-    steps:
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 1
-    - uses: actions/setup-python@v3
-      with:
-        python-version: ${{ matrix.python-version }}
-    - uses: actions/setup-java@v3
-      with:
-        distribution: 'adopt'
-        java-version: ${{ matrix.java-version }}
-    - run: pip install -r requirements/requirements.txt -r requirements/requirements-ut.txt -r requirements/requirements-clickhouse.txt -r requirements/requirements-postgres.txt -r requirements/requirements-spark.txt
-    - run: make test-coverage-all
-      env:
-        CLICKHOUSE_URL: clickhouse+native://default@localhost:9000
-        PG_URL: postgresql://postgres:postgres@localhost/postgres
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v2
-      with:
-        files: ./coverage.xml
-        flags: tests
-        name: EasySQL
+  # test-coverage-all:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       python-version: ['3.8']
+  #       java-version: ['8']
+  #   services:
+  #     clickhouse:
+  #       image: yandex/clickhouse-server:21
+  #       ports:
+  #         - 8123:8123
+  #         - 9000:9000
+  #     postgres:
+  #       image: postgres:14-alpine
+  #       env:
+  #         POSTGRES_PASSWORD: postgres
+  #       options: >-
+  #         --health-cmd pg_isready
+  #         --health-interval 10s
+  #         --health-timeout 5s
+  #         --health-retries 5
+  #       ports:
+  #         - 5432:5432
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #     with:
+  #       fetch-depth: 1
+  #   - uses: actions/setup-python@v3
+  #     with:
+  #       python-version: ${{ matrix.python-version }}
+  #   - uses: actions/setup-java@v3
+  #     with:
+  #       distribution: 'adopt'
+  #       java-version: ${{ matrix.java-version }}
+  #   - run: pip install -r requirements/requirements.txt -r requirements/requirements-ut.txt -r requirements/requirements-clickhouse.txt -r requirements/requirements-postgres.txt -r requirements/requirements-spark.txt
+  #   - run: make test-coverage-all
+  #     env:
+  #       CLICKHOUSE_URL: clickhouse+native://default@localhost:9000
+  #       PG_URL: postgresql://postgres:postgres@localhost/postgres
+  #   - name: Upload coverage to Codecov
+  #     uses: codecov/codecov-action@v2
+  #     with:
+  #       files: ./coverage.xml
+  #       flags: tests
+  #       name: EasySQL
