@@ -40,7 +40,9 @@ jobs:
       with:
         distribution: 'adopt'
         java-version: ${{ matrix.java-version }}
-    - run: pip install -r requirements/requirements.txt -r requirements/requirements-ut.txt
+    - name: Setup Poetry
+      uses: Gr1N/setup-poetry@v7
+    - run: poetry install
     - run: make unit-test
     - run: make test-coverage
   
