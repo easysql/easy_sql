@@ -42,6 +42,8 @@ jobs:
         java-version: ${{ matrix.java-version }}
     - name: Setup Poetry
       uses: Gr1N/setup-poetry@v7
+      env:
+        POETRY_VIRTUALENVS_CREATE: false
     - uses: actions/cache@v2
       with:
         path: ~/.cache/pypoetry/virtualenvs
