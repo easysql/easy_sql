@@ -42,6 +42,8 @@ jobs:
         java-version: ${{ matrix.java-version }}
     - name: Install Poetry
       uses: snok/install-poetry@v1
+      with:
+        virtualenvs-in-project: true
     - name: Cache Poetry
       id: cached-poetry-dependencies
       uses: actions/cache@v2
@@ -74,6 +76,8 @@ jobs:
         java-version: ${{ matrix.java-version }}
     - name: Install Poetry
       uses: snok/install-poetry@v1
+      with:
+        virtualenvs-in-project: true
     - name: Cache Poetry
       id: cached-poetry-dependencies
       uses: actions/cache@v2
