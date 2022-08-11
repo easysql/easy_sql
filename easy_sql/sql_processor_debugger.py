@@ -2,21 +2,35 @@ from typing import Dict, Any, List, Optional, Union
 
 from .sql_processor import *
 
-__all__ = ['SqlProcessorDebugger']
+__all__ = ["SqlProcessorDebugger"]
 
 from .sql_processor.backend import Backend, SparkBackend
 
 
 class SqlProcessorDebugger:
-
-    def __init__(self, sql_file_path: str, backend: Union['SparkSession', Backend],
-                 vars: Dict[str, Any] = None, funcs: Dict[str, Any] = None, funcs_py_file: str = None,
-                 extra_cols: List[Column] = None, udf_py_file: str = None, scala_udf_initializer: str = None, templates: Dict[str, Any] = None):
+    def __init__(
+        self,
+        sql_file_path: str,
+        backend: Union["SparkSession", Backend],
+        vars: Dict[str, Any] = None,
+        funcs: Dict[str, Any] = None,
+        funcs_py_file: str = None,
+        extra_cols: List[Column] = None,
+        udf_py_file: str = None,
+        scala_udf_initializer: str = None,
+        templates: Dict[str, Any] = None,
+    ):
         backend = backend if isinstance(backend, (Backend,)) else SparkBackend(spark=backend)
         self.udf_py_file = udf_py_file
         self.sql_file_path = sql_file_path
         self.scala_udf_initializer = scala_udf_initializer
-        self.initial_vars, self.initial_funcs, self.funcs_py_file, self.initial_extra_cols, self.initial_templates = vars or {}, funcs or {}, funcs_py_file, extra_cols or [], templates or {}
+        self.initial_vars, self.initial_funcs, self.funcs_py_file, self.initial_extra_cols, self.initial_templates = (
+            vars or {},
+            funcs or {},
+            funcs_py_file,
+            extra_cols or [],
+            templates or {},
+        )
         self.backend = backend
         self.sql_processor = self._create_sql_processor()
         self.steps = self.sql_processor.step_list
@@ -25,13 +39,17 @@ class SqlProcessorDebugger:
 
     def _create_sql_processor(self) -> SqlProcessor:
         import copy
-        with open(self.sql_file_path, 'r') as f:
+
+        with open(self.sql_file_path, "r") as f:
             sql = f.read()
-        sql_processor = SqlProcessor(self.backend, sql,
-                                     extra_cols=copy.deepcopy(self.initial_extra_cols),
-                                     variables=copy.deepcopy(self.initial_vars),
-                                     scala_udf_initializer=self.scala_udf_initializer,
-                                     templates=copy.deepcopy(self.initial_templates))
+        sql_processor = SqlProcessor(
+            self.backend,
+            sql,
+            extra_cols=copy.deepcopy(self.initial_extra_cols),
+            variables=copy.deepcopy(self.initial_vars),
+            scala_udf_initializer=self.scala_udf_initializer,
+            templates=copy.deepcopy(self.initial_templates),
+        )
         if self.initial_funcs:
             sql_processor.register_funcs(self.initial_funcs)
         if self.funcs_py_file:
@@ -63,9 +81,9 @@ class SqlProcessorDebugger:
         if self._current_step_index < len(self.steps) and self._current_step_index != -1:
             return self._current_step_index + 1
         if self._current_step_index == -1:
-            print('Not started yet! No current step number right now.')
+            print("Not started yet! No current step number right now.")
         else:
-            print('Already finished! No current step number right now.')
+            print("Already finished! No current step number right now.")
 
     @property
     def next_step(self) -> Optional[Step]:
@@ -79,7 +97,7 @@ class SqlProcessorDebugger:
         if step_index < len(self.steps) and step_index != -1:
             return step_index + 1
         else:
-            print('Already finished! No next step number right now.')
+            print("Already finished! No next step number right now.")
 
     @property
     def last_step(self) -> Optional[Step]:
@@ -91,7 +109,7 @@ class SqlProcessorDebugger:
     def last_step_no(self) -> Optional[int]:
         step_index = self._current_step_index - 1
         if step_index == -2:
-            print('Not started yet! No last step number right now.')
+            print("Not started yet! No last step number right now.")
             return None
         if step_index < len(self.steps) and step_index != -1:
             return step_index + 1
@@ -106,14 +124,14 @@ class SqlProcessorDebugger:
 
     def add_vars(self, vars: Dict[str, Any]):
         if vars is None or not isinstance(vars, dict):
-            print('Vars must be a non-empty dict. Will do nothing!')
+            print("Vars must be a non-empty dict. Will do nothing!")
             return
         self.sql_processor.add_vars(vars)
         self.initial_vars.update(vars)
 
     def set_vars(self, vars: Dict[str, Any]):
         if vars is None or not isinstance(vars, dict):
-            print('Vars must be a non-empty dict. Will do nothing!')
+            print("Vars must be a non-empty dict. Will do nothing!")
             return
         if self.is_inprogress:
             self.sql_processor.set_vars(vars)
@@ -140,29 +158,29 @@ class SqlProcessorDebugger:
         return self.backend.exec_sql(sql)
 
     def showdf(self, table_name: str):
-        self.sql(f'select * from {table_name}').show()
+        self.sql(f"select * from {table_name}").show()
 
     def step(self, step_no: int) -> Optional[Step]:
         return self.steps[step_no - 1] if 1 <= step_no <= len(self.steps) else None
 
     def print_steps(self):
         for i in range(len(self.steps)):
-            print(f'Step {i + 1}: {str(self.step(i + 1))}')
+            print(f"Step {i + 1}: {str(self.step(i + 1))}")
 
     def step_on(self):
         if self.step(self._current_step_index + 1 + 1):
             self.sql_processor.run_step(self.steps[self._current_step_index + 1], True)
             self._current_step_index += 1
         else:
-            print('Process already ended! Nothing to run!')
+            print("Process already ended! Nothing to run!")
 
     def step_to(self, step_no: int):
         if step_no <= 0 or step_no > len(self.steps):
-            print(f'step_index must be from [1...{len(self.steps)}], got {step_no}. Will not run anything!')
+            print(f"step_index must be from [1...{len(self.steps)}], got {step_no}. Will not run anything!")
             return
         step_index_0_based = step_no - 1
         if step_index_0_based <= self._current_step_index:
-            print(f'We are at step {self._current_step_index + 1} now. Nothing to run!')
+            print(f"We are at step {self._current_step_index + 1} now. Nothing to run!")
             return
         while self._current_step_index < step_index_0_based:
             self.step_on()

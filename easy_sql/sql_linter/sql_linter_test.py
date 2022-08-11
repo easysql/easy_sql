@@ -4,65 +4,58 @@ from easy_sql.sql_linter.sql_linter import SqlLinter
 
 
 class SqlLinterTest(unittest.TestCase):
-
     def test_should_work_for_normal_sql(self):
-        sql = '''select  a,
+        sql = """select  a,
 date,date2,
 aa from sales_order
-'''
+"""
 
-        sql_linter = SqlLinter(sql,
-                               include_rules=None,
-                               exclude_rules=None)
+        sql_linter = SqlLinter(sql, include_rules=None, exclude_rules=None)
         result = sql_linter.lint("bigquery", easysql=False)
         fixed = sql_linter.fix("bigquery", easy_sql=False)
         self.assertEqual(len(result), 7)
         print(fixed)
-        expected = '''select a
+        expected = """select a
     , date, date2
     , aa from ${temp_db}.sales_order
-'''
+"""
         self.assertEqual(expected, fixed)
 
     def test_should_work_for_exclude_rules(self):
-        sql = '''select  a,
+        sql = """select  a,
 date,date2,
 aa from sales_order
-'''
+"""
 
-        sql_linter = SqlLinter(sql,
-                               include_rules=None,
-                               exclude_rules=['BigQuery_L001'])
+        sql_linter = SqlLinter(sql, include_rules=None, exclude_rules=["BigQuery_L001"])
         result = sql_linter.lint("bigquery", easysql=False)
         fixed = sql_linter.fix("bigquery", easy_sql=False)
         self.assertEqual(len(result), 6)
         print(fixed)
-        expected = '''select a
+        expected = """select a
     , date, date2
     , aa from sales_order
-'''
+"""
         self.assertEqual(expected, fixed)
 
     def test_should_work_for_variables(self):
-        sql = '''-- backend: bigquery
+        sql = """-- backend: bigquery
 -- target=temp.feature_stage_0_out
 select  a,
 ${date},${date2},
 ${${aa}} from sales_order
-'''
+"""
 
-        sql_linter = SqlLinter(sql,
-                               include_rules=None,
-                               exclude_rules=None)
+        sql_linter = SqlLinter(sql, include_rules=None, exclude_rules=None)
         result = sql_linter.lint("bigquery")
         fixed = sql_linter.fix("bigquery")
         self.assertEqual(len(result), 7)
-        expected = '''-- backend: bigquery
+        expected = """-- backend: bigquery
 -- target=temp.feature_stage_0_out
 select a
     , ${date}, ${date2}
     , ${${aa}} from ${temp_db}.sales_order
-'''
+"""
         self.assertEqual(expected, fixed)
 
     def test_should_work_when_have_three_quote(self):
@@ -71,9 +64,7 @@ select a
 select  a,"""hh"""ab, "" ac from table
 '''
 
-        sql_linter = SqlLinter(sql,
-                               include_rules=None,
-                               exclude_rules=None)
+        sql_linter = SqlLinter(sql, include_rules=None, exclude_rules=None)
         result = sql_linter.lint("bigquery")
         fixed = sql_linter.fix("bigquery")
         self.assertEqual(len(result), 5)
@@ -99,9 +90,7 @@ select *
 , ${data_date_no_ds}, a1, b1 from ${temp_db}.model_data
 """
 
-        sql_linter = SqlLinter(sql,
-                               include_rules=None,
-                               exclude_rules=None)
+        sql_linter = SqlLinter(sql, include_rules=None, exclude_rules=None)
         result = sql_linter.lint("bigquery")
         self.assertEqual(len(result), 7)
         fixed = sql_linter.fix("bigquery")
@@ -140,7 +129,7 @@ select @{dim_cols} from sales_amount
     fk_table_name=dwd_sales.sales_dim_product_h, pk=product_key, fk_table_biz_key=id,
     update_time_col_name=update_time, partition_col_name=di)}
 """
-        sql_linter = SqlLinter(sql, exclude_rules=['L025'])
+        sql_linter = SqlLinter(sql, exclude_rules=["L025"])
         result = sql_linter.lint("bigquery")
         self.assertEqual(len(result), 2)
         fixed = sql_linter.fix("bigquery")
@@ -251,5 +240,5 @@ select * from ${temp_db}.order_count where value < ${a}
         self.assertEqual(expected, fixed)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

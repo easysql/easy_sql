@@ -18,18 +18,18 @@ class SqlLinter:
     def __init__(self, sql: str, include_rules: [str] = None, exclude_rules: [str] = None):
         self.origin_sql = sql
         self.fixed_sql_list = []
-        self.supported_backend = ['spark', 'postgres', 'clickhouse', 'bigquery']
+        self.supported_backend = ["spark", "postgres", "clickhouse", "bigquery"]
         self.step_list = self._get_step_list()
         self.include_rules = include_rules
         self.exclude_rules = exclude_rules
         self.reporter = LintReporter()
 
     def _parse_backend(self, sql: str):
-        sql_lines = sql.split('\n')
+        sql_lines = sql.split("\n")
         backend = None
         for line in sql_lines:
-            if re.match(r'^-- \s*backend:.*$', line):
-                backend = line[line.index('backend:') + len('backend:'):].strip()
+            if re.match(r"^-- \s*backend:.*$", line):
+                backend = line[line.index("backend:") + len("backend:") :].strip()
                 break
 
         if backend is None:
@@ -38,14 +38,15 @@ class SqlLinter:
 
         if backend not in self.supported_backend:
             raise Exception(
-                f'Unsupported backend `${backend}`, all supported backends are: ' + ",".join(self.supported_backend))
+                f"Unsupported backend `${backend}`, all supported backends are: " + ",".join(self.supported_backend)
+            )
 
         self.reporter.report_message(f"Use backend: {backend}")
         self.fixed_sql_list.append("-- backend: " + backend)
         return backend
 
     def _get_step_list(self):
-        reporter = SqlProcessorReporter(report_task_id='sql_linter')
+        reporter = SqlProcessorReporter(report_task_id="sql_linter")
         func_runner = FuncRunner()
         step_factory = StepFactory(reporter, func_runner)
         step_list = step_factory.create_from_sql(self.origin_sql)
@@ -69,19 +70,19 @@ class SqlLinter:
         if rules is None:
             rules = []
         if len(rules) > 0:
-            config['core']['rules'] = ",".join(rules)
+            config["core"]["rules"] = ",".join(rules)
         else:
             if dialect in ["bigquery"]:
-                config['core']['rules'] = "core," + dialect
+                config["core"]["rules"] = "core," + dialect
             else:
-                config['core']['rules'] = "core"
+                config["core"]["rules"] = "core"
 
     @staticmethod
     def _update_excluded_rule_for_config(config: Dict[str, Any], rules: [str] = None):
         if rules is not None:
-            config['core']['exclude_rules'] = ",".join(rules)
+            config["core"]["exclude_rules"] = ",".join(rules)
         else:
-            config['core']['exclude_rules'] = None
+            config["core"]["exclude_rules"] = None
 
     def _check_parsable(self, root_segment: BaseSegment) -> bool:
         segment_list = [root_segment]
@@ -102,7 +103,9 @@ class SqlLinter:
                 return False
         return True
 
-    def _lint_step_sql(self, step: Step, lexer: Lexer, parser: Parser, linter: Linter, log_error: bool) -> List[SQLBaseError]:
+    def _lint_step_sql(
+        self, step: Step, lexer: Lexer, parser: Parser, linter: Linter, log_error: bool
+    ) -> List[SQLBaseError]:
         self.fixed_sql_list.append(step.target_config.step_config_str)
         if step.select_sql:
             if step.is_template_statement():
@@ -127,10 +130,10 @@ class SqlLinter:
         lexer = Lexer(dialect=dialect)
 
         # Add regex mather to lexer to enable easy sql
-        easy_sql_function = RegexLexer('easy_sql_function', r'\${[^\s,]+\(.+\)}', CodeSegment)
-        easy_sql_variable = RegexLexer('easy_sql_variable', r'\${[^\s,]+}', CodeSegment)
-        easy_sql_template = RegexLexer('easy_sql_template', r'@{[^{]+}', CodeSegment)
-        three_quote_string = RegexLexer('three_quote_string', r'""".*"""', CodeSegment)
+        easy_sql_function = RegexLexer("easy_sql_function", r"\${[^\s,]+\(.+\)}", CodeSegment)
+        easy_sql_variable = RegexLexer("easy_sql_variable", r"\${[^\s,]+}", CodeSegment)
+        easy_sql_template = RegexLexer("easy_sql_template", r"@{[^{]+}", CodeSegment)
+        three_quote_string = RegexLexer("three_quote_string", r'""".*"""', CodeSegment)
         lexer.lexer_matchers.insert(0, easy_sql_variable)
         lexer.lexer_matchers.insert(0, easy_sql_function)
         lexer.lexer_matchers.insert(0, easy_sql_template)
@@ -160,7 +163,9 @@ class SqlLinter:
         for step_no, step in enumerate(self.step_list):
             step_count = step_count + 1
             if log_error:
-                self.reporter.report_message("=== Check step {} at line {} ===".format(step_no + 1, step.target_config.line_no))
+                self.reporter.report_message(
+                    "=== Check step {} at line {} ===".format(step_no + 1, step.target_config.line_no)
+                )
             step_result = self._lint_step_sql(step, lexer, parser, linter, log_error)
             if step_result:
                 lint_result = lint_result + step_result
@@ -183,23 +188,25 @@ class SqlLinter:
 
     def _parser_sql_header(self):
         line_no = self.step_list[0].target_config.line_no
-        return self.origin_sql.split("\n")[:line_no - 1]
+        return self.origin_sql.split("\n")[: line_no - 1]
 
     def _prepare_linter(self, dialect: str, config_path: str = None):
         if config_path:
             config = FluffConfig.from_path(config_path)
         else:
             default_config_dict = FluffConfig(require_dialect=False)._configs
-            default_config_dict['rules']['L019'] = {'comma_style': 'leading'}
-            default_config_dict['rules']['L014'] = {'extended_capitalisation_policy': 'lower'}
-            default_config_dict['core']['dialect'] = dialect
+            default_config_dict["rules"]["L019"] = {"comma_style": "leading"}
+            default_config_dict["rules"]["L014"] = {"extended_capitalisation_policy": "lower"}
+            default_config_dict["core"]["dialect"] = dialect
             self._update_included_rule_for_config(default_config_dict, dialect=dialect, rules=self.include_rules)
             self._update_excluded_rule_for_config(default_config_dict, rules=self.exclude_rules)
             config = FluffConfig(configs=default_config_dict)
         linter = Linter(config=config, user_rules=__all__)
         return linter
 
-    def lint(self, backend: str, log_error: bool = True, easysql: bool = True, config_path: str = None) -> List[SQLBaseError]:
+    def lint(
+        self, backend: str, log_error: bool = True, easysql: bool = True, config_path: str = None
+    ) -> List[SQLBaseError]:
         if easysql:
             return self._lint_for_easy_sql(backend, log_error, config_path=config_path)
         else:

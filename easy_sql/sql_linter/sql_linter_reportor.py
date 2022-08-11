@@ -8,7 +8,6 @@ from sqlfluff.core import SQLBaseError
 
 
 class LintReporter:
-
     def __init__(self):
         self.sql_linter_log = LintReporter._create_logger(logging.DEBUG)
 
@@ -17,7 +16,7 @@ class LintReporter:
 
     @staticmethod
     def _create_logger(log_level: Union[int, str]):
-        logger = logging.getLogger('linter_logger')
+        logger = logging.getLogger("linter_logger")
         logger.setLevel(log_level)
         info_formater = colorlog.ColoredFormatter(
             fmt=(
@@ -31,8 +30,8 @@ class LintReporter:
         python_version = sys.version_info
         if python_version.major == 3 and python_version.minor == 6:
             sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
-        elif hasattr(sys.stdout, 'reconfigure'):
-            sys.stdout.reconfigure(encoding='utf-8')
+        elif hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8")
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(info_formater)
         for existing_handler in logger.handlers:
@@ -41,8 +40,9 @@ class LintReporter:
         return logger
 
     def report_violation(self, violation: SQLBaseError, step_start_line=0):
-        pos_info = "L: {} | P: {}: | {}  :".format(violation.line_no + step_start_line,
-                                                   violation.line_pos, violation.rule_code())
+        pos_info = "L: {} | P: {}: | {}  :".format(
+            violation.line_no + step_start_line, violation.line_pos, violation.rule_code()
+        )
         extra_dict = self._get_extra_default_dict()
         extra_dict["pos_info"] = pos_info
         extra_dict["description"] = violation.desc()
