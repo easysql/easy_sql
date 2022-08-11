@@ -193,7 +193,7 @@ class RdbTable(Table):
 
         result: ResultProxy = self._exec_sql(f"select * from {table_name} limit 0")
         result.close()
-        return result.keys()
+        return list(result.keys())
 
     def first(self) -> "RdbRow":
         all_action_are_limit = all([action[0] == "limit" for action in self._actions])
@@ -207,7 +207,7 @@ class RdbTable(Table):
 
             result: ResultProxy = self._exec_sql(self.sql)
             if min_limit <= 0:
-                return RdbRow(result.keys(), None)
+                return RdbRow(list(result.keys()), None)
             with TimeLog(
                 f"start to fetch first row: {self.sql}",
                 f"end to fetch first row({TimeLog.time_took_tpl}): {self.sql}",
@@ -224,7 +224,7 @@ class RdbTable(Table):
             f"end to fetch first row({TimeLog.time_took_tpl}): {self.sql}",
         ):
             row = result.first()
-        return RdbRow(result.keys(), row)
+        return RdbRow(list(result.keys()), row)
 
     def limit(self, count: int) -> "RdbTable":
         return RdbTable(self.backend, self.sql, self._actions + [("limit", count)])
@@ -263,7 +263,7 @@ class RdbTable(Table):
             logger.warning(
                 f"found {max_rows} items, but there may be more, will only fetch {max_rows} items at most for sql: {self.sql}"
             )
-        rows = [RdbRow(result.keys(), row) for row in rows]
+        rows = [RdbRow(list(result.keys()), row) for row in rows]
         result.close()
         return rows
 
