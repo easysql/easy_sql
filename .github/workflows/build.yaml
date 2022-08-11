@@ -36,6 +36,7 @@ jobs:
     - uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
+        cache: 'poetry'
     - uses: actions/setup-java@v3
       with:
         distribution: 'adopt'
@@ -44,10 +45,6 @@ jobs:
       uses: Gr1N/setup-poetry@v7
       env:
         POETRY_VIRTUALENVS_CREATE: false
-    - uses: actions/cache@v2
-      with:
-        path: ~/.cache/pypoetry/virtualenvs
-        key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
     - run: poetry install -E "spark linter"
     - run: poetry run make unit-test
     - run: poetry run make test-coverage
