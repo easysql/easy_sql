@@ -6,7 +6,9 @@ on:
       - "*"
     tags-ignore:
       - "v*"
-  pull_request: {}
+  pull_request: 
+    branches:
+        - master
 
 jobs:
   package:
