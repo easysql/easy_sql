@@ -21,7 +21,6 @@ jobs:
     - uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
-    - run: make package-pip
     - name: Load cached Poetry installation
       uses: actions/cache@v2
       with:
