@@ -44,7 +44,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ~/.local  # the path depends on the OS
-        key: poetry-0  # increment to reset cache
+        key: poetry-1  # increment to reset cache
     - name: Install Poetry
       uses: snok/install-poetry@v1
       with:
@@ -83,7 +83,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ~/.local  # the path depends on the OS
-        key: poetry-0  # increment to reset cache
+        key: poetry-1  # increment to reset cache
     - name: Install Poetry
       uses: snok/install-poetry@v1
       with:
@@ -94,7 +94,7 @@ jobs:
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-1
-    - run: poetry install --no-interaction -E "spark click" 
+    - run: poetry install --no-interaction -E "spark cli" 
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: |
         source .venv/bin/activate
