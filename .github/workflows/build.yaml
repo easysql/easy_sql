@@ -9,20 +9,28 @@ on:
   pull_request: {}
 
 jobs:
-  # package:
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     matrix:
-  #       python-version: ['3.7', '3.8']
-  #   steps:
-  #   - uses: actions/checkout@v2
-  #     with:
-  #       fetch-depth: 1
-  #   - uses: actions/setup-python@v3
-  #     with:
-  #       python-version: ${{ matrix.python-version }}
-  #   - run: make package-pip
-  
+  package:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.7', '3.8']
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - run: make package-pip
+    - name: Load cached Poetry installation
+      uses: actions/cache@v2
+      with:
+        path: ~/.local  # the path depends on the OS
+        key: poetry-1  # increment to reset cache
+    - name: Install Poetry
+      uses: snok/install-poetry@v1.3.1
+    - run: poetry build    
+
   unit-test:
     runs-on: ubuntu-latest
     strategy:
