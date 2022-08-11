@@ -50,6 +50,7 @@ profile = "black"
 src_paths = ["easy_sql"]
 
 [tool.black]
+line-length = 120
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
