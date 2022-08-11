@@ -54,7 +54,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-2
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-1
     - run: poetry install --no-interaction -E "spark linter" 
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: |
@@ -93,7 +93,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-2
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-1
     - run: poetry install --no-interaction -E "spark cli" 
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: |
@@ -138,7 +138,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-1
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-2
     - run: poetry install --no-interaction -E "pg cli" 
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: source .venv/bin/activate && make e2e-test-postgres
