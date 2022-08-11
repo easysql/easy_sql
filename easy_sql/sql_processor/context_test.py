@@ -4,7 +4,6 @@ from easy_sql.sql_processor.context import CommentSubstitutor
 
 
 class CommentSubstitutorTest(unittest.TestCase):
-
     def test_check_if_quote_closed(self):
         # self.assertTrue(CommentSubstitutor.is_quote_closed(''))
         # self.assertTrue(CommentSubstitutor.is_quote_closed('abc'))
@@ -34,7 +33,7 @@ class CommentSubstitutorTest(unittest.TestCase):
         self.assertFalse(CommentSubstitutor.is_quote_closed("'\\\\''"))
 
     def test_should_replace_and_recover_comment(self):
-        sql_expr = '''
+        sql_expr = """
 select ${a}, ${b} -- ${a} in comment
 , ',-- ' as c -- special comment
 , ',--  as c -- something' -- special comment 1
@@ -48,14 +47,16 @@ select ${a}, ${b} -- ${a} in comment
 , ',-- ' as c -- special comment
 -- ${a} in comment
    ${a} -- some comment
-        '''
+        """
         sub = CommentSubstitutor()
         sql_expr = sub.substitute(sql_expr)
-        print('\n'.join(sub.recognized_comment))
+        print("\n".join(sub.recognized_comment))
         print(sql_expr)
-        sql_expr = sql_expr.replace('${a}', 'aaa')
-        sql_expr = sql_expr.replace('${b}', 'bbb\nbbb')
-        self.assertEqual(sub.recover(sql_expr), '''
+        sql_expr = sql_expr.replace("${a}", "aaa")
+        sql_expr = sql_expr.replace("${b}", "bbb\nbbb")
+        self.assertEqual(
+            sub.recover(sql_expr),
+            """
 select aaa, bbb
 bbb -- ${a} in comment
 , ',-- ' as c -- special comment
@@ -70,4 +71,5 @@ bbb -- ${a} in comment
 , ',-- ' as c -- special comment
 -- ${a} in comment
    aaa -- some comment
-        ''')
+        """,
+        )

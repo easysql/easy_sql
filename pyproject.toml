@@ -52,7 +52,6 @@ src_paths = ["easy_sql"]
 
 [tool.black]
 line-length = 120
-skip-string-normalization = 1
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

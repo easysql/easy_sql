@@ -1,6 +1,7 @@
 from sqlfluff.core.parser import CodeSegment
 from sqlfluff.core.rules.base import (
-    BaseRule, LintFix,
+    BaseRule,
+    LintFix,
     LintResult,
     RuleContext,
 )
