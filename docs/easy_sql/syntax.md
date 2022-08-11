@@ -69,9 +69,9 @@ select
 from some_db.table_c
 
 -- target=output.some_db.some_table
-select 
+select
     *
-from table_a a 
+from table_a a
     left join table_b b on a.id=b.id
     left join table_c c on a.id=c.id
 ```
@@ -114,7 +114,7 @@ There is a simple example below:
 -- target=variables
 select 1 as a, '2' as b
 -- target=variables
-select 
+select
     ${a} as a
     , ${b} as b
     , 1${a} as a1
@@ -138,7 +138,7 @@ Other things to note about variables:
 
 Another common case is to save a query to a temporary table for later query. We have already seen a concrete example above.
 
-It works simply as what you expected. 
+It works simply as what you expected.
 
 - The query result will be saved to a temporary table if the target is 'temp'.
 - The query result will be saved to a cached temporary table if the target is 'cache'.
@@ -152,10 +152,10 @@ Easy SQL just create views with the specified name in a temporary default databa
 Since there is no actual loading of data for temporary tables, to define a temporary table is a very light-weight operation.
 You can create as many temporary tables as you wish.
 
-There are a few things to note when creating temporary tables for different backends. 
+There are a few things to note when creating temporary tables for different backends.
 
 - For Spark backend, the name of the temporary table can be reused, but it cannot be reused for the other backends since we cannot create two database views with the same name in the same default database.
-- For BigQuery backend, we have to specify names like `${temp_db}.SOME_TEMP_TABLE_NAME` when query the created temporary table. You guessed it, the 'temp_db' is a pre-defined variable provided by Easy SQL engine. This limitation is introduced by BigQuery since there is no such concept of a default database (named dataset in BigQuery). 
+- For BigQuery backend, we have to specify names like `${temp_db}.SOME_TEMP_TABLE_NAME` when query the created temporary table. You guessed it, the 'temp_db' is a pre-defined variable provided by Easy SQL engine. This limitation is introduced by BigQuery since there is no such concept of a default database (named dataset in BigQuery).
 
 ### Function calls
 
@@ -208,7 +208,7 @@ For the usage of function in Easy SQL and a list of useful built-in functions in
 
 ### Control execution flow
 
-For an imperative language, providing a way to control execution flow is important. 
+For an imperative language, providing a way to control execution flow is important.
 
 Back to the top, there is a case mentioned that
 'we would like to use large computing resources when we're handling data in the first partition since the amount of data there is far larger than that in the other partitions'.
@@ -294,7 +294,7 @@ select
 dim.product_name
 , dim.product_category
 , oc.order_count
-, sa.sales_amount 
+, sa.sales_amount
 from dims dim
     left join order_count oc on @{join_conditions(right_table=oc)}
     left join sales_amount sa on @{join_conditions(right_table=sa)}
@@ -316,7 +316,7 @@ From the example above, we could find a few things to note about templates:
 Besides, there are some other notes:
 
 - Variables can be referenced in template body, and the resolution of variables happens at the resolution time of the template (when the step with template reference is executing). This is useful since we can change the value of some variable between two targets referencing the same template.
-- There should be no templates used in the body of templates. This is to make the resolution of templates to be simple. 
+- There should be no templates used in the body of templates. This is to make the resolution of templates to be simple.
 
 ### Include other ETL code snippets
 
@@ -324,7 +324,7 @@ Template is designed for reusing code within one ETL. How to reuse code across E
 One common way to reuse code is to create a temporary mid-table.
 But it seems heavy since we need to create a real table and there might be data copying.
 
-Easy SQL provides a way to reuse code from some other ETL file. This is the 'include' command. 
+Easy SQL provides a way to reuse code from some other ETL file. This is the 'include' command.
 
 Include looks similar to target. Below is an example:
 

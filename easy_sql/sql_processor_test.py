@@ -141,7 +141,7 @@ select #{a} as a, #{b} as b, #{c} as c, ${d} as d
 -- target=template.temp1
 #{a} as #{an}, #{b} as #{bn}
 -- target=cache.result
-select @{temp1(a=1, an=a, b=2, bn=b)}, 
+select @{temp1(a=1, an=a, b=2, bn=b)},
 @{temp1(a=3, an=c, b=4, bn=d)}
         """
         self.assertEqual(run_sql(sql, 'result', variables={'d': '4'}), [(1, 2, 3, 4)])
@@ -169,7 +169,7 @@ select 1 as a
         # template引用时，参数可以换行
         sql = """
 -- target=template.temp1
-#{a} as a, 
+#{a} as a,
     #{b} as b, #{c} as c, ${d} as d, ${d1(1, ${d})} as e
 -- target=cache.result
 select
@@ -263,7 +263,7 @@ select 1 as a
 -- target=variables
 select 'old_a' as var_a
 
--- case1: exception_handler 可以带参数，使用 `{var_name}` 来引用变量，变量值取 handler 被执行时的取值 
+-- case1: exception_handler 可以带参数，使用 `{var_name}` 来引用变量，变量值取 handler 被执行时的取值
 -- target=variables
 select "exception_handler1({__step__}, {var_a}, b)" as __exception_handler__
 -- target=variables
@@ -276,12 +276,12 @@ select ${not_existed1}
 select 'exception_handler2()' as __exception_handler__
 -- target=temp.res2
 select ${not_existed2}
-         
+
 -- case3: 可以针对接下来的步骤取消 exception_handler 设定，将值置为 null 即可
 -- target=variables
 select null as __exception_handler__
 -- target=temp.res3
-select ${not_existed3}         
+select ${not_existed3}
 """
         from .sql_processor import StepStatus,SqlProcessor, StepReport
         from .sql_processor.step import Step
@@ -452,7 +452,7 @@ class StepFactoryTest(unittest.TestCase):
     def test_include_snippet_from_py(self):
         spark = LocalSpark.get()
         sql = """
--- can have comments here        
+-- can have comments here
 -- include=easy_sql.sql_processor_test.test_snippet
 -- target=temp.result1
 select ${a} as res_a
@@ -471,7 +471,7 @@ select ${b} as res_b
 
     def test_include_snippet_from_sql(self):
         sql = """
--- can have comments here        
+-- can have comments here
 -- include=/tmp/test_snippet.sql
 -- target=temp.result1
 select ${a} as res_a

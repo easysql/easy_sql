@@ -89,7 +89,7 @@ select a, """hh""" as ab, "" as ac from ${temp_db}.table
 select
     translate('${data_date}', '-', '')  as data_date_no_ds
     , true                              as __create_hive_table__
-    
+
 -- target=temp.model_data
 select * from sales_model_demo_with_label where date='${data_date_no_ds}'
 
@@ -138,7 +138,7 @@ select @{dim_cols} from sales_amount
 @{transited_with_fk_inc_template(
     source_table_name=transited, source_table_biz_key=product_id, result_col_name=product_id_key,
     fk_table_name=dwd_sales.sales_dim_product_h, pk=product_key, fk_table_biz_key=id,
-    update_time_col_name=update_time, partition_col_name=di)} 
+    update_time_col_name=update_time, partition_col_name=di)}
 """
         sql_linter = SqlLinter(sql, exclude_rules=['L025'])
         result = sql_linter.lint("bigquery")
@@ -184,7 +184,7 @@ product_name
 
 -- target=temp.dims
 select @{dim_cols} from order_count
-union 
+union
 select @{dim_cols} from sales_amount
 """
         sql_linter = SqlLinter(sql)
@@ -222,7 +222,7 @@ select @{dim_cols} from sales_amount
 -- target=variables
 select ${plus(1, 2)} as a
 , flag as b
-from data_table 
+from data_table
 
 -- target=temp.dims
 select * from order_count where value < ${a}

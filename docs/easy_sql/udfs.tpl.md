@@ -7,7 +7,7 @@ User-defined function is a widely used concept in SQL world. It is a user-progra
 There are two types of user defined functions in SQL:
 
 - `UDF`: User-defined function that acts on one row and return a single value.
-- `UDAF`: User-defined aggregate function that acts on multiple rows at once and return a single aggregated value as a result. 
+- `UDAF`: User-defined aggregate function that acts on multiple rows at once and return a single aggregated value as a result.
 
 Easy SQL provides support to define UDF/UDAF, register them, and then use them in ETL.
 
@@ -38,7 +38,7 @@ random_udf = udf(lambda: int(random.random() * 100), IntegerType()).asNondetermi
 For details, please refer to pyspark [UDF](https://spark.apache.org/docs/3.1.3/api/python/reference/api/pyspark.sql.functions.udf.html) introduction page.
 There is no support to create UDAF from pyspark yet. We can use collect_list with pyspark UDF to simulate UDAF.
 
-Easy SQL provides support for registering UDF / UDAF in both scala and python. 
+Easy SQL provides support for registering UDF / UDAF in both scala and python.
 
 ### Register and use scala UDF/UDAF
 
@@ -93,7 +93,7 @@ You'll get a result like:
 
 ```
 ===================== REPORT FOR step-1 ==================
-config: StepConfig(target=log.test_udf, condition=None, line_no=5) 
+config: StepConfig(target=log.test_udf, condition=None, line_no=5)
 sql: select string_set(array("a", "a", "b")) as stringset
 status: SUCCEEDED
 start time: xxxx-xx-xx xx:xx:xx, end time: xxxx-xx-xx xx:xx:xx, execution time: 2.194115s - 65.29%
@@ -139,7 +139,7 @@ You'll get a result like:
 
 ```
 ===================== REPORT FOR step-1 ==================
-config: StepConfig(target=log.test_udf, condition=None, line_no=5) 
+config: StepConfig(target=log.test_udf, condition=None, line_no=5)
 sql: select string_set(array("a", "a", "b")) as stringset
 status: SUCCEEDED
 start time: xxxx-xx-xx xx:xx:xx, end time: xxxx-xx-xx xx:xx:xx, execution time: 2.194115s - 65.29%
@@ -182,7 +182,7 @@ You'll get a result like:
 
 ```
 ===================== REPORT FOR step-1 ==================
-config: StepConfig(target=log.test_udf, condition=None, line_no=4) 
+config: StepConfig(target=log.test_udf, condition=None, line_no=4)
 sql: select translate('abcad', 'a', '') as translated_str
 status: SUCCEEDED
 start time: xxxx-xx-xx xx:xx:xx, end time: xxxx-xx-xx xx:xx:xx, execution time: 0.048148s - 70.54%
@@ -220,7 +220,7 @@ select string_set(array("a", "a", "b")) as stringset
 ```
 
 For a detailed sample implementation and other backends,
-please refer to the implementation of [data_process](https://github.com/easysql/easy_sql/blob/main/easy_sql/data_process.py) module. 
+please refer to the implementation of [data_process](https://github.com/easysql/easy_sql/blob/main/easy_sql/data_process.py) module.
 
 ## UDF reference
 

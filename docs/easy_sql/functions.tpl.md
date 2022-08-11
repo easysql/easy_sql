@@ -8,7 +8,7 @@ For example:
 
 - Send out a http request to report status when some step of the ETL fails for some reasons.
 - Check if a partition exists.
-- Get the first partition value. 
+- Get the first partition value.
 
 These tasks could be easily implemented in python functions.
 
@@ -26,7 +26,7 @@ Let's have a look at a simple example of how to create and register a new functi
 ### Implement your customized function
 
 First of all, you need to implement your function in a python file.
-Let's assume we're using spark backend, and the function we'd like to implement is a function to count the partitions of some table. 
+Let's assume we're using spark backend, and the function we'd like to implement is a function to count the partitions of some table.
 
 We could create a file named `customized_func.py`, with content:
 
@@ -40,7 +40,7 @@ def count_partitions(table_name: str) -> int:
 
 ### Use function in ETL
 
-If we use the command line interface to run the ETL, we need to configure it with a property named `easy_sql.func_file_path` in your ETL file. 
+If we use the command line interface to run the ETL, we need to configure it with a property named `easy_sql.func_file_path` in your ETL file.
 An example is as below:
 
 ```sql
@@ -69,7 +69,7 @@ We'll see the output like below:
 
 ```
 ===================== REPORT FOR step-1 ==================
-config: StepConfig(target=action.define_table, condition=None, line_no=4) 
+config: StepConfig(target=action.define_table, condition=None, line_no=4)
 sql: create table some_table partitioned by (pt) as
 select * from (
     select 1 as a, 2 as b, 1 as pt
@@ -82,7 +82,7 @@ messages:
 
 
 ===================== REPORT FOR step-2 ==================
-config: StepConfig(target=log.partition_count, condition=None, line_no=12) 
+config: StepConfig(target=log.partition_count, condition=None, line_no=12)
 sql: select 2 as partition_count
 status: SUCCEEDED
 start time: 2022-08-03 10:33:43, end time: 2022-08-03 10:33:43, execution time: 0.254982s - 2.50%
@@ -93,7 +93,7 @@ partition_count=2
 **Notes:**
 
 - The command line interface will import and register all the functions in the python file. So we suggest defining all of your functions in a `__all__` variable.
-- The function file path in configuration `-- config: easy_sql.func_file_path=some_function.py` is either an absolute path or a path relative to current working directory. 
+- The function file path in configuration `-- config: easy_sql.func_file_path=some_function.py` is either an absolute path or a path relative to current working directory.
 
 ### Register functions programmatically
 
