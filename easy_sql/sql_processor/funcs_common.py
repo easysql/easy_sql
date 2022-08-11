@@ -1,9 +1,10 @@
 import traceback
 from datetime import datetime, timedelta
 from typing import List, Optional, Union
+
+from ..logger import logger
 from . import SqlProcessorException, Step
 from .backend import Backend
-from ..logger import logger
 
 __all__ = ["ColumnFuncs", "TableFuncs", "PartitionFuncs", "AlertFunc"]
 
@@ -266,8 +267,8 @@ class AlertFunc:
         self.alerter = alerter
 
     def alert(self, step, context, rule_name: str, pass_condition: str, alert_template: str, mentioned_users: str):
-        from .step import Step
         from .context import ProcessorContext
+        from .step import Step
 
         step: Step = step
         context: ProcessorContext = context

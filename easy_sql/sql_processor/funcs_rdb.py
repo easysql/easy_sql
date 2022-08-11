@@ -3,7 +3,9 @@ import os
 from typing import List
 
 from .backend.rdb import RdbBackend
-from .funcs_common import ColumnFuncs, TableFuncs, PartitionFuncs as PartitionFuncsBase, AlertFunc
+from .funcs_common import AlertFunc, ColumnFuncs
+from .funcs_common import PartitionFuncs as PartitionFuncsBase
+from .funcs_common import TableFuncs
 
 __all__ = ["PartitionFuncs", "ColumnFuncs", "AlertFunc", "TableFuncs", "ModelFuncs"]
 
@@ -23,6 +25,7 @@ class ModelFuncs:
     ):
         from pyspark.ml import PipelineModel
         from pyspark.sql.functions import expr
+
         from ..spark_optimizer import get_spark
 
         SPARK_JARS = (
@@ -87,6 +90,7 @@ class ModelFuncs:
     ):
         from pyspark.ml import PipelineModel
         from pyspark.sql.functions import expr
+
         from ..spark_optimizer import get_spark
 
         workdir = os.path.dirname(os.environ.get("PWD"))

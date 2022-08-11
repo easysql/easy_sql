@@ -3,9 +3,16 @@ import time
 import unittest
 
 from easy_sql import base_test
-from easy_sql.base_test import dt, date, TEST_PG_URL, TEST_CH_URL, TEST_BQ_URL, bigquery_sql_expr
-from easy_sql.sql_processor.backend import TableMeta, SaveMode, Partition
-from easy_sql.sql_processor.backend.rdb import RdbBackend, RdbRow, _exec_sql, TimeLog
+from easy_sql.base_test import (
+    TEST_BQ_URL,
+    TEST_CH_URL,
+    TEST_PG_URL,
+    bigquery_sql_expr,
+    date,
+    dt,
+)
+from easy_sql.sql_processor.backend import Partition, SaveMode, TableMeta
+from easy_sql.sql_processor.backend.rdb import RdbBackend, RdbRow, TimeLog, _exec_sql
 
 
 class RdbTest(unittest.TestCase):

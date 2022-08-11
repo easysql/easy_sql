@@ -1,8 +1,8 @@
-from easy_sql.sql_processor.backend.rdb import RdbBackend, _exec_sql
-from easy_sql.sql_processor.backend.rdb import SqlExpr
-from easy_sql.sql_processor.sql_processor import SqlProcessor
-from datetime import datetime
 import os
+from datetime import datetime
+
+from easy_sql.sql_processor.backend.rdb import RdbBackend, SqlExpr, _exec_sql
+from easy_sql.sql_processor.sql_processor import SqlProcessor
 
 partition_col_converter = (
     lambda col: f"PARSE_DATE('%Y-%m', {col}) as {col}"

@@ -4,19 +4,19 @@ import re
 import sys
 import unittest
 from datetime import datetime
-from typing import List, Tuple, Any, Dict, Callable, Union, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import xlrd
 from bson import json_util
-from xlrd import open_workbook, Book
-from xlrd.sheet import Sheet, Cell
+from xlrd import Book, open_workbook
+from xlrd.sheet import Cell, Sheet
 
 __all__ = ["SqlTester", "TableData", "TestCase", "WorkPath", "work_path", "SqlReader", "TableColumnTypes"]
 
-from easy_sql.sql_processor import SqlProcessor
-from easy_sql.sql_processor.backend import Backend, SparkBackend, Row, Partition
-from easy_sql.sql_processor.backend.rdb import RdbBackend, Col
 from easy_sql.logger import logger
+from easy_sql.sql_processor import SqlProcessor
+from easy_sql.sql_processor.backend import Backend, Partition, Row, SparkBackend
+from easy_sql.sql_processor.backend.rdb import Col, RdbBackend
 
 debug_log_enable = True
 
@@ -144,18 +144,18 @@ class TableColumnTypes:
     def column_types_to_schema_spark(self, spark: "SparkSession", columns: List[str], types: List[str]) -> "StructType":
         from pyspark.sql.functions import expr
         from pyspark.sql.types import (
-            StructType,
-            StructField,
-            IntegerType,
-            ShortType,
-            LongType,
-            DoubleType,
-            FloatType,
-            StringType,
+            ArrayType,
             BooleanType,
             DateType,
+            DoubleType,
+            FloatType,
+            IntegerType,
+            LongType,
+            ShortType,
+            StringType,
+            StructField,
+            StructType,
             TimestampType,
-            ArrayType,
         )
 
         fields_creators = {

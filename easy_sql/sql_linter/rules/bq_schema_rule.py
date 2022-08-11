@@ -1,10 +1,5 @@
 from sqlfluff.core.parser import CodeSegment
-from sqlfluff.core.rules.base import (
-    BaseRule,
-    LintFix,
-    LintResult,
-    RuleContext,
-)
+from sqlfluff.core.rules.base import BaseRule, LintFix, LintResult, RuleContext
 
 
 class Rule_BigQuery_L001(BaseRule):

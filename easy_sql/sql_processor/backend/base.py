@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, Callable, List, Tuple, Any, Union
+from typing import Any, Callable, Dict, List, Tuple, Union
 
 __all__ = ["Backend", "Table", "Row", "TableMeta", "Partition", "SaveMode"]
 

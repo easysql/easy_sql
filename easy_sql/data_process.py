@@ -3,7 +3,7 @@ import re
 import urllib.parse
 from datetime import datetime
 from os import path
-from typing import Dict, Any, List, Optional, Callable
+from typing import Any, Callable, Dict, List, Optional
 
 import click
 
@@ -109,7 +109,10 @@ def create_sql_processor_backend(backend: str, sql: str, task_name: str) -> "Bac
         exec_sql = lambda sql: backend.exec_native_sql(sql)
     elif backend == "maxcompute":
         odps_parms = {"access_id": "xx", "secret_access_key": "xx", "project": "xx", "endpoint": "xx"}
-        from easy_sql.sql_processor.backend.maxcompute import MaxComputeBackend, _exec_sql
+        from easy_sql.sql_processor.backend.maxcompute import (
+            MaxComputeBackend,
+            _exec_sql,
+        )
 
         backend = MaxComputeBackend(**odps_parms)
         exec_sql = lambda sql: _exec_sql(backend.conn, sql)

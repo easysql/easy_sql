@@ -1,4 +1,4 @@
-from typing import Dict, Callable
+from typing import Callable, Dict
 
 from .backend import Backend, SparkBackend
 from .backend.rdb import RdbBackend
@@ -57,7 +57,12 @@ class FuncRunner:
 
     @staticmethod
     def _get_rdb_funcs(backend) -> Dict[str, Callable]:
-        from easy_sql.sql_processor.funcs_rdb import PartitionFuncs, ColumnFuncs, TableFuncs, ModelFuncs
+        from easy_sql.sql_processor.funcs_rdb import (
+            ColumnFuncs,
+            ModelFuncs,
+            PartitionFuncs,
+            TableFuncs,
+        )
 
         partition_funcs = PartitionFuncs(backend)
         col_funcs = ColumnFuncs(backend)
@@ -88,13 +93,13 @@ class FuncRunner:
     @staticmethod
     def _get_spark_funcs(backend) -> Dict[str, Callable]:
         from easy_sql.sql_processor.funcs_spark import (
-            ParallelismFuncs,
-            PartitionFuncs,
             CacheFuncs,
             ColumnFuncs,
-            TableFuncs,
             IOFuncs,
             ModelFuncs,
+            ParallelismFuncs,
+            PartitionFuncs,
+            TableFuncs,
         )
 
         spark = backend.spark

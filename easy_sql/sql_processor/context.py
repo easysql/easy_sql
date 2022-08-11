@@ -1,10 +1,10 @@
 import copy
 import re
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 from ..logger import logger
 from . import FuncRunner
-from .common import SqlProcessorException, Column, VarsReplacer
+from .common import Column, SqlProcessorException, VarsReplacer
 
 __all__ = ["VarsContext", "TemplatesContext", "ProcessorContext"]
 

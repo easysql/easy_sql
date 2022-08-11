@@ -5,8 +5,9 @@ from typing import Dict, List
 
 from pyspark.sql import SparkSession
 
-from easy_sql.sql_processor.backend.rdb import SqlExpr
 from easy_sql.sql_processor import SqlProcessor
+from easy_sql.sql_processor.backend.rdb import SqlExpr
+
 from .local_spark import LocalSpark
 from .logger import log_time
 

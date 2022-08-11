@@ -1,7 +1,15 @@
 import unittest
 
 from easy_sql import base_test
-from easy_sql.base_test import dt, TEST_PG_URL, TEST_CH_URL, TEST_BQ_URL, bigquery_sql_expr, date, dt_zone
+from easy_sql.base_test import (
+    TEST_BQ_URL,
+    TEST_CH_URL,
+    TEST_PG_URL,
+    bigquery_sql_expr,
+    date,
+    dt,
+    dt_zone,
+)
 
 
 class SqlProcessorTest(unittest.TestCase):
@@ -25,6 +33,7 @@ class SqlProcessorTest(unittest.TestCase):
         if not base_test.should_run_integration_test("bq"):
             return
         import os
+
         from easy_sql.sql_processor.backend.rdb import RdbBackend, _exec_sql
 
         backend = RdbBackend(
@@ -56,6 +65,7 @@ class SqlProcessorTest(unittest.TestCase):
         if not base_test.should_run_integration_test("bq"):
             return
         import os
+
         from easy_sql.sql_processor.backend.rdb import RdbBackend, _exec_sql
 
         backend = RdbBackend(

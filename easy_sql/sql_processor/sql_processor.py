@@ -1,18 +1,18 @@
-from typing import List, Any, Dict, Callable, Union
+from typing import Any, Callable, Dict, List, Union
 
+from ..logger import logger
 from .backend import Backend, SparkBackend
 from .common import Column
-from .context import ProcessorContext, VarsContext, TemplatesContext
+from .context import ProcessorContext, TemplatesContext, VarsContext
 from .funcs import FuncRunner
 from .report import SqlProcessorReporter, StepStatus
 from .step import Step, StepFactory
-from ..logger import logger
 
 
 def extract_funcs_from_pyfile(funcs_py_file):
+    import importlib
     import os
     import sys
-    import importlib
 
     sys.path.insert(0, os.path.dirname(funcs_py_file))
     func_mod = importlib.import_module(os.path.basename(funcs_py_file)[:-3])

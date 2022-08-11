@@ -1,7 +1,7 @@
 import unittest
 
 from easy_sql.sql_processor.backend import Partition
-from easy_sql.sql_processor.backend.rdb import SqlExpr, ChSqlDialect
+from easy_sql.sql_processor.backend.rdb import ChSqlDialect, SqlExpr
 
 
 class RdbTest(unittest.TestCase):

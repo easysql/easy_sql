@@ -1,6 +1,6 @@
 import unittest
 
-from .base_test import TEST_PG_URL, TEST_CH_URL
+from .base_test import TEST_CH_URL, TEST_PG_URL
 from .sql_processor.backend import Backend, SparkBackend
 from .sql_processor_debugger import *
 
@@ -15,8 +15,7 @@ class SqlProcessorDebuggerTest(unittest.TestCase):
         self.run_test_process_sql_debugger(SparkBackend(spark))
 
     def test_process_sql_debugger_pg(self):
-        from easy_sql.sql_processor.backend.postgres import PostgresBackend
-        from easy_sql.sql_processor.backend.postgres import _exec_sql
+        from easy_sql.sql_processor.backend.postgres import PostgresBackend, _exec_sql
 
         pg = PostgresBackend(TEST_PG_URL)
         _exec_sql(pg.conn, "drop schema if exists t cascade")
