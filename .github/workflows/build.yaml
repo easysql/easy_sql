@@ -34,6 +34,7 @@ jobs:
       with:
         fetch-depth: 1
     - uses: actions/setup-python@v3
+      id: setup-python
       with:
         python-version: ${{ matrix.python-version }}
     - uses: actions/setup-java@v3
@@ -54,7 +55,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-1
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-ut
     - run: poetry install --no-interaction -E "spark linter" 
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: |
@@ -73,6 +74,7 @@ jobs:
       with:
         fetch-depth: 1
     - uses: actions/setup-python@v3
+      id: setup-python
       with:
         python-version: ${{ matrix.python-version }}
     - uses: actions/setup-java@v3
@@ -93,7 +95,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-1
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-spark
     - run: poetry install --no-interaction -E "spark cli" 
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: |
@@ -122,6 +124,7 @@ jobs:
       with:
         fetch-depth: 1
     - uses: actions/setup-python@v3
+      id: setup-python
       with:
         python-version: ${{ matrix.python-version }}
     - name: Load cached Poetry installation
@@ -138,7 +141,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-2
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-pg
     - run: poetry install --no-interaction -E "pg cli" 
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: source .venv/bin/activate && make e2e-test-postgres
