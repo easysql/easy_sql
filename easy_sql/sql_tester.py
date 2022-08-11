@@ -529,7 +529,7 @@ class TestCase:
             return self.sql_file_content
         else:
             if self.sql_file_path is None:
-                raise AssertionError(f"can not find the sql file having same name with test file")
+                raise AssertionError("can not find the sql file having same name with test file")
             with open(work_path.path(self.sql_file_path), "r") as f:
                 return f.read()
 

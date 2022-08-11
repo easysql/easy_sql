@@ -47,7 +47,7 @@ class ModelFuncs:
             "credentialsFile": f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-prod.json",
         }
 
-        spark = get_spark(f"test", spark_config_settings_dict)
+        spark = get_spark("test", spark_config_settings_dict)
         bucket = "dataplat-gcp-demo"
         spark.conf.set("temporaryGcsBucket", bucket)
 

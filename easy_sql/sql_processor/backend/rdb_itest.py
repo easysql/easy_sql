@@ -224,7 +224,7 @@ class RdbTest(unittest.TestCase):
         backend.create_cache_table(backend.exec_sql("select * from t.test"), "test")
         backend.save_table(TableMeta("test"), TableMeta("t.xx0"), SaveMode.overwrite, True)
         self.assertListEqual(
-            backend.exec_sql(f"select * from t.xx0 order by id").collect(),
+            backend.exec_sql("select * from t.xx0 order by id").collect(),
             [RdbRow(["id", "val"], (1, "1")), RdbRow(["id", "val"], (2, "2")), RdbRow(["id", "val"], (3, "3"))],
         )
 
@@ -237,7 +237,7 @@ class RdbTest(unittest.TestCase):
         # first save without partitions, should create
         backend.save_table(TableMeta("test_limit"), TableMeta("t.xx"), SaveMode.overwrite, True)
         self.assertListEqual(
-            backend.exec_sql(f"select * from t.xx order by id").collect(),
+            backend.exec_sql("select * from t.xx order by id").collect(),
             [RdbRow(["id", "val"], (1, "1")), RdbRow(["id", "val"], (2, "2"))],
         )
 
@@ -246,7 +246,7 @@ class RdbTest(unittest.TestCase):
         backend.create_cache_table(backend.exec_sql("select * from t.test order by id limit 2"), "test_limit")
         backend.save_table(TableMeta("test_limit"), TableMeta("t.xx"), SaveMode.overwrite, True)
         self.assertListEqual(
-            backend.exec_sql(f"select * from t.xx order by id").collect(),
+            backend.exec_sql("select * from t.xx order by id").collect(),
             [RdbRow(["id", "val"], (1, "1")), RdbRow(["id", "val"], (2, "2"))],
         )
 
@@ -270,7 +270,7 @@ class RdbTest(unittest.TestCase):
             ),
         )
 
-        _exec_sql(backend.conn, f"drop table if exists t.xx")
+        _exec_sql(backend.conn, "drop table if exists t.xx")
 
         # first save with partitions, should create
         backend.exec_native_sql(backend.sql_dialect.drop_view_sql("test_limit"))
@@ -279,7 +279,7 @@ class RdbTest(unittest.TestCase):
             TableMeta("test_limit"), TableMeta("t.xx", partitions=[Partition("a", mock_dt_1)]), SaveMode.overwrite, True
         )
         self.assertListEqual(
-            backend.exec_sql(f"select * from t.xx order by id").collect(),
+            backend.exec_sql("select * from t.xx order by id").collect(),
             [RdbRow(["id", "val", "a"], (1, "1", mock_dt_1)), RdbRow(["id", "val", "a"], (2, "2", mock_dt_1))],
         )
 
@@ -290,7 +290,7 @@ class RdbTest(unittest.TestCase):
             TableMeta("test_limit"), TableMeta("t.xx", partitions=[Partition("a", mock_dt_2)]), SaveMode.overwrite, True
         )
         self.assertListEqual(
-            backend.exec_sql(f"select * from t.xx order by a, id").collect(),
+            backend.exec_sql("select * from t.xx order by a, id").collect(),
             [
                 RdbRow(["id", "val", "a"], (1, "1", mock_dt_1)),
                 RdbRow(["id", "val", "a"], (2, "2", mock_dt_1)),
@@ -309,7 +309,7 @@ class RdbTest(unittest.TestCase):
             False,
         )
         self.assertListEqual(
-            backend.exec_sql(f"select * from t.xx order by a, id").collect(),
+            backend.exec_sql("select * from t.xx order by a, id").collect(),
             [
                 RdbRow(["id", "val", "a"], (1, "1", mock_dt_1)),
                 RdbRow(["id", "val", "a"], (2, "2", mock_dt_1)),
@@ -325,7 +325,7 @@ class RdbTest(unittest.TestCase):
             TableMeta("test_limit"), TableMeta("t.xx", partitions=[Partition("a", mock_dt_2)]), SaveMode.append, True
         )
         self.assertListEqual(
-            backend.exec_sql(f"select * from t.xx order by a, id").collect(),
+            backend.exec_sql("select * from t.xx order by a, id").collect(),
             [
                 RdbRow(["id", "val", "a"], (1, "1", mock_dt_1)),
                 RdbRow(["id", "val", "a"], (2, "2", mock_dt_1)),
