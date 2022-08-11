@@ -1,10 +1,10 @@
 import time
 from enum import Enum
 from random import random
-from typing import Dict, Callable, List, Any, Tuple, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from .base import *
 from ...logger import logger
+from .base import *
 
 # TODO: SqlExpr should be a common class
 from .rdb import SqlExpr

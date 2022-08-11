@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from .step import Step, ReportCollector
+from .step import ReportCollector, Step
 
 
 class StepStatus:
@@ -85,8 +85,7 @@ class SqlProcessorReporter(ReportCollector):
             self._report_to_es(report)
 
     def _report_to_es(self, report):
-        from easy_sql.report import Reporter
-        from easy_sql.report import EsService
+        from easy_sql.report import EsService, Reporter
 
         Reporter(EsService(self.report_es_url), index_prefix=self.report_es_index_prefix).report_task_result(
             task_id=self.report_task_id, report=report
@@ -96,7 +95,8 @@ class SqlProcessorReporter(ReportCollector):
         print(report)
 
     def _report_to_hdfs(self, report):
-        import os, hashlib
+        import hashlib
+        import os
 
         file_name = os.path.basename(self.report_hdfs_path)
         md5 = hashlib.md5()

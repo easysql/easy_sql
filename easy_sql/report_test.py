@@ -1,6 +1,6 @@
 import unittest
 
-from easy_sql.report import Reporter, EsService
+from easy_sql.report import EsService, Reporter
 
 
 class ReporterTest(unittest.TestCase):

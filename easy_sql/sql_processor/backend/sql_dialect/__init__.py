@@ -1,5 +1,6 @@
-from datetime import datetime, date
-from typing import Dict, Callable, List, Tuple, Optional, Any, Union
+from datetime import date, datetime
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+
 from ..base import Partition
 
 __all__ = ["SqlExpr", "SqlDialect"]

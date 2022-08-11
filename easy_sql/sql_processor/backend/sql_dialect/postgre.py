@@ -1,6 +1,7 @@
-from typing import Dict, Callable, List, Tuple, Union
+from typing import Callable, Dict, List, Tuple, Union
 
 from easy_sql.sql_processor.backend.sql_dialect import SqlDialect
+
 from ..base import Partition
 
 __all__ = ["PgSqlDialect"]

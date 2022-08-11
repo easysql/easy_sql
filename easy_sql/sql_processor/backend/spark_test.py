@@ -1,6 +1,6 @@
 import unittest
 
-from pyspark.sql.functions import lit, expr
+from pyspark.sql.functions import expr, lit
 
 from easy_sql.base_test import LocalSpark
 from easy_sql.sql_processor.backend import SparkTable

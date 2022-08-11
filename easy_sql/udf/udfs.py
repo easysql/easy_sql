@@ -1,4 +1,4 @@
-from typing import Callable, Dict, Any, Union, List
+from typing import Any, Callable, Dict, List, Union
 
 
 def _all_udfs(cls: Any):

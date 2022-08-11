@@ -3,6 +3,7 @@ import re
 
 class UDF:
     from collections import Callable
+
     from pyspark.sql.types import DataType
 
     def __init__(self, func: Callable, return_type: DataType):

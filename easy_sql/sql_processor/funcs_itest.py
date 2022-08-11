@@ -2,21 +2,26 @@ import json
 import unittest
 from typing import Tuple
 
-from easy_sql.base_test import TEST_PG_URL, TEST_CH_URL
+from easy_sql.base_test import TEST_CH_URL, TEST_PG_URL
 from easy_sql.local_spark import LocalSpark
-from easy_sql.sql_processor import Step, FuncRunner
+from easy_sql.sql_processor import FuncRunner, Step
 from easy_sql.sql_processor.backend import Partition, SparkTable
-from easy_sql.sql_processor.backend.base import Col, Backend
+from easy_sql.sql_processor.backend.base import Backend, Col
 from easy_sql.sql_processor.backend.rdb import RdbBackend
-from easy_sql.sql_processor.context import ProcessorContext, VarsContext, TemplatesContext
-from easy_sql.sql_processor.funcs_common import ColumnFuncs, TableFuncs, AlertFunc, Alerter
-from easy_sql.sql_processor.funcs_rdb import PartitionFuncs
-from easy_sql.sql_processor.funcs_spark import (
-    PartitionFuncs as SparkPartitionFuncs,
-    CacheFuncs,
-    ParallelismFuncs,
-    IOFuncs,
+from easy_sql.sql_processor.context import (
+    ProcessorContext,
+    TemplatesContext,
+    VarsContext,
 )
+from easy_sql.sql_processor.funcs_common import (
+    Alerter,
+    AlertFunc,
+    ColumnFuncs,
+    TableFuncs,
+)
+from easy_sql.sql_processor.funcs_rdb import PartitionFuncs
+from easy_sql.sql_processor.funcs_spark import CacheFuncs, IOFuncs, ParallelismFuncs
+from easy_sql.sql_processor.funcs_spark import PartitionFuncs as SparkPartitionFuncs
 from easy_sql.sql_processor.step import ReportCollector
 
 

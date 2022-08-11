@@ -1,11 +1,15 @@
 import re
 import unittest
 from functools import partial
-from easy_sql.sql_processor.backend import TableMeta, SaveMode, Partition
-from easy_sql.sql_processor.backend.maxcompute import MaxComputeRow, MaxComputeTable, MaxComputeBackend
 
 from easy_sql import base_test
 from easy_sql.base_test import dt
+from easy_sql.sql_processor.backend import Partition, SaveMode, TableMeta
+from easy_sql.sql_processor.backend.maxcompute import (
+    MaxComputeBackend,
+    MaxComputeRow,
+    MaxComputeTable,
+)
 
 
 class MaxComputeTest(unittest.TestCase):

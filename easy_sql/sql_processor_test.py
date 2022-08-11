@@ -2,11 +2,12 @@ import unittest
 from decimal import Decimal
 from typing import Dict
 
-from pyspark.sql.types import StructType, StructField, IntegerType
+from pyspark.sql.types import IntegerType, StructField, StructType
 from pyspark.sql.utils import ParseException
 
 from easy_sql.base_test import LocalSpark, run_sql
-from .sql_processor import FuncRunner, VarsContext, SqlProcessor, SqlProcessorException
+
+from .sql_processor import FuncRunner, SqlProcessor, SqlProcessorException, VarsContext
 from .sql_processor.step import StepFactory
 
 
@@ -281,7 +282,7 @@ select null as __exception_handler__
 -- target=temp.res3
 select ${not_existed3}
 """
-        from .sql_processor import StepStatus, SqlProcessor, StepReport
+        from .sql_processor import SqlProcessor, StepReport, StepStatus
         from .sql_processor.step import Step
 
         def exception_handler1(step: Step, a, b):

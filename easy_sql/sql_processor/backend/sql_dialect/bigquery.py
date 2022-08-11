@@ -1,8 +1,8 @@
-from typing import Dict, Callable, List, Tuple
+from typing import Callable, Dict, List, Tuple
 
 from easy_sql.sql_processor.backend.sql_dialect import SqlDialect, SqlExpr
-from ..base import Partition
 
+from ..base import Partition
 
 __all__ = ["BqSqlDialect"]
 

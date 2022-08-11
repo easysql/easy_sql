@@ -1,12 +1,14 @@
 import json
 import os
-from typing import List, Dict, Union
+from typing import Dict, List, Union
 
 from pyspark.sql import SparkSession
 
 from .backend import SparkBackend
-from .common import _exec_sql, SqlProcessorAssertionError
-from .funcs_common import ColumnFuncs, TableFuncs, PartitionFuncs as PartitionFuncsBase, AlertFunc
+from .common import SqlProcessorAssertionError, _exec_sql
+from .funcs_common import AlertFunc, ColumnFuncs
+from .funcs_common import PartitionFuncs as PartitionFuncsBase
+from .funcs_common import TableFuncs
 
 __all__ = [
     "PartitionFuncs",
@@ -58,8 +60,8 @@ class IOFuncs:
         )
 
     def rename_csv_output(self, spark_output_path: str, to_file: str):
-        import subprocess
         import re
+        import subprocess
 
         assert to_file.startswith("/"), "to_file must be a full path starts with /, found: " + to_file
         is_local_file = spark_output_path.startswith("file:///")

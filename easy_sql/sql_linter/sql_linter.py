@@ -1,17 +1,17 @@
 import re
-from typing import Sequence, Dict, Any, List
+from typing import Any, Dict, List, Sequence
 
 import regex
-from sqlfluff.core import Lexer, Parser, Linter, SQLBaseError
+from sqlfluff.core import Lexer, Linter, Parser, SQLBaseError
 from sqlfluff.core.config import FluffConfig
-from sqlfluff.core.parser import RegexLexer, CodeSegment
+from sqlfluff.core.parser import CodeSegment, RegexLexer
 from sqlfluff.core.parser.segments import BaseSegment
 
 from easy_sql.sql_linter.rules import __all__
 from easy_sql.sql_linter.sql_linter_reportor import LintReporter
 from easy_sql.sql_processor.funcs import FuncRunner
 from easy_sql.sql_processor.report import SqlProcessorReporter
-from easy_sql.sql_processor.step import StepFactory, Step
+from easy_sql.sql_processor.step import Step, StepFactory
 
 
 class SqlLinter:

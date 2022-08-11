@@ -1,6 +1,6 @@
 import unittest
 
-from easy_sql.sql_processor import StepConfig, SqlProcessorException
+from easy_sql.sql_processor import SqlProcessorException, StepConfig
 
 
 class StepConfigTest(unittest.TestCase):

@@ -1,7 +1,6 @@
 import sys
 from os import path
-from typing import Dict, Any
-
+from typing import Any, Dict
 
 src_path = path.dirname(path.abspath(__file__))
 sys.path.insert(0, src_path)
@@ -10,7 +9,8 @@ __all__ = ["create_debugger", "create_pg_debugger", "create_ch_debugger"]
 
 
 def create_debugger(sql_file_path: str, vars: Dict[str, Any] = None, funcs: Dict[str, Any] = None):
-    import os, subprocess
+    import os
+    import subprocess
 
     spark_home = (
         subprocess.check_output(["bash", "-c", "echo 'import os; print(os.environ[\"SPARK_HOME\"])' | pyspark"])
@@ -23,8 +23,9 @@ def create_debugger(sql_file_path: str, vars: Dict[str, Any] = None, funcs: Dict
 
     findspark.init()
 
-    from easy_sql.sql_processor.backend import SparkBackend
     from pyspark.sql import SparkSession
+
+    from easy_sql.sql_processor.backend import SparkBackend
 
     spark = SparkSession.builder.enableHiveSupport().getOrCreate()
     backend = SparkBackend(spark)

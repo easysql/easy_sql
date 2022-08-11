@@ -1,10 +1,12 @@
 import re
 import uuid
 from os import path
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 
 from ..logger import logger
-from .backend import Backend, Table as BackendTable, TableMeta as Table, Partition, SaveMode
+from .backend import Backend, Partition, SaveMode
+from .backend import Table as BackendTable
+from .backend import TableMeta as Table
 from .common import SqlProcessorException
 from .context import ProcessorContext
 from .funcs import FuncRunner

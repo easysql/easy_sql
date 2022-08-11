@@ -2,7 +2,7 @@ import os.path
 import unittest
 from datetime import datetime
 
-from easy_sql.sql_tester import TableColumnTypes, TestDataFile, SqlReader, work_path
+from easy_sql.sql_tester import SqlReader, TableColumnTypes, TestDataFile, work_path
 
 
 class TableColumnTypesTest(unittest.TestCase):

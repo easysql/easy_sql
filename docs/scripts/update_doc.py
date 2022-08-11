@@ -3,7 +3,7 @@ import os.path
 import re
 from typing import Callable, Sequence
 
-from easy_sql.sql_processor import funcs_spark, funcs_rdb
+from easy_sql.sql_processor import funcs_rdb, funcs_spark
 from easy_sql.udf import udfs
 
 
