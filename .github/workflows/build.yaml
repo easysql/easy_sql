@@ -46,7 +46,7 @@ jobs:
         path: ~/.local  # the path depends on the OS
         key: poetry-1  # increment to reset cache
     - name: Install Poetry
-      uses: snok/install-poetry@v1
+      uses: snok/install-poetry@v1.3.1
       with:
         virtualenvs-in-project: true
     - name: Cache Poetry
@@ -85,10 +85,10 @@ jobs:
         path: ~/.local  # the path depends on the OS
         key: poetry-1  # increment to reset cache
     - name: Install Poetry
-      uses: snok/install-poetry@v1
+      uses: snok/install-poetry@v1.3.1
       with:
         virtualenvs-in-project: true
-    - name: Cache Poetry
+    - name: Load cached Poetry dependencies 
       id: cached-poetry-dependencies
       uses: actions/cache@v2
       with:
@@ -100,34 +100,50 @@ jobs:
         source .venv/bin/activate
         make e2e-test-spark
 
-  # e2e-test-postgres:
-  #   runs-on: ubuntu-latest
-  #   services:
-  #     postgres:
-  #       image: postgres:14-alpine
-  #       env:
-  #         POSTGRES_PASSWORD: postgres
-  #       options: >-
-  #         --health-cmd pg_isready
-  #         --health-interval 10s
-  #         --health-timeout 5s
-  #         --health-retries 5
-  #       ports:
-  #         - 5432:5432
-  #   strategy:
-  #     matrix:
-  #       python-version: ['3.7', '3.8']
-  #   steps:
-  #   - uses: actions/checkout@v2
-  #     with:
-  #       fetch-depth: 1
-  #   - uses: actions/setup-python@v3
-  #     with:
-  #       python-version: ${{ matrix.python-version }}
-  #   - run: pip install -r requirements/requirements.txt -r requirements/requirements-postgres.txt
-  #   - run: make e2e-test-postgres
-  #     env:
-  #       PG_URL: postgresql://postgres:postgres@localhost/postgres
+  e2e-test-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    strategy:
+      matrix:
+        python-version: ['3.7', '3.8']
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Load cached Poetry installation
+      uses: actions/cache@v2
+      with:
+        path: ~/.local  # the path depends on the OS
+        key: poetry-1  # increment to reset cache
+    - name: Install Poetry
+      uses: snok/install-poetry@v1.3.1
+      with:
+        virtualenvs-in-project: true
+    - name: Load cached Poetry dependencies 
+      id: cached-poetry-dependencies
+      uses: actions/cache@v2
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-1
+    - run: poetry install --no-interaction -E "pg cli" 
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+    - run: source .venv/bin/activate && make e2e-test-postgres
+      env:
+        PG_URL: postgresql://postgres:postgres@localhost/postgres
 
   # e2e-test-clickhouse:
   #   runs-on: ubuntu-latest
