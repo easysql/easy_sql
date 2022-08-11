@@ -188,48 +188,59 @@ jobs:
       env:
         CLICKHOUSE_URL: clickhouse+native://default@localhost:9000
 
-  # test-coverage-all:
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     matrix:
-  #       python-version: ['3.8']
-  #       java-version: ['8']
-  #   services:
-  #     clickhouse:
-  #       image: yandex/clickhouse-server:21
-  #       ports:
-  #         - 8123:8123
-  #         - 9000:9000
-  #     postgres:
-  #       image: postgres:14-alpine
-  #       env:
-  #         POSTGRES_PASSWORD: postgres
-  #       options: >-
-  #         --health-cmd pg_isready
-  #         --health-interval 10s
-  #         --health-timeout 5s
-  #         --health-retries 5
-  #       ports:
-  #         - 5432:5432
-  #   steps:
-  #   - uses: actions/checkout@v2
-  #     with:
-  #       fetch-depth: 1
-  #   - uses: actions/setup-python@v3
-  #     with:
-  #       python-version: ${{ matrix.python-version }}
-  #   - uses: actions/setup-java@v3
-  #     with:
-  #       distribution: 'adopt'
-  #       java-version: ${{ matrix.java-version }}
-  #   - run: pip install -r requirements/requirements.txt -r requirements/requirements-ut.txt -r requirements/requirements-clickhouse.txt -r requirements/requirements-postgres.txt -r requirements/requirements-spark.txt
-  #   - run: make test-coverage-all
-  #     env:
-  #       CLICKHOUSE_URL: clickhouse+native://default@localhost:9000
-  #       PG_URL: postgresql://postgres:postgres@localhost/postgres
-  #   - name: Upload coverage to Codecov
-  #     uses: codecov/codecov-action@v2
-  #     with:
-  #       files: ./coverage.xml
-  #       flags: tests
-  #       name: EasySQL
+  test-coverage-all:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8']
+        java-version: ['8']
+    services:
+      clickhouse:
+        image: yandex/clickhouse-server:21
+        ports:
+          - 8123:8123
+          - 9000:9000
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - uses: actions/setup-java@v3
+      with:
+        distribution: 'adopt'
+        java-version: ${{ matrix.java-version }}
+    - name: Install Poetry
+      uses: snok/install-poetry@v1.3.1
+      with:
+        virtualenvs-in-project: true
+    - name: Load cached Poetry dependencies 
+      id: cached-poetry-dependencies
+      uses: actions/cache@v2
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-all
+    - run: poetry install --no-interaction -E "clickhouse pg spark cli linter" 
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+    - run: source .venv/bin/activate && make test-coverage-all
+      env:
+        CLICKHOUSE_URL: clickhouse+native://default@localhost:9000
+        PG_URL: postgresql://postgres:postgres@localhost/postgres
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v2
+      with:
+        files: ./coverage.xml
+        flags: tests
+        name: EasySQL
