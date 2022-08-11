@@ -7,7 +7,7 @@ The filter conditions, data transformation rules, join conditions and other logi
 In these cases, we should do a testing early to avoid possible production issues.
 Testing also gives us confidence about what we coded and helps team with quality assurance.
 
-But there are a lot of challenges about ETL testing there, and we see a lot of team struggling. 
+But there are a lot of challenges about ETL testing there, and we see a lot of team struggling.
 
 ### ETL testing challenges
 
@@ -16,7 +16,7 @@ A common way to do ETL testing requires the steps below:
 - Copy the database definition and table schema to the environment.
 - For tables used in the ETL, we prepare testing data and insert data to tables.
 - We run the ETL and it generates a new table with data as a result.
-- We compare the generated data and the expected data to find if there are any issues. 
+- We compare the generated data and the expected data to find if there are any issues.
 
 There is no easy thing for the above steps.
 
@@ -25,7 +25,7 @@ Cloud services may ease the ops work but you may be tightly bounded to some clou
 
 For step 2, we may need to write scripts to sync database and table schema.
 We also need to develop a strategy to save the existing data in test environment.
-The drawback of it is that it breaks the network separation from test to production environment. 
+The drawback of it is that it breaks the network separation from test to production environment.
 
 For step 3, it's always been hard work to prepare testing data
 since some tables the ETL used may contain hundreds of columns and we have to pay attention to columns that are not used in the ETL.
@@ -181,7 +181,7 @@ For details of the command line usage, please run `python3 -m easy_sql.sql_test 
 
 ## Run test programmatically
 
-Easy SQL also provides an interface to run ETL programmatically. This way, you can easily integrate tests in Easy SQL with your favorite testing framework. 
+Easy SQL also provides an interface to run ETL programmatically. This way, you can easily integrate tests in Easy SQL with your favorite testing framework.
 
 To run a test in your code, write code below:
 
@@ -191,8 +191,8 @@ from easy_sql.sql_tester import SqlTester
 from easy_sql.sql_processor.backend import SparkBackend
 from pyspark.sql import SparkSession
 
-SqlTester(env='test', 
-          backend_creator=lambda case: SparkBackend(SparkSession.builder.enableHiveSupport().getOrCreate()), 
+SqlTester(env='test',
+          backend_creator=lambda case: SparkBackend(SparkSession.builder.enableHiveSupport().getOrCreate()),
           work_dir=os.path.abspath(os.curdir))\
     .run_tests('path/to/your/test/file')
 ```

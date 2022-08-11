@@ -23,7 +23,7 @@ Think about the following cases.
 3. We would like to reuse some code to check if some order is a valid order (think about e-commerce business).
 4. We would like to stop at some step of the ETL and check if the data is what we expected.
 
-When we use SQL to develop our ETL, it is hard to handle the above cases. 
+When we use SQL to develop our ETL, it is hard to handle the above cases.
 But for a company with a wide range of data usage, there are similar cases everywhere.
 
 ### Why imperative SQL

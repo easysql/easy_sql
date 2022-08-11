@@ -64,9 +64,9 @@ select 1 as t
 select 1 as actual, 1 as expected
 -- target=check.check(1, 2), if=f1(1, ${a})
 -- target=template.test_b
--- for ch, we must use sub query, 
+-- for ch, we must use sub query,
 -- since `#{type} as type` in select expression conflicts with `target.type` in where expression
-select 
+select
     id as id,
     #{type} as type
 from (
@@ -81,7 +81,7 @@ select
     id as id,
     #{type2} as type
 from (
-    select 
+    select
         id as id
     from target
     where

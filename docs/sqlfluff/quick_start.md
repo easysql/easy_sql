@@ -13,7 +13,7 @@ Sqlfluff not support for python 2, it need python 3+. Check your python version 
 $ python --version
 ```
 
-## Quick install 
+## Quick install
 
 Install sqlfluff with pip: `pip install sqlfluff`
 
@@ -33,7 +33,7 @@ $ sqlfluff lint test_sqlfulff.sql --dialect ansi
 ```
 output:
 ```
-== [test_sqlfulff.sql] FAIL                                                                                                                                                                                             
+== [test_sqlfulff.sql] FAIL
 L:   1 | P:   1 | L034 | Select wildcards then simple targets before calculations
                        | and aggregates.
 L:   1 | P:   1 | L036 | Select targets should be on a new line unless there is
@@ -79,9 +79,9 @@ $ sqlfluff rules
 
 ```output
 ==== sqlfluff - rules ====
-L001: Unnecessary trailing whitespace.                                          
-L002: Mixed Tabs and Spaces in single whitespace.                               
-L003: Indentation not consistent with previous lines.   
+L001: Unnecessary trailing whitespace.
+L002: Mixed Tabs and Spaces in single whitespace.
+L003: Indentation not consistent with previous lines.
 ```
 
 Rules are predefined, but it is flexible at parameter and usage.
@@ -94,7 +94,7 @@ Only enable few rule:
 rules = L001,L002 (default :all)
 ```
 
-Ignore specify rule: 
+Ignore specify rule:
 
 ```config
 exclude_rules = L001,L002
@@ -116,7 +116,7 @@ By default, it is Jinja template, and we also use Jinja as example here.
 
 ```sql
 SELECT a+b  AS foo,
-c AS bar from my_table where name = {{ test_name }}; 
+c AS bar from my_table where name = {{ test_name }};
 ```
 
 Set the value of the parameter in the config file `.sqlfluff`:

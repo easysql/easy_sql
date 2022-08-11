@@ -23,7 +23,7 @@ sql="""-- backend: bigquery
 select
     translate('${data_date}', '-', '')  as data_date_no_ds
     , true                              as __create_hive_table__
-    
+
 -- target=temp.model_data
 select * from sales_model_demo_with_label
 
