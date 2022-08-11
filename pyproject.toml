@@ -37,6 +37,7 @@ clickhouse-sqlalchemy = {version = "^0.2.1", optional = true}
 xlrd = "1.2.0"
 pymongo = "^4.2.0"
 coverage = "^6.4.3"
+pre-commit = "^2.20.0"
 
 [tool.poetry.extras]
 cli = ["click"]
