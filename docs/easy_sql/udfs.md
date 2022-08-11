@@ -248,4 +248,3 @@ There are several UDFs implemented in Easy SQL. Below are a list of them for ref
 ### Clickhouse UDFs
 
 - [`translate()`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/udf/udfs/index.html#easy_sql.udf.udfs.ChUdfs.translate)
-
