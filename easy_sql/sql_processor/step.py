@@ -280,7 +280,7 @@ class Step:
             target_table = Table(target_table_name)
             if not dry_run and backend.table_exists(target_table):
                 backend.refresh_table_partitions(target_table)
-            self.collect_report(message=f"save with dynamic partitions")
+            self.collect_report(message="save with dynamic partitions")
 
         if dry_run:
             if static_partition_name:
@@ -291,7 +291,7 @@ class Step:
                 else:
                     table = table.with_column(static_partition_name, backend.sql_expr.for_value(static_partition_value))
             backend.create_temp_table(table, temp_table_name + "_output")
-            self.collect_report(message=f"will not save data to data warehouse, since we are in dry run mode")
+            self.collect_report(message="will not save data to data warehouse, since we are in dry run mode")
             return
 
         target_table_exists = backend.table_exists(target_table)
@@ -306,7 +306,7 @@ class Step:
         log_data = df.limit(20).collect()
         if len(log_data) == 0:
             logger.info(f"log for [{self.target_config.name}]: no data to show")
-            self.collect_report(message=f"no data to show")
+            self.collect_report(message="no data to show")
         elif len(log_data) == 1:
             logger.info(f"log for [{self.target_config.name}]: {str(log_data[0])}")
             self.collect_report(message=f"{str(log_data[0])}")
@@ -425,7 +425,7 @@ class StepFactory:
                     read_file_func = getattr(func_mod, "read_file")
                     resoloved_sqls.append(read_file_func(file))
                 except ModuleNotFoundError:
-                    logger.info(f"failed to import common.file_reader, will try default file reader")
+                    logger.info("failed to import common.file_reader, will try default file reader")
                     resoloved_sqls.append(SqlSnippetsReader.read_file(file))
             elif re.match(include_py_pattern, line_stripped, flags=re.IGNORECASE):
                 matches = re.match(include_py_pattern, line_stripped, flags=re.IGNORECASE)

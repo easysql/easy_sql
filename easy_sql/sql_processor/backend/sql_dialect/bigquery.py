@@ -20,7 +20,7 @@ class BqSqlDialect(SqlDialect):
     # There's no such equivalent statement like 'use ${db}' in BigQuery.
     # Table must be qualified with a dataset when using BigQuery
     def use_db_sql(self, db: str) -> str:
-        return f"select 1"
+        return "select 1"
 
     def drop_db_sql(self, db: str) -> str:
         return f"drop schema if exists {db} cascade"
@@ -99,7 +99,7 @@ class BqSqlDialect(SqlDialect):
     def create_table_with_partitions_sql(
         self, table_name: str, cols: List[Dict[str, "sqlalchemy.types.TypeEngine"]], partitions: List[Partition]
     ):
-        cols_expr = f",\n".join(
+        cols_expr = ",\n".join(
             f"{col['name']} {self.sql_expr.for_bigquery_type(col['name'], col['type'])}" for col in cols
         )
         if len(partitions) == 0:
