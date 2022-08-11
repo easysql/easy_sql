@@ -58,10 +58,8 @@ jobs:
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-ut
     - run: poetry install --no-interaction -E "spark linter" 
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-    - run: |
-          source .venv/bin/activate
-          make unit-test
-          make test-coverage
+    - run: poetry run make unit-test
+    - run: poetry run make test-coverage
   
   e2e-test-spark:
     runs-on: ubuntu-latest
@@ -98,9 +96,7 @@ jobs:
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-spark
     - run: poetry install --no-interaction -E "spark cli" 
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-    - run: |
-        source .venv/bin/activate
-        make e2e-test-spark
+    - run: poetry run make e2e-test-spark
 
   e2e-test-postgres:
     runs-on: ubuntu-latest
@@ -144,7 +140,7 @@ jobs:
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-pg
     - run: poetry install --no-interaction -E "pg cli" 
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-    - run: source .venv/bin/activate && make e2e-test-postgres
+    - run: poetry run make e2e-test-postgres
       env:
         PG_URL: postgresql://postgres:postgres@localhost/postgres
 
@@ -184,7 +180,7 @@ jobs:
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-ch
     - run: poetry install --no-interaction -E "clickhouse cli" 
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-    - run: source .venv/bin/activate && make e2e-test-clickhouse
+    - run: poetry run make e2e-test-clickhouse
       env:
         CLICKHOUSE_URL: clickhouse+native://default@localhost:9000
 
@@ -239,7 +235,7 @@ jobs:
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-all
     - run: poetry install --no-interaction -E "clickhouse pg spark cli linter" 
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-    - run: source .venv/bin/activate && make test-coverage-all
+    - run: poetry run make test-coverage-all
       env:
         CLICKHOUSE_URL: clickhouse+native://default@localhost:9000
         PG_URL: postgresql://postgres:postgres@localhost/postgres
