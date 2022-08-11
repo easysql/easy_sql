@@ -49,8 +49,8 @@ jobs:
         path: ~/.cache/pypoetry/virtualenvs
         key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
     - run: poetry install -E "spark linter"
-    - run: make unit-test
-    - run: make test-coverage
+    - run: poetry run make unit-test
+    - run: poetry run make test-coverage
   
   # e2e-test-spark:
   #   runs-on: ubuntu-latest
