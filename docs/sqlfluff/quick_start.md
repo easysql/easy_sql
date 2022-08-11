@@ -142,5 +142,3 @@ $ sqlfluff parse test_sqlfulff.sql --rules L003,L009,L010 --dialect ansi
 
 
 refer dbt tool but it is static
-
-

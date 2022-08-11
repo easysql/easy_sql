@@ -58,4 +58,3 @@ def clear_temp_views(spark: SparkSession):
         if table.isTemporary:
             print(f'dropping temp view {table.name}')
             spark.catalog.dropTempView(table.name)
-

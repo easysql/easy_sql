@@ -128,4 +128,3 @@ class FuncRunner:
             params = original_params.split(',')
             params = [vars_replacer.replace_variables(p.strip(), False) for p in params]
         return func(*params)
-

@@ -115,4 +115,3 @@ class SqlProcessorReporter(ReportCollector):
             report.append(self.step_reports[step.id].report_as_text(total_execution_seconds, verbose))
         report.append(f'\ntotal execution time: {total_execution_seconds}s')
         return '\n'.join(report)
-

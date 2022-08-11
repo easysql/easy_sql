@@ -195,5 +195,3 @@ class MaxComputeTest(unittest.TestCase):
         ])
 
         backend.exec_native_sql('drop table if exists xx')
-
-

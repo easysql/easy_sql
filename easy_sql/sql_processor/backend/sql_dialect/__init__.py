@@ -161,4 +161,3 @@ class SqlDialect:
 
     def delete_pt_metadata_sql(self, table_name: str, partitions: List[Partition]) -> str:
         raise NotImplementedError()
-
