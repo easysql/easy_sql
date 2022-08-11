@@ -2,8 +2,24 @@
 name = "easy_sql-easy_sql"
 version = "0.3.0"
 description = "A library developed to ease the data ETL development process."
-authors = ["Easy SQL from Thoughtworks"]
-license = "Apache License 2.0"
+authors = ["Easy SQL from Thoughtworks <easy_sql@thoughtworks.com>"]
+license = "Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/easysql/easy_sql"
+homepage = "https://easy-sql.readthedocs.io"
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+]
+packages = [
+    { include = "easy_sql" },
+]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/easysql/easy_sql/issues"
 
 [tool.poetry.dependencies]
 python = "^3.7"
