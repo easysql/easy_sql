@@ -1,9 +1,10 @@
 import os
 import uuid
 from datetime import datetime
-from typing import Dict, List
+from typing import TYPE_CHECKING, Dict, List
 
-from pyspark.sql import SparkSession
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
 
 from easy_sql.sql_processor import SqlProcessor
 from easy_sql.sql_processor.backend.rdb import SqlExpr
@@ -69,7 +70,7 @@ def run_sql(
     funcs: dict = None,
     variables: dict = None,
     dry_run: bool = False,
-    spark: SparkSession = None,
+    spark: "SparkSession" = None,
     spark_conf: Dict = None,
 ) -> List:
     spark = spark or LocalSpark.get(spark_conf)
