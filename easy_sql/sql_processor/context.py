@@ -1,9 +1,12 @@
 import copy
 import re
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List
 
 from ..logger import logger
-from . import FuncRunner
+
+if TYPE_CHECKING:
+    from . import FuncRunner
+
 from .common import Column, SqlProcessorException, VarsReplacer
 
 __all__ = ["VarsContext", "TemplatesContext", "ProcessorContext"]
