@@ -1,5 +1,6 @@
 [flake8]
 max-line-length = 120
 extend-ignore = E203, E501
+extend-select = TC, TC1
 per-file-ignores =
     easy_sql/sql_linter/sql_linter_test.py: W291,W293
