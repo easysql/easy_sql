@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Tuple, Union
 
 from ...logger import logger
@@ -49,19 +51,19 @@ class SparkTable(Table):
     def field_names(self) -> List[str]:
         return self.df.schema.fieldNames()
 
-    def first(self) -> "Row":
+    def first(self) -> Row:
         return SparkRow(self.df.first())
 
-    def limit(self, count: int) -> "SparkTable":
+    def limit(self, count: int) -> SparkTable:
         return SparkTable(self.df.limit(count))
 
-    def with_column(self, name: str, value: any) -> "SparkTable":
+    def with_column(self, name: str, value: any) -> SparkTable:
         from pyspark.sql import Column
         from pyspark.sql.functions import expr
 
         return SparkTable(self.df.withColumn(name, value if isinstance(value, Column) else expr(value)))
 
-    def collect(self) -> List["Row"]:
+    def collect(self) -> List[Row]:
         return [SparkRow(row) for row in self.df.collect()]
 
     def show(self, count: int = 20):
@@ -120,14 +122,14 @@ class SparkBackend(Backend):
 
         return SparkTable(self.spark.createDataFrame(self.spark.sparkContext.emptyRDD(), StructType([])))
 
-    def create_temp_table(self, table: "SparkTable", name: str):
+    def create_temp_table(self, table: SparkTable, name: str):
         table.df.createOrReplaceTempView(name)
 
-    def create_cache_table(self, table: "SparkTable", name: str):
+    def create_cache_table(self, table: SparkTable, name: str):
         table.df.createOrReplaceTempView(name)
         self.spark.catalog.cacheTable(name)
 
-    def broadcast_table(self, table: "SparkTable", name: str):
+    def broadcast_table(self, table: SparkTable, name: str):
         from pyspark.sql.functions import broadcast
 
         df = broadcast(table.df)
@@ -137,11 +139,11 @@ class SparkBackend(Backend):
         logger.info(f"will exec sql: {sql}")
         return self.spark.sql(sql)
 
-    def exec_sql(self, sql: str) -> "Table":
+    def exec_sql(self, sql: str) -> Table:
         logger.info(f"will exec sql: {sql}")
         return SparkTable(self.spark.sql(sql))
 
-    def table_exists(self, table: "TableMeta"):
+    def table_exists(self, table: TableMeta):
         from pyspark.sql.utils import AnalysisException
 
         try:
@@ -179,9 +181,9 @@ class SparkBackend(Backend):
 
     def save_table(
         self,
-        source_table_meta: "TableMeta",
-        target_table_meta: "TableMeta",
-        save_mode: "SaveMode",
+        source_table_meta: TableMeta,
+        target_table_meta: TableMeta,
+        save_mode: SaveMode,
         create_target_table: bool,
     ):
         from pyspark.sql.functions import lit
@@ -223,7 +225,7 @@ class SparkBackend(Backend):
         )
         self.exec_native_sql(save_sql)
 
-    def refresh_table_partitions(self, table: "TableMeta"):
+    def refresh_table_partitions(self, table: TableMeta):
         df = self.exec_native_sql(f"desc {table.table_name}")
         column_list = df.select(df.col_name, df.data_type).rdd.map(lambda x: (x[0], x[1])).collect()
         partition_details = [
@@ -246,7 +248,7 @@ class SparkBackend(Backend):
         full_table_name: str,
         values: List[List[Any]],
         schema: Union[StructType, List[Col]],
-        partitions: List["Partition"],
+        partitions: List[Partition],
     ):
         print(f"creating table: {full_table_name}")
         self.spark.sql(f'create database if not exists {full_table_name.split(".")[0]}')

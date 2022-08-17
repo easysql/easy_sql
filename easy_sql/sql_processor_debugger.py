@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from .sql_processor import Column, SqlProcessor, Step

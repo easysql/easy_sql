@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 import uuid
 from os import path
@@ -17,7 +19,7 @@ __all__ = ["StepConfig", "Step", "StepType", "ReportCollector", "StepFactory"]
 
 
 class ReportCollector:
-    def collect_report(self, step: "Step", status: str = None, message: str = None):
+    def collect_report(self, step: Step, status: str = None, message: str = None):
         raise NotImplementedError()
 
 
@@ -37,7 +39,7 @@ class StepConfig:
     def __repr__(self):
         return str(self)
 
-    def __eq__(self, other: "StepConfig"):
+    def __eq__(self, other: StepConfig):
         return (
             isinstance(other, StepConfig)
             and self.step_type == other.step_type
@@ -47,7 +49,7 @@ class StepConfig:
         )
 
     @staticmethod
-    def from_config_line(config_line: str, line_no: int) -> "StepConfig":
+    def from_config_line(config_line: str, line_no: int) -> StepConfig:
         configs = re.compile(r"^\s*-- ").sub("", config_line).strip()
         configs = configs[configs.index("=") + 1 :]
         target_type = configs[: configs.index(".")] if configs.find(".") != -1 else configs

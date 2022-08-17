@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 import time
 from datetime import datetime
@@ -159,7 +161,7 @@ class RdbTable(Table):
         result.close()
         return list(result.keys())
 
-    def first(self) -> "RdbRow":
+    def first(self) -> RdbRow:
         all_action_are_limit = all([action[0] == "limit" for action in self._actions])
         if all_action_are_limit:
             min_limit = min([action[1] for action in self._actions]) if len(self._actions) > 0 else 1
@@ -182,16 +184,16 @@ class RdbTable(Table):
             row = result.first()
         return RdbRow(list(result.keys()), row)
 
-    def limit(self, count: int) -> "RdbTable":
+    def limit(self, count: int) -> RdbTable:
         return RdbTable(self.backend, self.sql, self._actions + [("limit", count)])
 
-    def with_column(self, name: str, value: any) -> "RdbTable":
+    def with_column(self, name: str, value: any) -> RdbTable:
         return RdbTable(self.backend, self.sql, self._actions + [("newcol", name, value)])
 
-    def collect(self) -> List["RdbRow"]:
+    def collect(self) -> List[RdbRow]:
         return self._collect()
 
-    def _collect(self, row_count: int = None) -> List["RdbRow"]:
+    def _collect(self, row_count: int = None) -> List[RdbRow]:
         self._execute_actions()
 
         result: ResultProxy = self._exec_sql(self.sql)
@@ -342,7 +344,7 @@ class RdbRow(Row):
     def as_tuple(self):
         return self._values
 
-    def __eq__(self, other: "RdbRow"):
+    def __eq__(self, other: RdbRow):
         if (
             not isinstance(
                 other,
@@ -479,7 +481,7 @@ class RdbBackend(Backend):
     def exec_native_sql(self, sql: str) -> Any:
         return _exec_sql(self.conn, sql)
 
-    def exec_sql(self, sql: str) -> "RdbTable":
+    def exec_sql(self, sql: str) -> RdbTable:
         return RdbTable(self, sql)
 
     def _tables(self, db: str) -> List[str]:
@@ -512,24 +514,24 @@ class RdbBackend(Backend):
                     else:
                         raise e
 
-    def create_temp_table(self, table: "RdbTable", name: str):
+    def create_temp_table(self, table: RdbTable, name: str):
         logger.info(f"create_temp_table with: table={table}, name={name}")
         table.save_to_temp_table(name)
 
-    def create_cache_table(self, table: "RdbTable", name: str):
+    def create_cache_table(self, table: RdbTable, name: str):
         logger.info(f"create_cache_table with: table={table}, name={name}")
         table.save_to_temp_table(name)
 
-    def broadcast_table(self, table: "RdbTable", name: str):
+    def broadcast_table(self, table: RdbTable, name: str):
         logger.info(f"broadcast_table with: table={table}, name={name}")
         table.save_to_temp_table(name)
 
-    def table_exists(self, table: "TableMeta"):
+    def table_exists(self, table: TableMeta):
         schema, table_name = table.dbname, table.pure_table_name
         schema = schema or self.temp_schema
         return table_name in self._tables(schema)
 
-    def refresh_table_partitions(self, table: "TableMeta"):
+    def refresh_table_partitions(self, table: TableMeta):
         if self.sql_dialect.support_native_partition():
             native_partitions_sql, extract_partition_cols = self.sql_dialect.native_partitions_sql(table.table_name)
             pt_cols = extract_partition_cols(_exec_sql(self.conn, native_partitions_sql))
@@ -553,7 +555,7 @@ class RdbBackend(Backend):
         return save_partitions_list
 
     def save_table(
-        self, source_table: "TableMeta", target_table: "TableMeta", save_mode: "SaveMode", create_target_table: bool
+        self, source_table: TableMeta, target_table: TableMeta, save_mode: SaveMode, create_target_table: bool
     ):
         logger.info(
             f"save table with: source_table={source_table}, target_table={target_table}, "
@@ -658,7 +660,7 @@ class RdbBackend(Backend):
             )
 
     def create_table_with_data(
-        self, full_table_name: str, values: List[List[Any]], schema: List[Col], partitions: List["Partition"]
+        self, full_table_name: str, values: List[List[Any]], schema: List[Col], partitions: List[Partition]
     ):
         db, _ = full_table_name[: full_table_name.index(".")], full_table_name[full_table_name.index(".") + 1 :]
         _exec_sql(self.conn, self.sql_dialect.create_db_sql(db))
