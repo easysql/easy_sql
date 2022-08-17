@@ -1,15 +1,17 @@
 import re
 import uuid
 from os import path
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from ..logger import logger
 from .backend import Backend, Partition, SaveMode
 from .backend import Table as BackendTable
 from .backend import TableMeta as Table
 from .common import SqlProcessorException
-from .context import ProcessorContext
-from .funcs import FuncRunner
+
+if TYPE_CHECKING:
+    from .context import ProcessorContext
+    from .funcs import FuncRunner
 
 __all__ = ["StepConfig", "Step", "StepType", "ReportCollector", "StepFactory"]
 
@@ -64,9 +66,10 @@ class StepConfig:
         if condition_match:
             target_name = condition_match.group(1) if target_name is not None else None
             target_condition = condition_match.group(2).strip()
-            if not re.compile(r"[a-zA-Z0-9_]*\([^()]*\)").match(target_condition):
+            reg_exp = r"[a-zA-Z0-9_]*\([^()]*\)"
+            if not re.compile(reg_exp).match(target_condition):
                 raise SqlProcessorException(
-                    f"parse step config failed. condition must be like [a-zA-Z0-9_]*\([^()]*\), "
+                    f"parse step config failed. condition must be like {reg_exp}, "
                     f"but got {target_condition}. config_line={config_line}"
                 )
 
@@ -174,16 +177,15 @@ class Step:
         if not table:
             return
 
-        if StepType.VARIABLES == self.target_config.step_type:
-            if not table.is_empty():
-                field_names = table.field_names()
-                row = table.first()
-                for field_name in field_names:
-                    index = field_names.index(field_name)
-                    field_value = "null"
-                    if row[index] is not None:
-                        field_value = str(row[index])
-                    context.add_vars({field_name: field_value})
+        if StepType.VARIABLES == self.target_config.step_type and not table.is_empty():
+            field_names = table.field_names()
+            row = table.first()
+            for field_name in field_names:
+                index = field_names.index(field_name)
+                field_value = "null"
+                if row[index] is not None:
+                    field_value = str(row[index])
+                context.add_vars({field_name: field_value})
 
         if StepType.LIST_VARIABLES == self.target_config.step_type:
             field_names = table.field_names()
@@ -259,7 +261,7 @@ class Step:
                     static_partition_value = value
                 else:
                     static_partition_value = backend.sql_expr.convert_partition_value(static_partition_name, value)
-            if "save_mode" == name.lower() or "__save_mode__" == name.lower():
+            if name.lower() == "save_mode" or name.lower() == "__save_mode__":
                 save_mode = SaveMode[value.lower()]
             if name.lower() in [
                 "__create_hive_table__",
@@ -403,7 +405,7 @@ class StepFactory:
         include_py_pattern = r"^--\s*include\s*=\s*(.*)\.(\w+|\*)$"
         lines = sql.split("\n")
         resoloved_sqls = []
-        for index, line in enumerate(lines):
+        for _, line in enumerate(lines):
             line = line.replace(";", "")
             line_stripped = line.strip()
             if re.match(include_sql_pattern, line_stripped, flags=re.IGNORECASE):
@@ -422,7 +424,7 @@ class StepFactory:
                     import importlib
 
                     func_mod = importlib.import_module("common.file_reader")
-                    read_file_func = getattr(func_mod, "read_file")
+                    read_file_func = func_mod.read_file
                     resoloved_sqls.append(read_file_func(file))
                 except ModuleNotFoundError:
                     logger.info("failed to import common.file_reader, will try default file reader")
