@@ -419,6 +419,8 @@ class RdbBackend(Backend):
             url_raw_parts = url_parts[0].split("/")
             if len(url_raw_parts) == 4:  # db in url
                 url_raw_parts = url_raw_parts[:-1]
+            elif len(url_raw_parts) == 3:  # db not in url
+                pass
             else:
                 raise Exception(f"unrecognized url: {url}")
             url = f'{"/".join(url_raw_parts + [self.temp_schema])}{url_params}'
