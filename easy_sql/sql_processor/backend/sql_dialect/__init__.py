@@ -1,7 +1,11 @@
 from datetime import date, datetime
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
-from ..base import Partition
+if TYPE_CHECKING:
+    from sqlalchemy.engine import ResultProxy
+    from sqlalchemy.types import TypeEngine
+
+    from ..base import Partition
 
 __all__ = ["SqlExpr", "SqlDialect"]
 
@@ -12,7 +16,7 @@ class SqlExpr:
     def __init__(
         self,
         value_to_sql_expr: Callable[[Any], Optional[str]] = None,
-        column_sql_type_converter: Callable[[str, str, "sqlalchemy.types.TypeEngine"], Optional[str]] = None,
+        column_sql_type_converter: Callable[[str, str, TypeEngine], Optional[str]] = None,
         partition_col_converter: Callable[[str], str] = None,
         partition_value_converter: Callable[[str, str], Any] = None,
         partition_expr: Callable[[str, str], str] = None,
@@ -66,7 +70,7 @@ class SqlExpr:
         else:
             raise SqlProcessorAssertionError(f"value of type {type(value)} not supported yet!")
 
-    def for_bigquery_type(self, col_name: str, col_type: Union[str, "sqlalchemy.types.TypeEngine"]) -> str:
+    def for_bigquery_type(self, col_name: str, col_type: Union[str, TypeEngine]) -> str:
         if self.column_sql_type_converter:
             converted_col_type = self.column_sql_type_converter("bigquery", col_name, col_type)
             if converted_col_type is not None:
@@ -131,9 +135,7 @@ class SqlDialect:
     def delete_partition_sql(self, table_name, partitions: List[Partition]) -> Union[str, List[str]]:
         raise NotImplementedError()
 
-    def native_partitions_sql(
-        self, table_name: str
-    ) -> Tuple[str, Callable[["sqlalchemy.engine.ResultProxy"], List[str]]]:
+    def native_partitions_sql(self, table_name: str) -> Tuple[str, Callable[[ResultProxy], List[str]]]:
         raise NotImplementedError()
 
     def create_table_with_partitions_sql(self, table_name: str, cols: List[Dict], partitions: List[Partition]):
