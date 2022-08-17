@@ -18,7 +18,10 @@ from ...udf import udfs
 from .base import Col
 
 if TYPE_CHECKING:
-    import sqlalchemy
+    from sqlalchemy.engine import ResultProxy
+    from sqlalchemy.engine.base import Connection, Engine
+    from sqlalchemy.engine.reflection import Inspector
+    from sqlalchemy.sql.elements import TextClause
 
 
 class TimeLog:
@@ -38,10 +41,7 @@ class TimeLog:
         logger.info(self.end_log_tpl.format(time_took=time_took))
 
 
-def _exec_sql(
-    conn, sql: Union[str, "sqlalchemy.sql.elements.TextClause", List[str]], *args, **kwargs
-) -> "sqlalchemy.engine.ResultProxy":
-    from sqlalchemy.engine.base import Connection
+def _exec_sql(conn, sql: Union[str, TextClause, List[str]], *args, **kwargs) -> ResultProxy:
     from sqlalchemy.sql.elements import TextClause
 
     conn: Connection = conn
@@ -155,8 +155,6 @@ class RdbTable(Table):
         return self._field_names(f"{self.backend.temp_schema}.{field_names_result_table_name}")
 
     def _field_names(self, table_name: str) -> List[str]:
-        from sqlalchemy.engine import ResultProxy
-
         result: ResultProxy = self._exec_sql(f"select * from {table_name} limit 0")
         result.close()
         return list(result.keys())
@@ -165,7 +163,6 @@ class RdbTable(Table):
         all_action_are_limit = all([action[0] == "limit" for action in self._actions])
         if all_action_are_limit:
             min_limit = min([action[1] for action in self._actions]) if len(self._actions) > 0 else 1
-            from sqlalchemy.engine import ResultProxy
 
             result: ResultProxy = self._exec_sql(self.sql)
             if min_limit <= 0:
@@ -177,7 +174,6 @@ class RdbTable(Table):
             return RdbRow(list(result.keys()), row)
 
         self._execute_actions()
-        from sqlalchemy.engine import ResultProxy
 
         result: ResultProxy = self._exec_sql(self.sql)
         with TimeLog(
@@ -197,7 +193,6 @@ class RdbTable(Table):
 
     def _collect(self, row_count: int = None) -> List["RdbRow"]:
         self._execute_actions()
-        from sqlalchemy.engine import ResultProxy
 
         result: ResultProxy = self._exec_sql(self.sql)
         # collect at most 1000 rows for now
@@ -393,7 +388,6 @@ class RdbBackend(Backend):
 
     def __init_inner(self, url: str, credentials: str = None):
         from sqlalchemy import create_engine
-        from sqlalchemy.engine.base import Connection, Engine
 
         self.temp_schema = f"sp_temp_{int(time.mktime(time.gmtime()))}_{int(random() * 10000):04d}"
 
@@ -423,8 +417,6 @@ class RdbBackend(Backend):
             url_raw_parts = url_parts[0].split("/")
             if len(url_raw_parts) == 4:  # db in url
                 url_raw_parts = url_raw_parts[:-1]
-            elif len(url_raw_parts) == 3:  # db not in url
-                url_raw_parts = url_raw_parts
             else:
                 raise Exception(f"unrecognized url: {url}")
             url = f'{"/".join(url_raw_parts + [self.temp_schema])}{url_params}'
@@ -453,7 +445,6 @@ class RdbBackend(Backend):
     @property
     def inspector(self):
         from sqlalchemy import inspect
-        from sqlalchemy.engine.reflection import Inspector
 
         # inspector object has cache built-in, so we should recreate the object if required
         inspector: Inspector = inspect(self.engine)
@@ -461,12 +452,12 @@ class RdbBackend(Backend):
 
     def reset(self):
         if self.conn:
-            try:
+            try:  # noqa: SIM105
                 self.conn.close()
             except Exception:
                 pass
         if self.engine:
-            try:
+            try:  # noqa: SIM105
                 self.engine.dispose()
             except Exception:
                 pass
@@ -680,12 +671,9 @@ class RdbBackend(Backend):
         cols = [col.name for col in schema]
         pt_cols = [p.field for p in partitions]
         pt_values_list = [[row[cols.index(p)] for p in pt_cols] for row in values]
-        partitions = set(
-            [
-                tuple([Partition(field, value) for field, value in zip(pt_cols, pt_values)])
-                for pt_values in pt_values_list
-            ]
-        )
+        partitions = {
+            tuple([Partition(field, value) for field, value in zip(pt_cols, pt_values)]) for pt_values in pt_values_list
+        }
         if partitions and not self.sql_dialect.create_partition_automatically():
             for partition in partitions:
                 if partition:
@@ -695,7 +683,7 @@ class RdbBackend(Backend):
         converted_col_names = ", ".join(self.sql_dialect.convert_pt_col_expr([f":{col}" for col in cols], pt_cols))
         stmt = text(f'insert into {full_table_name} ({", ".join(cols)}) VALUES ({converted_col_names})')
         for v in values:
-            _exec_sql(self.conn, stmt, **dict([(col, _v) for _v, col in zip(v, cols)]))
+            _exec_sql(self.conn, stmt, **{col: _v for _v, col in zip(v, cols)})
 
         if partitions and not self.sql_dialect.support_static_partition():
             _exec_sql(self.conn, self.sql_dialect.create_pt_meta_table_sql(db))
@@ -713,4 +701,4 @@ class RdbBackend(Backend):
 
         stmt = text(f'insert into {table_name} ({", ".join(cols)}) VALUES ({", ".join([f":{col}" for col in cols])})')
         for v in values:
-            _exec_sql(self.conn, stmt, **dict([(col, _v) for _v, col in zip(v, cols)]))
+            _exec_sql(self.conn, stmt, **{col: _v for _v, col in zip(v, cols)})
