@@ -1,10 +1,12 @@
 import codecs
 import logging
 import sys
-from typing import List, Union
+from typing import TYPE_CHECKING, List, Union
 
 import colorlog
-from sqlfluff.core import SQLBaseError
+
+if TYPE_CHECKING:
+    from sqlfluff.core import SQLBaseError
 
 
 class LintReporter:
