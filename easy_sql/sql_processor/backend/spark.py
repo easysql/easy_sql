@@ -1,12 +1,15 @@
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Tuple, Union
 
 from ...logger import logger
 from ...udf import udfs
 from ..common import SqlProcessorAssertionError
-from .base import *
-from .base import Col
+from .base import Backend, Col, Partition, Row, SaveMode, Table, TableMeta
 
 __all__ = ["SparkRow", "SparkTable", "SparkBackend"]
+
+if TYPE_CHECKING:
+    from pyspark.sql import DataFrame
+    from pyspark.sql.types import StructType
 
 
 class SparkRow(Row):
@@ -130,7 +133,7 @@ class SparkBackend(Backend):
         df = broadcast(table.df)
         df.createOrReplaceTempView(name)
 
-    def exec_native_sql(self, sql: str) -> "pyspark.sql.DataFrame":
+    def exec_native_sql(self, sql: str) -> DataFrame:
         logger.info(f"will exec sql: {sql}")
         return self.spark.sql(sql)
 
@@ -146,7 +149,7 @@ class SparkBackend(Backend):
         except AnalysisException:
             return False
 
-    def _create_table(self, dbname: str, table_name: str, schema: "StructType", partitions: List[Partition]):
+    def _create_table(self, dbname: str, table_name: str, schema: StructType, partitions: List[Partition]):
         from pyspark.sql.functions import lit
 
         spark = self.spark
@@ -229,7 +232,7 @@ class SparkBackend(Backend):
         if len(partition_details) == 0:
             table.update_partitions([])
         else:
-            partitions = list(map(lambda x: Partition(x[0]), partition_details[0]))
+            partitions = [Partition(x[0]) for x in partition_details[0]]
             table.update_partitions([Partition(p.field, p.value) for p in partitions])
 
     def clean(self):
@@ -242,7 +245,7 @@ class SparkBackend(Backend):
         self,
         full_table_name: str,
         values: List[List[Any]],
-        schema: Union["pyspark.sql.types.StructType", List[Col]],
+        schema: Union[StructType, List[Col]],
         partitions: List["Partition"],
     ):
         print(f"creating table: {full_table_name}")
@@ -256,5 +259,5 @@ class SparkBackend(Backend):
             write = write.partitionBy(*[p.field for p in partitions])
         write.mode("overwrite").saveAsTable(full_table_name, mode="overwrite")
 
-    def create_temp_table_with_data(self, table_name: str, values: List[List[Any]], schema: "StructType"):
+    def create_temp_table_with_data(self, table_name: str, values: List[List[Any]], schema: StructType):
         self.spark.createDataFrame(values, schema).createOrReplaceTempView(table_name)
