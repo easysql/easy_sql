@@ -1,11 +1,13 @@
 import re
+from typing import TYPE_CHECKING
 
-
-class UDF:
+if TYPE_CHECKING:
     from collections import Callable
 
     from pyspark.sql.types import DataType
 
+
+class UDF:
     def __init__(self, func: Callable, return_type: DataType):
         self.func = func
         self.return_type = return_type
