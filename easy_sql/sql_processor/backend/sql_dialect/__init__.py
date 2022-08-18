@@ -98,6 +98,9 @@ class SqlDialect:
     def support_native_partition(self) -> bool:
         raise NotImplementedError()
 
+    def support_move_individual_partition(self) -> bool:
+        raise NotImplementedError()
+
     def create_db_sql(self, db: str) -> str:
         raise NotImplementedError()
 
@@ -114,6 +117,9 @@ class SqlDialect:
         raise NotImplementedError()
 
     def get_tables_sql(self, db) -> str:
+        raise NotImplementedError()
+
+    def get_schemas_sql(self) -> str:
         raise NotImplementedError()
 
     def create_table_sql(self, table_name: str, select_sql: str) -> str:
@@ -155,19 +161,18 @@ class SqlDialect:
         else:
             if len(partition_cols) > 1:
                 raise SqlProcessorAssertionError(
-                    f"Only single-column partitioning is supported! found: {partition_cols}"
-                )
+                    f'Only single-column partitioning is supported! found: {partition_cols}')
             # the format of pt_col may be :{pt_col}, which is transferred by method create_table_with_data
             return [
-                col
-                if col not in [partition_cols[0], f":{partition_cols[0]}"]
-                else self.sql_expr.convert_partition_col(col)
-                for col in all_cols
-            ]
+                col if col not in [partition_cols[0], f":{partition_cols[0]}"] else self.sql_expr.convert_partition_col(
+                    col)
+                for col in all_cols]
 
-    def insert_data_sql(
-        self, table_name: str, col_names_expr: str, select_sql: str, partitions: List[Partition]
-    ) -> Union[str, List[str]]:
+    def insert_data_sql(self, table_name: str, col_names_expr: str, select_sql: str, partitions: List[Partition]) -> \
+    Union[str, List[str]]:
+        raise NotImplementedError()
+
+    def move_data_sql(self, target_table_name: str, temp_table_name: str, partitions: List[Partition]) -> List[str]:
         raise NotImplementedError()
 
     def drop_table_sql(self, table: str) -> str:
@@ -180,4 +185,7 @@ class SqlDialect:
         raise NotImplementedError()
 
     def delete_pt_metadata_sql(self, table_name: str, partitions: List[Partition]) -> str:
+        raise NotImplementedError()
+
+    def create_table_like_sql(self, target_table_name: str, source_table_name: str, partitions: List[Partition]) -> str:
         raise NotImplementedError()
