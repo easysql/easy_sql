@@ -1,10 +1,17 @@
+from __future__ import annotations
+
 import traceback
 from datetime import datetime, timedelta
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 from ..logger import logger
-from . import SqlProcessorException, Step
-from .backend import Backend
+from . import SqlProcessorException
+
+if TYPE_CHECKING:
+    from .backend import Backend
+    from .context import ProcessorContext
+    from .step import Step
+
 
 __all__ = ["ColumnFuncs", "TableFuncs", "PartitionFuncs", "AlertFunc"]
 
@@ -102,8 +109,6 @@ class PartitionFuncs:
         return partition_value in self._get_partition_values_as_str(table_name)
 
     def ensure_partition_exists(self, step, *args) -> bool:
-        from easy_sql.sql_processor import Step
-
         step: Step = step
         if len(args) < 2:
             raise Exception(
@@ -126,8 +131,6 @@ class PartitionFuncs:
         return True
 
     def ensure_dwd_partition_exists(self, step, *args) -> bool:
-        from easy_sql.sql_processor import Step
-
         step: Step = step
         if len(args) < 2:
             raise Exception(
@@ -178,8 +181,6 @@ class PartitionFuncs:
         return check_ok
 
     def ensure_partition_or_first_partition_exists(self, step, *args) -> bool:
-        from easy_sql.sql_processor import Step
-
         step: Step = step
         if len(args) < 2:
             raise Exception(
@@ -266,11 +267,9 @@ class AlertFunc:
         self.backend = backend
         self.alerter = alerter
 
-    def alert(self, step, context, rule_name: str, pass_condition: str, alert_template: str, mentioned_users: str):
-        from .context import ProcessorContext
-        from .step import Step
-
-        step: Step = step
+    def alert(
+        self, step: Step, context, rule_name: str, pass_condition: str, alert_template: str, mentioned_users: str
+    ):
         context: ProcessorContext = context
         # Fetch 10 rows at most
         alert_data = self.backend.exec_sql(step.select_sql).limit(10).collect()
