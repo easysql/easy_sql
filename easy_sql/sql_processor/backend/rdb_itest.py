@@ -46,7 +46,6 @@ class RdbTest(unittest.TestCase):
         if not base_test.should_run_integration_test("bq"):
             return
         import os
-
         backend = RdbBackend(
             TEST_BQ_URL,
             credentials=f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-prod.json",
@@ -54,7 +53,6 @@ class RdbTest(unittest.TestCase):
         )
         from sqlalchemy import inspect
         from sqlalchemy.engine.reflection import Inspector
-
         insp: Inspector = inspect(backend.engine)
         temp_schemas = insp.get_schema_names()
         for schema in temp_schemas:
@@ -131,6 +129,9 @@ class RdbTest(unittest.TestCase):
         _exec_sql(backend.conn, "create schema t")
         _exec_sql(backend.conn, "create table t.test(id int, val varchar(100))")
         _exec_sql(backend.conn, "insert into t.test values(1, '1'), (2, '2'), (3, '3')")
+        _exec_sql(backend.conn, "create table t.dynamic_partition_test(id int, val varchar(100), a varchar(100))")
+        _exec_sql(backend.conn, "insert into t.dynamic_partition_test values(1, '1', '2021-01-01'), "
+                                "(2, '2', '2021-01-02'),(3, '3', '2021-01-03')")
 
         self.run_test_backend(backend)
 
@@ -140,6 +141,10 @@ class RdbTest(unittest.TestCase):
         _exec_sql(backend.conn, "create database t")
         _exec_sql(backend.conn, "create table t.test(id int, val String) engine=MergeTree order by tuple()")
         _exec_sql(backend.conn, "insert into t.test values(1, '1'), (2, '2'), (3, '3')")
+        _exec_sql(backend.conn,
+                  "create table t.dynamic_partition_test(id int, val String, a DateTime) engine=MergeTree order by tuple()")
+        _exec_sql(backend.conn, "insert into t.dynamic_partition_test values(1, '1', '2021-01-01 00:00:00'), "
+                                "(2, '2', '2021-01-02 00:00:00'), (3, '3', '2021-01-03 00:00:00')")
         self.run_test_backend(backend)
 
     def test_bq_backend(self):
@@ -156,6 +161,9 @@ class RdbTest(unittest.TestCase):
         _exec_sql(backend.conn, "create schema if not exists t")
         _exec_sql(backend.conn, "create table if not exists t.test(id int, val string)")
         _exec_sql(backend.conn, "insert into t.test values(1, '1'), (2, '2'), (3, '3')")
+        _exec_sql(backend.conn, "create table if not exists t.dynamic_partition_test(id int, val string, a date)")
+        _exec_sql(backend.conn,
+                  "insert into t.dynamic_partition_test values(1, '1', '2021-01-01'), (2, '2', '2021-01-02'), (3, '3', '2021-01-03')")
         self.run_test_backend(backend)
 
     def run_test_table(self, backend: RdbBackend, timezone=None):
@@ -250,12 +258,22 @@ class RdbTest(unittest.TestCase):
             [RdbRow(["id", "val"], (1, "1")), RdbRow(["id", "val"], (2, "2"))],
         )
 
+
+        # third save without partitions, should create extra row
+        backend.exec_native_sql(backend.sql_dialect.drop_view_sql("test_limit"))
+        backend.create_cache_table(backend.exec_sql("select * from t.test order by id limit 3"), "test_limit")
+        backend.save_table(TableMeta("test_limit"), TableMeta("t.xx"), SaveMode.overwrite, True)
+        self.assertListEqual(
+            backend.exec_sql("select * from t.xx order by id").collect(),
+            [RdbRow(["id", "val"], (1, "1")), RdbRow(["id", "val"], (2, "2")), RdbRow(["id", "val"], (3, "3"))
+        ])
+
         if backend.is_bq:
-            mock_dt_1, mock_dt_2 = date("2021-01-01"), date("2021-01-02")
+            mock_dt_1, mock_dt_2, mock_dt_3 = date("2021-01-01"), date("2021-01-02"), date("2021-01-03")
         elif backend.is_pg:
-            mock_dt_1, mock_dt_2 = "2021-01-01", "2021-01-02"
+            mock_dt_1, mock_dt_2, mock_dt_3 = "2021-01-01", "2021-01-02", "2021-01-03"
         else:
-            mock_dt_1, mock_dt_2 = dt("2021-01-01 00:00:00"), dt("2021-01-02 00:00:00")
+            mock_dt_1, mock_dt_2, mock_dt_3 = dt("2021-01-01 00:00:00"), dt("2021-01-02 00:00:00"), dt("2021-01-03 00:00:00")
 
         backend.exec_native_sql(backend.sql_dialect.drop_view_sql("test_limit"))
         backend.create_cache_table(backend.exec_sql("select id from t.test limit 2"), "test_limit")
@@ -275,66 +293,123 @@ class RdbTest(unittest.TestCase):
         # first save with partitions, should create
         backend.exec_native_sql(backend.sql_dialect.drop_view_sql("test_limit"))
         backend.create_cache_table(backend.exec_sql("select * from t.test order by id limit 2"), "test_limit")
-        backend.save_table(
-            TableMeta("test_limit"), TableMeta("t.xx", partitions=[Partition("a", mock_dt_1)]), SaveMode.overwrite, True
-        )
-        self.assertListEqual(
-            backend.exec_sql("select * from t.xx order by id").collect(),
-            [RdbRow(["id", "val", "a"], (1, "1", mock_dt_1)), RdbRow(["id", "val", "a"], (2, "2", mock_dt_1))],
-        )
+        backend.save_table(TableMeta("test_limit"),
+                           TableMeta("t.xx", partitions=[Partition("a", mock_dt_1)]), SaveMode.overwrite,
+                           True)
+        self.assertListEqual(backend.exec_sql("select * from t.xx order by id").collect(), [
+            RdbRow(["id", "val", "a"], (1, "1", mock_dt_1)),
+            RdbRow(["id", "val", "a"], (2, "2", mock_dt_1))
+        ])
 
         # second save with partitions, should overwrite
         backend.exec_native_sql(backend.sql_dialect.drop_view_sql("test_limit"))
         backend.create_cache_table(backend.exec_sql("select * from t.test order by id limit 2"), "test_limit")
-        backend.save_table(
-            TableMeta("test_limit"), TableMeta("t.xx", partitions=[Partition("a", mock_dt_2)]), SaveMode.overwrite, True
-        )
-        self.assertListEqual(
-            backend.exec_sql("select * from t.xx order by a, id").collect(),
-            [
-                RdbRow(["id", "val", "a"], (1, "1", mock_dt_1)),
-                RdbRow(["id", "val", "a"], (2, "2", mock_dt_1)),
-                RdbRow(["id", "val", "a"], (1, "1", mock_dt_2)),
-                RdbRow(["id", "val", "a"], (2, "2", mock_dt_2)),
-            ],
-        )
+        backend.save_table(TableMeta("test_limit"),
+                           TableMeta("t.xx", partitions=[Partition("a", mock_dt_2)]), SaveMode.overwrite,
+                           True)
+        self.assertListEqual(backend.exec_sql("select * from t.xx order by a, id").collect(), [
+            RdbRow(["id", "val", "a"], (1, "1", mock_dt_1)),
+            RdbRow(["id", "val", "a"], (2, "2", mock_dt_1)),
+            RdbRow(["id", "val", "a"], (1, "1", mock_dt_2)),
+            RdbRow(["id", "val", "a"], (2, "2", mock_dt_2))
+        ])
 
         # third save with partitions, should overwrite
         backend.exec_native_sql(backend.sql_dialect.drop_view_sql("test_limit"))
         backend.create_cache_table(backend.exec_sql("select * from t.test order by id limit 2"), "test_limit")
-        backend.save_table(
-            TableMeta("test_limit"),
-            TableMeta("t.xx", partitions=[Partition("a", mock_dt_2)]),
-            SaveMode.overwrite,
-            False,
-        )
-        self.assertListEqual(
-            backend.exec_sql("select * from t.xx order by a, id").collect(),
-            [
-                RdbRow(["id", "val", "a"], (1, "1", mock_dt_1)),
-                RdbRow(["id", "val", "a"], (2, "2", mock_dt_1)),
-                RdbRow(["id", "val", "a"], (1, "1", mock_dt_2)),
-                RdbRow(["id", "val", "a"], (2, "2", mock_dt_2)),
-            ],
-        )
+        backend.save_table(TableMeta("test_limit"),
+                           TableMeta("t.xx", partitions=[Partition("a", mock_dt_2)]), SaveMode.overwrite,
+                           False)
+        self.assertListEqual(backend.exec_sql("select * from t.xx order by a, id").collect(), [
+            RdbRow(["id", "val", "a"], (1, "1", mock_dt_1)),
+            RdbRow(["id", "val", "a"], (2, "2", mock_dt_1)),
+            RdbRow(["id", "val", "a"], (1, "1", mock_dt_2)),
+            RdbRow(["id", "val", "a"], (2, "2", mock_dt_2))
+        ])
 
         # fourth save with partitions, should append
         backend.exec_native_sql(backend.sql_dialect.drop_view_sql("test_limit"))
         backend.create_cache_table(backend.exec_sql("select * from t.test order by id limit 2"), "test_limit")
-        backend.save_table(
-            TableMeta("test_limit"), TableMeta("t.xx", partitions=[Partition("a", mock_dt_2)]), SaveMode.append, True
-        )
-        self.assertListEqual(
-            backend.exec_sql("select * from t.xx order by a, id").collect(),
-            [
-                RdbRow(["id", "val", "a"], (1, "1", mock_dt_1)),
-                RdbRow(["id", "val", "a"], (2, "2", mock_dt_1)),
-                RdbRow(["id", "val", "a"], (1, "1", mock_dt_2)),
-                RdbRow(["id", "val", "a"], (1, "1", mock_dt_2)),
-                RdbRow(["id", "val", "a"], (2, "2", mock_dt_2)),
-                RdbRow(["id", "val", "a"], (2, "2", mock_dt_2)),
-            ],
-        )
+        backend.save_table(TableMeta("test_limit"),
+                           TableMeta("t.xx", partitions=[Partition("a", mock_dt_2)]), SaveMode.append,
+                           True)
+        self.assertListEqual(backend.exec_sql("select * from t.xx order by a, id").collect(), [
+            RdbRow(["id", "val", "a"], (1, "1", mock_dt_1)),
+            RdbRow(["id", "val", "a"], (2, "2", mock_dt_1)),
+            RdbRow(["id", "val", "a"], (1, "1", mock_dt_2)),
+            RdbRow(["id", "val", "a"], (1, "1", mock_dt_2)),
+            RdbRow(["id", "val", "a"], (2, "2", mock_dt_2)),
+            RdbRow(["id", "val", "a"], (2, "2", mock_dt_2)),
+        ])
+
+        # first save with dynamic partitions, create
+        _exec_sql(backend.conn, f"drop table if exists t.xx1")
+        backend.create_cache_table(backend.exec_sql("select * from t.dynamic_partition_test order by id limit 3"),
+                                   "dynamic_partition_test_limit")
+        backend.save_table(TableMeta("dynamic_partition_test_limit"),
+                           TableMeta("t.xx1", partitions=[Partition("a", None)]), SaveMode.overwrite,
+                           True)
+        self.assertListEqual(backend.exec_sql("select * from t.xx1 order by a, id").collect(), [
+            RdbRow(["id", "val", "a"], (1, "1", mock_dt_1)),
+            RdbRow(["id", "val", "a"], (2, "2", mock_dt_2)),
+            RdbRow(["id", "val", "a"], (3, "3", mock_dt_3)),
+        ])
+
+        # second save with dynamic partitions, overwrite
+        backend.exec_native_sql(backend.sql_dialect.drop_view_sql("dynamic_partition_test_limit"))
+        backend.create_cache_table(backend.exec_sql("select * from t.dynamic_partition_test order by id limit 3"),
+                                   "dynamic_partition_test_limit")
+        backend.save_table(TableMeta("dynamic_partition_test_limit"),
+                           TableMeta("t.xx1", partitions=[Partition("a", None)]), SaveMode.overwrite,
+                           False)
+        self.assertListEqual(backend.exec_sql("select * from t.xx1 order by a, id").collect(), [
+            RdbRow(["id", "val", "a"], (1, "1", mock_dt_1)),
+            RdbRow(["id", "val", "a"], (2, "2", mock_dt_2)),
+            RdbRow(["id", "val", "a"], (3, "3", mock_dt_3)),
+        ])
+
+        # third save with dynamic partitions, append
+        backend.exec_native_sql(backend.sql_dialect.drop_view_sql("dynamic_partition_test_limit"))
+        backend.create_cache_table(backend.exec_sql("select * from t.dynamic_partition_test order by id limit 3"),
+                                   "dynamic_partition_test_limit")
+        backend.save_table(TableMeta("dynamic_partition_test_limit"),
+                           TableMeta("t.xx1", partitions=[Partition("a", None)]), SaveMode.append,
+                           False)
+        self.assertListEqual(backend.exec_sql("select * from t.xx1 order by a, id").collect(), [
+            RdbRow(["id", "val", "a"], (1, "1", mock_dt_1)),
+            RdbRow(["id", "val", "a"], (1, "1", mock_dt_1)),
+            RdbRow(["id", "val", "a"], (2, "2", mock_dt_2)),
+            RdbRow(["id", "val", "a"], (2, "2", mock_dt_2)),
+            RdbRow(["id", "val", "a"], (3, "3", mock_dt_3)),
+            RdbRow(["id", "val", "a"], (3, "3", mock_dt_3)),
+        ])
+
+        # fourth save with dynamic partitions, overwrite
+        backend.exec_native_sql(backend.sql_dialect.drop_view_sql("dynamic_partition_test_limit"))
+        backend.create_cache_table(backend.exec_sql("select * from t.dynamic_partition_test order by id limit 3"),
+                                   "dynamic_partition_test_limit")
+        backend.save_table(TableMeta("dynamic_partition_test_limit"),
+                           TableMeta("t.xx1", partitions=[Partition("a", None)]), SaveMode.overwrite,
+                           False)
+        self.assertListEqual(backend.exec_sql("select * from t.xx1 order by a, id").collect(), [
+            RdbRow(["id", "val", "a"], (1, "1", mock_dt_1)),
+            RdbRow(["id", "val", "a"], (2, "2", mock_dt_2)),
+            RdbRow(["id", "val", "a"], (3, "3", mock_dt_3)),
+        ])
+
+        # first save with non-existing target_table, create
+        backend.exec_native_sql(backend.sql_dialect.drop_view_sql("dynamic_partition_test_limit"))
+        backend.create_cache_table(backend.exec_sql("select * from t.dynamic_partition_test order by id limit 3"),
+                                   "dynamic_partition_test_limit")
+        backend.save_table(TableMeta("dynamic_partition_test_limit"),
+                           TableMeta("t_created_db.created_table", partitions=[Partition("a", None)]),
+                           SaveMode.overwrite,
+                           True)
+        self.assertListEqual(backend.exec_sql("select * from t_created_db.created_table order by a, id").collect(), [
+            RdbRow(["id", "val", "a"], (1, "1", mock_dt_1)),
+            RdbRow(["id", "val", "a"], (2, "2", mock_dt_2)),
+            RdbRow(["id", "val", "a"], (3, "3", mock_dt_3)),
+        ])
 
         pre_temp_db = backend.temp_schema
         backend.reset()
