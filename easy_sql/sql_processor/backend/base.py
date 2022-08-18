@@ -1,5 +1,11 @@
+from __future__ import annotations
+
 from enum import Enum
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Tuple, Union
+
+if TYPE_CHECKING:
+    from pyspark.sql.types import StructType
+
 
 __all__ = ["Backend", "Table", "Row", "TableMeta", "Partition", "SaveMode"]
 
@@ -48,7 +54,7 @@ class Backend:
     def exec_native_sql(self, sql: str) -> Any:
         raise NotImplementedError()
 
-    def exec_sql(self, sql: str) -> "Table":
+    def exec_sql(self, sql: str) -> Table:
         raise NotImplementedError()
 
     def temp_tables(self) -> List[str]:
@@ -60,23 +66,23 @@ class Backend:
     def clear_temp_tables(self, exclude: List[str] = None):
         raise NotImplementedError()
 
-    def create_temp_table(self, table: "Table", name: str):
+    def create_temp_table(self, table: Table, name: str):
         raise NotImplementedError()
 
-    def create_cache_table(self, table: "Table", name: str):
+    def create_cache_table(self, table: Table, name: str):
         raise NotImplementedError()
 
-    def broadcast_table(self, table: "Table", name: str):
+    def broadcast_table(self, table: Table, name: str):
         raise NotImplementedError()
 
-    def table_exists(self, table: "TableMeta"):
+    def table_exists(self, table: TableMeta):
         pass
 
-    def refresh_table_partitions(self, table: "TableMeta"):
+    def refresh_table_partitions(self, table: TableMeta):
         raise NotImplementedError()
 
     def save_table(
-        self, source_table: "TableMeta", target_table: "TableMeta", save_mode: "SaveMode", create_target_table: bool
+        self, source_table: TableMeta, target_table: TableMeta, save_mode: SaveMode, create_target_table: bool
     ):
         raise NotImplementedError()
 
@@ -87,13 +93,13 @@ class Backend:
         self,
         full_table_name: str,
         values: List[List[Any]],
-        schema: Union["StructType", List[Col]],
-        partitions: List["Partition"],
+        schema: Union[StructType, List[Col]],
+        partitions: List[Partition],
     ):
         raise NotImplementedError()
 
     def create_temp_table_with_data(
-        self, table_name: str, values: List[List[Any]], schema: Union["StructType", List[Col]]
+        self, table_name: str, values: List[List[Any]], schema: Union[StructType, List[Col]]
     ):
         raise NotImplementedError()
 
@@ -137,14 +143,14 @@ class TableMeta:
             f", pure_table_name={self.pure_table_name})"
         )
 
-    def update_partitions(self, partitions: List[Partition]) -> "TableMeta":
+    def update_partitions(self, partitions: List[Partition]) -> TableMeta:
         self.partitions = partitions
         return self
 
-    def clone_with_name(self, table_name: str) -> "TableMeta":
+    def clone_with_name(self, table_name: str) -> TableMeta:
         return TableMeta(table_name, self.partitions)
 
-    def clone_with_partitions(self, partitions: List[Partition]) -> "TableMeta":
+    def clone_with_partitions(self, partitions: List[Partition]) -> TableMeta:
         return TableMeta(self.table_name, partitions)
 
     def __parse_table_name(self) -> Tuple[str, str]:
@@ -174,16 +180,16 @@ class Table:
     def field_names(self) -> List[str]:
         raise NotImplementedError()
 
-    def first(self) -> "Row":
+    def first(self) -> Row:
         raise NotImplementedError()
 
-    def limit(self, count: int) -> "Table":
+    def limit(self, count: int) -> Table:
         raise NotImplementedError()
 
-    def with_column(self, name: str, value: any) -> "Table":
+    def with_column(self, name: str, value: any) -> Table:
         raise NotImplementedError()
 
-    def collect(self) -> List["Row"]:
+    def collect(self) -> List[Row]:
         raise NotImplementedError()
 
     def show(self, count: int):
