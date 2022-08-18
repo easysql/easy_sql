@@ -10,6 +10,10 @@ from .funcs_common import TableFuncs
 __all__ = ["PartitionFuncs", "ColumnFuncs", "AlertFunc", "TableFuncs", "ModelFuncs"]
 
 
+def is_int_type(type_name):
+    any([type_name.startswith(t) for t in ["integer", "long", "decimal", "short"]])
+
+
 class ModelFuncs:
     def __init__(self, backend: RdbBackend):
         self.backend = backend
@@ -67,7 +71,6 @@ class ModelFuncs:
         output_ref_cols = [col.strip() for col in output_ref_cols.split(",") if col.strip()]
         model = PipelineModel.load(model_save_path)
 
-        is_int_type = lambda type_name: any([type_name.startswith(t) for t in ["integer", "long", "decimal", "short"]])
         int_cols = [f.name for f in data.schema.fields if is_int_type(f.dataType.typeName())]
         for col in int_cols:
             data = data.withColumn(col, expr(f"cast({col} as double)"))
@@ -140,7 +143,6 @@ class ModelFuncs:
         output_ref_cols = [col.strip() for col in output_ref_cols.split(",") if col.strip()]
         model = PipelineModel.load(model_save_path)
 
-        is_int_type = lambda type_name: any([type_name.startswith(t) for t in ["integer", "long", "decimal", "short"]])
         int_cols = [f.name for f in data.schema.fields if is_int_type(f.dataType.typeName())]
         for col in int_cols:
             data = data.withColumn(col, expr(f"cast({col} as double)"))
@@ -224,7 +226,7 @@ class PartitionFuncs(PartitionFuncsBase):
         """
         partition_values = [str(v[1]) for v in self.backend.exec_sql(sql).collect()]
         for p in partition_values:
-            if not p.upper().startswith("FOR VALUES FROM (") or not ") TO (" in p.upper():
+            if not p.upper().startswith("FOR VALUES FROM (") or ") TO (" not in p.upper():
                 raise Exception("unable to parse partition: " + p)
         partition_values = [v[len("FOR VALUES FROM (") : v.upper().index(") TO (")] for v in partition_values]
         partition_values = [v.strip("'") if v.startswith("'") else int(v) for v in partition_values]
