@@ -1,15 +1,16 @@
+from __future__ import annotations
+
 import json
 import os
 import re
 import sys
 import unittest
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
 import xlrd
 from bson import json_util
 from xlrd import Book, open_workbook
-from xlrd.sheet import Cell, Sheet
 
 __all__ = ["SqlTester", "TableData", "TestCase", "WorkPath", "work_path", "SqlReader", "TableColumnTypes"]
 
@@ -17,6 +18,11 @@ from easy_sql.logger import logger
 from easy_sql.sql_processor import SqlProcessor
 from easy_sql.sql_processor.backend import Backend, Partition, Row, SparkBackend
 from easy_sql.sql_processor.backend.rdb import Col, RdbBackend
+
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
+    from pyspark.sql.types import StructType
+    from xlrd.sheet import Cell, Sheet
 
 debug_log_enable = True
 
@@ -59,7 +65,7 @@ class TableData:
         return None
 
     @staticmethod
-    def from_dict(data: Dict) -> "TableData":
+    def from_dict(data: Dict) -> TableData:
         return TableData(
             data["name"],
             json.loads(data["columns"]),
@@ -69,7 +75,7 @@ class TableData:
         )
 
 
-class lazy_property(object):
+class lazy_property:
     def __init__(self, func):
         self.func = func
 
@@ -130,7 +136,7 @@ class TableColumnTypes:
 
     def column_types_to_schema(
         self, backend: Backend, columns: List[str], types: List[str]
-    ) -> Union["StructType", List[Col]]:
+    ) -> Union[StructType, List[Col]]:
         if isinstance(backend, SparkBackend):
             return self.column_types_to_schema_spark(backend.spark, columns, types)
         elif isinstance(backend, RdbBackend):
@@ -141,7 +147,7 @@ class TableColumnTypes:
     def column_types_to_schema_rdb(self, backend: RdbBackend, columns: List[str], types: List[str]) -> List[Col]:
         return [Col(col, type_) for col, type_ in zip(columns, types)]
 
-    def column_types_to_schema_spark(self, spark: "SparkSession", columns: List[str], types: List[str]) -> "StructType":
+    def column_types_to_schema_spark(self, spark: SparkSession, columns: List[str], types: List[str]) -> StructType:
         from pyspark.sql.functions import expr
         from pyspark.sql.types import (
             ArrayType,
@@ -219,10 +225,8 @@ class TableColumnTypes:
         try:
             if col_name in self.partition_col_types:
                 backend_is_bigquery = self.backend == "bigquery"
-                if backend_is_bigquery:
+                if backend_is_bigquery or col_name == "data_date":
                     # for bigquery, partition column must be a date
-                    return col_type, process_pt_val(date_converter, col_value)
-                elif col_name == "data_date":
                     return col_type, process_pt_val(date_converter, col_value)
                 else:
                     try:
@@ -292,13 +296,11 @@ class TestCase:
         self.default_col_type = default_col_type
 
     def as_dict(self):
-        data = dict(
-            [
-                (attr, getattr(self, attr))
-                for attr in dir(self)
-                if not attr.startswith("_") and not callable(getattr(self, attr))
-            ]
-        )
+        data = {
+            attr: getattr(self, attr)
+            for attr in dir(self)
+            if not attr.startswith("_") and not callable(getattr(self, attr))
+        }
         data.update(
             {
                 "inputs": [table_data.as_dict() for table_data in self.inputs],
@@ -308,7 +310,7 @@ class TestCase:
         return data
 
     @staticmethod
-    def from_dict(data: Dict) -> "TestCase":
+    def from_dict(data: Dict) -> TestCase:
         case = TestCase(data["sql_file_path"], data.get("sql_file_content", None))
         case.name = data["name"]
         case.vars = data["vars"]
@@ -550,7 +552,7 @@ class TestCase:
 
 
 class TestDataFile:
-    def __init__(self, test_data_file: str, sql_reader: "SqlReader", backend: str = "spark"):
+    def __init__(self, test_data_file: str, sql_reader: SqlReader, backend: str = "spark"):
         self.test_data_file = test_data_file
         self.sql_reader = sql_reader
         self.wb = open_workbook(self.test_data_file)
@@ -662,7 +664,7 @@ class TestResult:
             print(f"failed cases: {', '.join([cr['case_name'] for cr in self.failed_cases])}")
 
     @staticmethod
-    def print_results(test_results: List["TestResult"]):
+    def print_results(test_results: List[TestResult]):
         print("======================Test Report====================")
         for tr in test_results:
             tr.print_result()
@@ -784,7 +786,7 @@ class TestCaseRunner:
 
     def clean(self, case: TestCase, backend: Backend):
         databases = set()
-        table_names = set.union(set(input.name for input in case.inputs), set(output.name for output in case.outputs))
+        table_names = set.union({input.name for input in case.inputs}, {output.name for output in case.outputs})
         for table_name in table_names:
             if "." in table_name:
                 databases.add(table_name.split(".")[0])
@@ -810,7 +812,7 @@ class SqlTester:
         self,
         backend_creator: Callable[[TestCase], Backend] = None,
         table_column_types: TableColumnTypes = None,
-        sql_reader_creator: Callable[[], "SqlReader"] = None,
+        sql_reader_creator: Callable[[], SqlReader] = None,
         sql_processor_creator: Callable[[Backend, str, TestCase], SqlProcessor] = None,
         unit_test_case: unittest.TestCase = None,
         dry_run: bool = True,
@@ -957,7 +959,7 @@ class SqlReader:
 
     def find_file_path(self, file_name: str) -> str:
         file_name = os.path.basename(file_name)
-        for root, dirs, files in os.walk(work_path.work_path()):
+        for root, _dirs, files in os.walk(work_path.work_path()):
             for file in files:
                 if file == file_name:
                     return work_path.relative_path(os.path.join(root, file_name))
