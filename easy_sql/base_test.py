@@ -21,7 +21,7 @@ def should_run_integration_test(key: str = None):
     return False
 
 
-TEST_PG_URL = os.environ.get("PG_URL", "postgresql://postgres:123456@testpg:15432/postgres")
+TEST_PG_URL = os.environ.get("PG_URL", "postgresql://postgres:123456@host.docker.internal:15432/postgres")
 TEST_CH_URL = os.environ.get("CLICKHOUSE_URL", "clickhouse+native://default@testch:30123")
 TEST_BQ_URL = os.environ.get("BQ_URL", "bigquery://")
 
@@ -52,11 +52,11 @@ bigquery_sql_expr = SqlExpr(
 
 
 def dt(dt_s):
-    datetime.strptime(dt_s, "%Y-%m-%d %H:%M:%S")
+    return datetime.strptime(dt_s, "%Y-%m-%d %H:%M:%S")
 
 
 def date(s):
-    datetime.strptime(s, "%Y-%m-%d").date()
+    return datetime.strptime(s, "%Y-%m-%d").date()
 
 
 def dt_zone(dt_s: str, formate="%Y-%m-%d %H:%M:%S", timezone=None):
@@ -67,7 +67,7 @@ def dt_zone(dt_s: str, formate="%Y-%m-%d %H:%M:%S", timezone=None):
 
 
 def next_id():
-    str(uuid.uuid1()).replace("-", "")
+    return str(uuid.uuid1()).replace("-", "")
 
 
 @log_time
