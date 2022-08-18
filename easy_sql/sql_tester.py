@@ -6,10 +6,12 @@ import unittest
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-import xlrd
 from bson import json_util
-from xlrd import Book, open_workbook
-from xlrd.sheet import Cell, Sheet
+import openpyxl
+from openpyxl.cell import Cell
+from openpyxl.workbook import Workbook
+from openpyxl.worksheet.worksheet import Worksheet
+
 
 __all__ = ["SqlTester", "TableData", "TestCase", "WorkPath", "work_path", "SqlReader", "TableColumnTypes"]
 
@@ -28,12 +30,12 @@ def log_debug(msg: str):
 
 class TableData:
     def __init__(
-        self,
-        name: str,
-        columns: List[str],
-        column_types: List[str],
-        values: List[List[Any]],
-        value_descriptions: List[str],
+            self,
+            name: str,
+            columns: List[str],
+            column_types: List[str],
+            values: List[List[Any]],
+            value_descriptions: List[str],
     ):
         self.name, self.columns, self.column_types, self.values, self.value_descriptions = (
             name,
@@ -105,7 +107,7 @@ work_path = WorkPath()
 
 class TableColumnTypes:
     def __init__(
-        self, predefined_table_col_types: Dict[str, Dict[str, str]], partition_col_types: Dict[str, str], backend: str
+            self, predefined_table_col_types: Dict[str, Dict[str, str]], partition_col_types: Dict[str, str], backend: str
     ):
         self.table_col_types = predefined_table_col_types
         assert set(partition_col_types.values()).issubset(
@@ -129,7 +131,7 @@ class TableColumnTypes:
         return self.table_col_types[table_name][col_name].lower().strip()
 
     def column_types_to_schema(
-        self, backend: Backend, columns: List[str], types: List[str]
+            self, backend: Backend, columns: List[str], types: List[str]
     ) -> Union["StructType", List[Col]]:
         if isinstance(backend, SparkBackend):
             return self.column_types_to_schema_spark(backend.spark, columns, types)
@@ -197,7 +199,7 @@ class TableColumnTypes:
         return StructType(fields)
 
     def cast_as_type(
-        self, table_name: str, col_name: str, col_value: Any, date_converter: Callable = None, col_type: str = None
+            self, table_name: str, col_name: str, col_value: Any, date_converter: Callable = None, col_type: str = None
     ) -> Tuple[str, Any]:
         col_type = self.get_col_type(table_name, col_name) if col_type is None else col_type
         if self.backend == "clickhouse":
@@ -324,7 +326,7 @@ class TestCase:
         return os.path.basename(self.sql_file_path) if self.sql_file_path else None
 
     def parse_test_case_of_label(
-        self, wb: Book, label: str, row_start_idx: int, rows: List[List[Cell]], table_column_types: TableColumnTypes
+            self, wb: Workbook, label: str, row_start_idx: int, rows: List[List[Cell]], table_column_types: TableColumnTypes
     ):
         log_debug(f"start to parse case from row {row_start_idx} for label {label}")
         if label == "CASE":
@@ -344,7 +346,7 @@ class TestCase:
         else:
             raise AssertionError(f"unknown label: {label}")
 
-    def parse_includes(self, wb: Book, row_start_idx: int, rows: List[List[Cell]]):
+    def parse_includes(self, wb: Workbook, row_start_idx: int, rows: List[List[Cell]]):
         for i, row in enumerate(rows):
             include_name, include_value = row[1].value.strip(), row[2].value.strip()
             if include_name:
@@ -369,7 +371,7 @@ class TestCase:
                 self.func_file_paths.append(func_path.value)
                 log_debug(f"find func_path at row {row_start_idx + 1}: func_relative_path={func_path.value}")
 
-    def parse_vars(self, wb: Book, row_start_idx: int, rows: List[List[Cell]]):
+    def parse_vars(self, wb: Workbook, row_start_idx: int, rows: List[List[Cell]]):
         if len(rows) < 2:
             raise AssertionError(
                 f"parse test case at row {row_start_idx + 1} failed: there must be value set for VARS, found None"
@@ -383,7 +385,7 @@ class TestCase:
                         f"find vars at row {row_start_idx + 1}: name={var_name}, value={var_value} (type: {type(var_value)})"
                     )
 
-    def parse_var_from_cell(self, wb: Book, var_name: Cell, var_value: Cell) -> Tuple[str, Any]:
+    def parse_var_from_cell(self, wb: Workbook, var_name: Cell, var_value: Cell) -> Tuple[str, Any]:
         name = var_name.value.strip()
         if name.lower() == "data_date":
             value = self.parse_cell_value_as_date(wb, var_value.value).strftime("%Y-%m-%d")
@@ -391,7 +393,7 @@ class TestCase:
             value = var_value.value
         return name, value
 
-    def parse_cell_value_as_date(self, wb: Book, value: Any) -> datetime:
+    def parse_cell_value_as_date(self, wb: Workbook, value: Any) -> datetime:
         if value is None or (isinstance(value, str) and value.strip() == ""):
             return None
         elif isinstance(value, str) and value.strip() != "":
@@ -400,16 +402,16 @@ class TestCase:
                 raise AssertionError("date column must be of format `yyyy-MM-dd` or `yyyy-MM-dd HH:mm:ss`")
             format = "%Y-%m-%d" if len(value) == len("2000-01-01") else "%Y-%m-%d %H:%M:%S"
             return datetime.strptime(value, format)
-        return datetime(*xlrd.xldate_as_tuple(value, wb.datemode))
+        return value
 
-    def parse_output(self, wb: Book, row_start_idx: int, rows: List[List[Cell]], table_column_types: TableColumnTypes):
+    def parse_output(self, wb: Workbook, row_start_idx: int, rows: List[List[Cell]], table_column_types: TableColumnTypes):
         self.outputs.append(self.parse_table(wb, "OUTPUT", row_start_idx, rows, table_column_types))
 
-    def parse_input(self, wb: Book, row_start_idx: int, rows: List[List[Cell]], table_column_types: TableColumnTypes):
+    def parse_input(self, wb: Workbook, row_start_idx: int, rows: List[List[Cell]], table_column_types: TableColumnTypes):
         self.inputs.append(self.parse_table(wb, "INPUT", row_start_idx, rows, table_column_types))
 
     def parse_table(
-        self, wb: Book, label: str, row_start_idx: int, rows: List[List[Cell]], table_column_types: TableColumnTypes
+            self, wb: Workbook, label: str, row_start_idx: int, rows: List[List[Cell]], table_column_types: TableColumnTypes
     ) -> TableData:
         cells = rows[0]
         if len(cells) < 2 or not cells[1].value or not str(cells[1].value).strip():
@@ -494,15 +496,15 @@ class TestCase:
         return False
 
     def _parse_table_row_values(
-        self,
-        wb: Book,
-        table_name: str,
-        columns: List[str],
-        row_idx: int,
-        row_start_idx: int,
-        value_cells: List[Cell],
-        column_types: List[str],
-        table_column_types: TableColumnTypes,
+            self,
+            wb: Workbook,
+            table_name: str,
+            columns: List[str],
+            row_idx: int,
+            row_start_idx: int,
+            value_cells: List[Cell],
+            column_types: List[str],
+            table_column_types: TableColumnTypes,
     ):
         row_values = []
         for col_idx in range(len(columns)):
@@ -553,25 +555,25 @@ class TestDataFile:
     def __init__(self, test_data_file: str, sql_reader: "SqlReader", backend: str = "spark"):
         self.test_data_file = test_data_file
         self.sql_reader = sql_reader
-        self.wb = open_workbook(self.test_data_file)
+        self.wb = openpyxl.load_workbook(self.test_data_file)
         self.backend = backend
 
     def parse_test_cases(self, table_column_types: TableColumnTypes) -> List[TestCase]:
         wb = self.wb
         test_cases = []
-        for sheet_name in wb.sheet_names():
+        for sheet_name in wb.sheetnames:
             if not sheet_name.lower().startswith("suit"):
                 continue
-            for case in self.parse_test_cases_from_sheet(wb.sheet_by_name(sheet_name), table_column_types):
+            for case in self.parse_test_cases_from_sheet(wb[sheet_name], table_column_types):
                 test_cases.append(case)
         return test_cases
 
-    def parse_test_cases_from_sheet(self, sheet: Sheet, table_column_types: TableColumnTypes) -> List[TestCase]:
+    def parse_test_cases_from_sheet(self, sheet: Worksheet, table_column_types: TableColumnTypes) -> List[TestCase]:
         cases = []
         last_row_idx = -1
         cases_rows = []
         cases_start_indices = []
-        for row_idx, row in enumerate(sheet.get_rows()):
+        for row_idx, row in enumerate(sheet.rows):
             cells = list(row)
             if cells[0].value and cells[0].value.strip() == "CASE":
                 if last_row_idx == -1:
@@ -586,7 +588,7 @@ class TestDataFile:
         return cases
 
     def parse_test_case(
-        self, case_start_idx: int, case_rows: List[List[Cell]], table_column_types: TableColumnTypes
+            self, case_start_idx: int, case_rows: List[List[Cell]], table_column_types: TableColumnTypes
     ) -> TestCase:
         if self.backend == "clickhouse":
             default_col_type = "String"
@@ -612,7 +614,7 @@ class TestDataFile:
                         case_start_idx + last_label_idx,
                         case_rows[last_label_idx:i],
                         table_column_types,
-                    )
+                        )
                 last_label, last_label_idx = label, i
         if last_label:
             case.parse_test_case_of_label(
@@ -676,13 +678,13 @@ class TestResult:
 
 class TestCaseRunner:
     def __init__(
-        self,
-        env: str,
-        dry_run: bool,
-        backend_creator: Callable,
-        table_column_types: TableColumnTypes,
-        unit_test_case: unittest.TestCase,
-        sql_processor_creator: Callable,
+            self,
+            env: str,
+            dry_run: bool,
+            backend_creator: Callable,
+            table_column_types: TableColumnTypes,
+            unit_test_case: unittest.TestCase,
+            sql_processor_creator: Callable,
     ):
         self.unit_test_case = unit_test_case or unittest.TestCase()
         self.env, self.dry_run, self.backend_creator = env, dry_run, backend_creator
@@ -799,25 +801,25 @@ class TestCaseRunner:
                 import re
 
                 if not re.match(
-                    r"[\s\S]*Permission bigquery.datasets.delete denied on dataset[\s\S]*(or it may not exist)[\s\S]*",
-                    str(e.args[0]),
+                        r"[\s\S]*Permission bigquery.datasets.delete denied on dataset[\s\S]*(or it may not exist)[\s\S]*",
+                        str(e.args[0]),
                 ):
                     raise e
 
 
 class SqlTester:
     def __init__(
-        self,
-        backend_creator: Callable[[TestCase], Backend] = None,
-        table_column_types: TableColumnTypes = None,
-        sql_reader_creator: Callable[[], "SqlReader"] = None,
-        sql_processor_creator: Callable[[Backend, str, TestCase], SqlProcessor] = None,
-        unit_test_case: unittest.TestCase = None,
-        dry_run: bool = True,
-        env: str = "test",
-        work_dir: str = None,
-        backend: str = None,
-        scala_udf_initializer: str = None,
+            self,
+            backend_creator: Callable[[TestCase], Backend] = None,
+            table_column_types: TableColumnTypes = None,
+            sql_reader_creator: Callable[[], "SqlReader"] = None,
+            sql_processor_creator: Callable[[Backend, str, TestCase], SqlProcessor] = None,
+            unit_test_case: unittest.TestCase = None,
+            dry_run: bool = True,
+            env: str = "test",
+            work_dir: str = None,
+            backend: str = None,
+            scala_udf_initializer: str = None,
     ):
         if work_dir is not None:
             work_path.set_work_path(os.path.abspath(work_dir))

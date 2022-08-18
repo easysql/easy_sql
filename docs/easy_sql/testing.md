@@ -154,7 +154,7 @@ The JSON file is also optimized to let us compare data changes easily.
 
 To convert a test file in spreadsheet format to JSON format. Run the command below:
 
-(Before you run the command below, you will need to install two additional packages by `pip3 install click==6.7 pymongo==3.10.1 xlrd==1.2.0`)
+(Before you run the command below, you will need to install two additional packages by `pip3 install click==6.7 pymongo==3.10.1 openpyxl==3.0.10`)
 
 ```bash
 python3 -m easy_sql.sql_test convert-json -f {YOUR_XLSX_FILE_PATH}
@@ -169,7 +169,7 @@ Easy SQL provides a command line module to help to run ETL tests.
 
 To run the ETL test, execute the command below:
 
-(Before you run the command below, you will need to install two additional packages by `pip3 install click==6.7 pymongo==3.10.1 xlrd==1.2.0`)
+(Before you run the command below, you will need to install two additional packages by `pip3 install click==6.7 pymongo==3.10.1 openpyxl==3.0.10`)
 
 ```bash
 python3 -m easy_sql.sql_test run-test -f {YOUR_XLSX_FILE_PATH} -b {BACKEND}
@@ -193,7 +193,7 @@ from pyspark.sql import SparkSession
 
 SqlTester(env='test',
           backend_creator=lambda case: SparkBackend(SparkSession.builder.enableHiveSupport().getOrCreate()),
-          work_dir=os.path.abspath(os.curdir))\
+          work_dir=os.path.abspath(os.curdir))
     .run_tests('path/to/your/test/file')
 ```
 
