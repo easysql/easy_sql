@@ -5,11 +5,7 @@ from functools import partial
 from easy_sql import base_test
 from easy_sql.base_test import dt
 from easy_sql.sql_processor.backend import Partition, SaveMode, TableMeta
-from easy_sql.sql_processor.backend.maxcompute import (
-    MaxComputeBackend,
-    MaxComputeRow,
-    MaxComputeTable,
-)
+from easy_sql.sql_processor.backend.maxcompute import MaxComputeBackend, MaxComputeRow
 
 
 class MaxComputeTest(unittest.TestCase):
@@ -152,7 +148,7 @@ class MaxComputeTest(unittest.TestCase):
 
         backend.exec_native_sql("drop view if exists test_limit")
         backend.create_cache_table(backend.exec_sql(f"select * from {table_name} limit 2"), "test_limit")
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             backend.save_table(
                 TableMeta("test_limit"),
                 TableMeta("xx", partitions=[Partition("a", dt("2021-01-01 00:00:00"))]),

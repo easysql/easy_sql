@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import uuid
 from datetime import datetime
@@ -48,9 +50,13 @@ bigquery_sql_expr = SqlExpr(
     partition_expr=__partition_expr__,
 )
 
-dt = lambda dt_s: datetime.strptime(dt_s, "%Y-%m-%d %H:%M:%S")
 
-date = lambda s: datetime.strptime(s, "%Y-%m-%d").date()
+def dt(dt_s):
+    datetime.strptime(dt_s, "%Y-%m-%d %H:%M:%S")
+
+
+def date(s):
+    datetime.strptime(s, "%Y-%m-%d").date()
 
 
 def dt_zone(dt_s: str, formate="%Y-%m-%d %H:%M:%S", timezone=None):
@@ -60,7 +66,8 @@ def dt_zone(dt_s: str, formate="%Y-%m-%d %H:%M:%S", timezone=None):
         return datetime.strptime(dt_s, formate).replace(tzinfo=timezone)
 
 
-next_id = lambda: str(uuid.uuid1()).replace("-", "")
+def next_id():
+    str(uuid.uuid1()).replace("-", "")
 
 
 @log_time
@@ -70,7 +77,7 @@ def run_sql(
     funcs: dict = None,
     variables: dict = None,
     dry_run: bool = False,
-    spark: "SparkSession" = None,
+    spark: SparkSession = None,
     spark_conf: Dict = None,
 ) -> List:
     spark = spark or LocalSpark.get(spark_conf)
