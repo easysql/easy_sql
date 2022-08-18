@@ -1,9 +1,14 @@
+from __future__ import annotations
+
 import os
 import re
 import urllib.parse
 from datetime import datetime
 from os import path
-from typing import Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from easy_sql.sql_processor.backend import Backend
 
 import click
 
@@ -62,7 +67,6 @@ def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], pr
     config = EasySqlConfig.from_sql(sql_file)
 
     from easy_sql.sql_processor import SqlProcessor
-    from easy_sql.sql_processor.backend import Backend
 
     def run_with_vars(backend: Backend, variables: Dict[str, Any]):
         vars_dict = dict(
@@ -100,13 +104,13 @@ def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], pr
         backend.clean()
 
 
-def create_sql_processor_backend(backend: str, sql: str, task_name: str) -> "Backend":
+def create_sql_processor_backend(backend: str, sql: str, task_name: str) -> Backend:
     if backend == "spark":
         from easy_sql.spark_optimizer import get_spark
         from easy_sql.sql_processor.backend import SparkBackend
 
         backend = SparkBackend(get_spark(task_name))
-        exec_sql = lambda sql: backend.exec_native_sql(sql)
+        exec_sql = lambda sql: backend.exec_native_sql(sql)  # noqa: E731
     elif backend == "maxcompute":
         odps_parms = {"access_id": "xx", "secret_access_key": "xx", "project": "xx", "endpoint": "xx"}
         from easy_sql.sql_processor.backend.maxcompute import (
@@ -115,7 +119,7 @@ def create_sql_processor_backend(backend: str, sql: str, task_name: str) -> "Bac
         )
 
         backend = MaxComputeBackend(**odps_parms)
-        exec_sql = lambda sql: _exec_sql(backend.conn, sql)
+        exec_sql = lambda sql: _exec_sql(backend.conn, sql)  # noqa: E731
     elif backend in ["postgres", "clickhouse", "bigquery"]:
         from easy_sql.sql_processor.backend.rdb import RdbBackend, _exec_sql
 
@@ -134,7 +138,7 @@ def create_sql_processor_backend(backend: str, sql: str, task_name: str) -> "Bac
             backend = RdbBackend("bigquery://", credentials=os.environ["BIGQUERY_CREDENTIAL_FILE"])
         else:
             raise Exception(f"unsupported backend: {backend}")
-        exec_sql = lambda sql: _exec_sql(backend.conn, sql)
+        exec_sql = lambda sql: _exec_sql(backend.conn, sql)  # noqa: E731
     else:
         raise Exception("Unsupported backend found: " + backend)
 
@@ -168,7 +172,7 @@ class EasySqlConfig:
         self.scala_udf_initializer = scala_udf_initializer
 
     @staticmethod
-    def from_sql(sql_file: str = None, sql: str = None) -> "EasySqlConfig":
+    def from_sql(sql_file: str = None, sql: str = None) -> EasySqlConfig:
         assert sql_file is not None or sql is not None, "sql_file or sql must be set"
         sql = read_sql(sql_file) if sql_file else sql
         sql_lines = sql.split("\n")
