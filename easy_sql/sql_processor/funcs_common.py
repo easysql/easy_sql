@@ -1,10 +1,17 @@
+from __future__ import annotations
+
 import traceback
 from datetime import datetime, timedelta
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 from ..logger import logger
-from . import SqlProcessorException, Step
-from .backend import Backend
+from . import SqlProcessorException
+
+if TYPE_CHECKING:
+    from .backend import Backend
+    from .context import ProcessorContext
+    from .step import Step
+
 
 __all__ = ["ColumnFuncs", "TableFuncs", "PartitionFuncs", "AlertFunc"]
 
@@ -102,12 +109,11 @@ class PartitionFuncs:
         return partition_value in self._get_partition_values_as_str(table_name)
 
     def ensure_partition_exists(self, step, *args) -> bool:
-        from easy_sql.sql_processor import Step
-
         step: Step = step
         if len(args) < 2:
             raise Exception(
-                f"must contains at least one table and exactly one partition_value when calling ensure_partition_exists, got {args}"
+                "must contains at least one table and exactly one partition_value when calling"
+                f" ensure_partition_exists, got {args}"
             )
         partition_value = args[-1]
         tables = args[:-1]
@@ -126,12 +132,10 @@ class PartitionFuncs:
         return True
 
     def ensure_dwd_partition_exists(self, step, *args) -> bool:
-        from easy_sql.sql_processor import Step
-
         step: Step = step
         if len(args) < 2:
             raise Exception(
-                f"must contains one table and exactly one partition_value and one or more foreign key columns"
+                "must contains one table and exactly one partition_value and one or more foreign key columns"
                 f" when calling ensure_dwd_partition_exists, got {args}"
             )
         table_name = args[0]
@@ -160,7 +164,10 @@ class PartitionFuncs:
                 partition_value_to_use_expr = (
                     f"'{partition_value_to_use}'" if isinstance(partition_values[0], str) else partition_value_to_use
                 )
-                sql = f"select count(1) as total_count from {table_name} where {partition_col}={partition_value_to_use_expr}"
+                sql = (
+                    f"select count(1) as total_count from {table_name} where"
+                    f" {partition_col}={partition_value_to_use_expr}"
+                )
                 total_count = self.backend.exec_sql(sql).collect()[0][0]
                 if total_count > 0:
                     fk_col_non_null_expr = " or ".join([f"{fk_col} is not null" for fk_col in foreign_key_cols])
@@ -170,7 +177,10 @@ class PartitionFuncs:
                     )
                     any_fk_col_non_null_rows = self.backend.exec_sql(sql).collect()
                     if len(any_fk_col_non_null_rows) == 0:
-                        message = f"all fk cols are null in partition: table_name={table_name}, partition={partition_value_to_use}"
+                        message = (
+                            f"all fk cols are null in partition: table_name={table_name},"
+                            f" partition={partition_value_to_use}"
+                        )
                         logger.info(message)
                         step.collect_report(message=message)
                         check_ok = False
@@ -178,12 +188,11 @@ class PartitionFuncs:
         return check_ok
 
     def ensure_partition_or_first_partition_exists(self, step, *args) -> bool:
-        from easy_sql.sql_processor import Step
-
         step: Step = step
         if len(args) < 2:
             raise Exception(
-                f"must contains at least one table and exactly one partition_value when calling ensure_partition_exists, got {args}"
+                "must contains at least one table and exactly one partition_value when calling"
+                f" ensure_partition_exists, got {args}"
             )
         partition_value = args[-1]
         tables = args[:-1]
@@ -266,11 +275,9 @@ class AlertFunc:
         self.backend = backend
         self.alerter = alerter
 
-    def alert(self, step, context, rule_name: str, pass_condition: str, alert_template: str, mentioned_users: str):
-        from .context import ProcessorContext
-        from .step import Step
-
-        step: Step = step
+    def alert(
+        self, step: Step, context, rule_name: str, pass_condition: str, alert_template: str, mentioned_users: str
+    ):
         context: ProcessorContext = context
         # Fetch 10 rows at most
         alert_data = self.backend.exec_sql(step.select_sql).limit(10).collect()

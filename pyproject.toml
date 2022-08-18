@@ -34,10 +34,15 @@ clickhouse-driver = {version = "^0.2.4", optional = true}
 clickhouse-sqlalchemy = {version = "^0.2.1", optional = true}
 
 [tool.poetry.dev-dependencies]
-xlrd = "1.2.0"
 pymongo = "^4.2.0"
 coverage = "^6.4.3"
 pre-commit = "^2.20.0"
+flake8 = "^5.0.4"
+flake8-bugbear = "^22.7.1"
+flake8-comprehensions = "^3.10.0"
+flake8-simplify = "^0.19.3"
+flake8-type-checking = { version = "^2.1.2", python = "^3.8" }
+openpyxl = "^3.0.10"
 
 [tool.poetry.extras]
 cli = ["click"]
@@ -52,6 +57,7 @@ src_paths = ["easy_sql"]
 
 [tool.black]
 line-length = 120
+preview = true
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

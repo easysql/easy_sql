@@ -20,22 +20,19 @@ class FuncRunner:
     def create(backend: Backend) -> "FuncRunner":
         import builtins
 
-        builtin_funcs = dict(
-            [
-                (func, getattr(builtins, func))
-                for func in dir(builtins)
-                if not func.startswith("_") and func[0].islower() and callable(getattr(builtins, func))
-            ]
-        )
+        builtin_funcs = {
+            func: getattr(builtins, func)
+            for func in dir(builtins)
+            if not func.startswith("_") and func[0].islower() and callable(getattr(builtins, func))
+        }
+
         import operator
 
-        operator_funcs = dict(
-            [
-                (func, getattr(operator, func))
-                for func in dir(operator)
-                if not func.startswith("_") and func[0].islower() and callable(getattr(operator, func))
-            ]
-        )
+        operator_funcs = {
+            func: getattr(operator, func)
+            for func in dir(operator)
+            if not func.startswith("_") and func[0].islower() and callable(getattr(operator, func))
+        }
         operator_funcs.update({"equal": operator.eq})
         all_funcs = {}
         all_funcs.update(builtin_funcs)

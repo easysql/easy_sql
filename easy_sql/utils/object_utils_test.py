@@ -1,6 +1,6 @@
 import unittest
 
-from easy_sql.utils.object_utils import *
+from easy_sql.utils.object_utils import get_attr
 
 
 class ObjectUtilsTest(unittest.TestCase):

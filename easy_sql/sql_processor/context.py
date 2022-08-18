@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 import re
 from typing import TYPE_CHECKING, Any, Dict, List
@@ -21,7 +23,7 @@ class CommentSubstitutor:
     def substitute(self, sql_expr: str) -> str:
         if CommentSubstitutor.COMMENT_IDENTIFIABLE_NAME in sql_expr:
             raise Exception(
-                f"Cannot handle sql expression with "
+                "Cannot handle sql expression with "
                 f"comment identifiable name({CommentSubstitutor.COMMENT_IDENTIFIABLE_NAME}) inside: {sql_expr}"
             )
         lines = []
@@ -123,7 +125,7 @@ class VarsContext(VarsReplacer):
         self.func_runner = None
         self.debug_log = debug_log
 
-    def init(self, func_runner: "FuncRunner"):
+    def init(self, func_runner: FuncRunner):
         self.func_runner = func_runner
 
     def replace_variables(self, text: str, include_funcs: bool = True) -> str:
@@ -224,7 +226,8 @@ class TemplatesContext:
                     if re.compile(r"\)}$").search(value):
                         value = value[:-2].strip()
                     self._log_replace_process(
-                        f"template param matched: value_name={value_name}, value: {value}, template_name: {template_name}, template: {template}"
+                        f"template param matched: value_name={value_name}, value: {value}, template_name:"
+                        f" {template_name}, template: {template}"
                     )
                     template = re.sub(re.escape(f"#{{{value_name}}}"), value, template, flags=re.IGNORECASE)
                     index += 1

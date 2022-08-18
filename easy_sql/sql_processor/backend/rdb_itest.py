@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import re
 import time
 import unittest
+from typing import TYPE_CHECKING
 
 from easy_sql import base_test
 from easy_sql.base_test import (
@@ -14,6 +17,9 @@ from easy_sql.base_test import (
 from easy_sql.sql_processor.backend import Partition, SaveMode, TableMeta
 from easy_sql.sql_processor.backend.rdb import RdbBackend, RdbRow, TimeLog, _exec_sql
 
+if TYPE_CHECKING:
+    from sqlalchemy.engine.reflection import Inspector
+
 
 class RdbTest(unittest.TestCase):
     def test_log_time(self):
@@ -23,7 +29,6 @@ class RdbTest(unittest.TestCase):
     def test_clean_pg_temp_schema(self):
         pg = RdbBackend(TEST_PG_URL)
         from sqlalchemy import inspect
-        from sqlalchemy.engine.reflection import Inspector
 
         insp: Inspector = inspect(pg.engine)
         temp_schemas = insp.get_schema_names()
@@ -34,7 +39,6 @@ class RdbTest(unittest.TestCase):
     def test_clean_ch_temp_schema(self):
         backend = RdbBackend(TEST_CH_URL)
         from sqlalchemy import inspect
-        from sqlalchemy.engine.reflection import Inspector
 
         insp: Inspector = inspect(backend.engine)
         temp_schemas = insp.get_schema_names()
@@ -53,7 +57,6 @@ class RdbTest(unittest.TestCase):
             sql_expr=bigquery_sql_expr,
         )
         from sqlalchemy import inspect
-        from sqlalchemy.engine.reflection import Inspector
 
         insp: Inspector = inspect(backend.engine)
         temp_schemas = insp.get_schema_names()
@@ -174,7 +177,8 @@ class RdbTest(unittest.TestCase):
         _exec_sql(backend.conn, "create table if not exists t.dynamic_partition_test(id int, val string, a date)")
         _exec_sql(
             backend.conn,
-            "insert into t.dynamic_partition_test values(1, '1', '2021-01-01'), (2, '2', '2021-01-02'), (3, '3', '2021-01-03')",
+            "insert into t.dynamic_partition_test values(1, '1', '2021-01-01'), (2, '2', '2021-01-02'), (3, '3',"
+            " '2021-01-03')",
         )
         self.run_test_backend(backend)
 

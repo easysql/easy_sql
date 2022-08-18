@@ -1,21 +1,25 @@
+from __future__ import annotations
+
 import re
 import uuid
 from os import path
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from ..logger import logger
 from .backend import Backend, Partition, SaveMode
 from .backend import Table as BackendTable
 from .backend import TableMeta as Table
 from .common import SqlProcessorException
-from .context import ProcessorContext
-from .funcs import FuncRunner
+
+if TYPE_CHECKING:
+    from .context import ProcessorContext
+    from .funcs import FuncRunner
 
 __all__ = ["StepConfig", "Step", "StepType", "ReportCollector", "StepFactory"]
 
 
 class ReportCollector:
-    def collect_report(self, step: "Step", status: str = None, message: str = None):
+    def collect_report(self, step: Step, status: str = None, message: str = None):
         raise NotImplementedError()
 
 
@@ -35,7 +39,7 @@ class StepConfig:
     def __repr__(self):
         return str(self)
 
-    def __eq__(self, other: "StepConfig"):
+    def __eq__(self, other: StepConfig):
         return (
             isinstance(other, StepConfig)
             and self.step_type == other.step_type
@@ -45,7 +49,7 @@ class StepConfig:
         )
 
     @staticmethod
-    def from_config_line(config_line: str, line_no: int) -> "StepConfig":
+    def from_config_line(config_line: str, line_no: int) -> StepConfig:
         configs = re.compile(r"^\s*-- ").sub("", config_line).strip()
         configs = configs[configs.index("=") + 1 :]
         target_type = configs[: configs.index(".")] if configs.find(".") != -1 else configs
@@ -64,9 +68,10 @@ class StepConfig:
         if condition_match:
             target_name = condition_match.group(1) if target_name is not None else None
             target_condition = condition_match.group(2).strip()
-            if not re.compile(r"[a-zA-Z0-9_]*\([^()]*\)").match(target_condition):
+            reg_exp = r"[a-zA-Z0-9_]*\([^()]*\)"
+            if not re.compile(reg_exp).match(target_condition):
                 raise SqlProcessorException(
-                    f"parse step config failed. condition must be like [a-zA-Z0-9_]*\([^()]*\), "
+                    f"parse step config failed. condition must be like {reg_exp}, "
                     f"but got {target_condition}. config_line={config_line}"
                 )
 
@@ -174,16 +179,15 @@ class Step:
         if not table:
             return
 
-        if StepType.VARIABLES == self.target_config.step_type:
-            if not table.is_empty():
-                field_names = table.field_names()
-                row = table.first()
-                for field_name in field_names:
-                    index = field_names.index(field_name)
-                    field_value = "null"
-                    if row[index] is not None:
-                        field_value = str(row[index])
-                    context.add_vars({field_name: field_value})
+        if StepType.VARIABLES == self.target_config.step_type and not table.is_empty():
+            field_names = table.field_names()
+            row = table.first()
+            for field_name in field_names:
+                index = field_names.index(field_name)
+                field_value = "null"
+                if row[index] is not None:
+                    field_value = str(row[index])
+                context.add_vars({field_name: field_value})
 
         if StepType.LIST_VARIABLES == self.target_config.step_type:
             field_names = table.field_names()
@@ -234,7 +238,10 @@ class Step:
     def _write_for_output_step(self, backend: Backend, table: BackendTable, context: ProcessorContext, dry_run: bool):
         extra_cols, variables = context.extra_cols, context.vars
         if "." not in self.target_config.name:
-            message = f"table name for hive or output must be a full name, it should be of format DB.TABLE_NAME, got `{self.target_config.name}`"
+            message = (
+                "table name for hive or output must be a full name, it should be of format DB.TABLE_NAME, got"
+                f" `{self.target_config.name}`"
+            )
             self.collect_report(message=message)
             raise SqlProcessorException(message)
 
@@ -259,7 +266,7 @@ class Step:
                     static_partition_value = value
                 else:
                     static_partition_value = backend.sql_expr.convert_partition_value(static_partition_name, value)
-            if "save_mode" == name.lower() or "__save_mode__" == name.lower():
+            if name.lower() == "save_mode" or name.lower() == "__save_mode__":
                 save_mode = SaveMode[value.lower()]
             if name.lower() in [
                 "__create_hive_table__",
@@ -319,8 +326,7 @@ class Step:
         if self.target_config.is_target_name_a_func():
             if not self.func_runner.run_func(self.target_config.name, context.vars_context):
                 message = (
-                    f"check failed! check function returned False. "
-                    f"check={self.target_config.name}, vars={context.vars}"
+                    f"check failed! check function returned False. check={self.target_config.name}, vars={context.vars}"
                 )
                 self.collect_report(message=message)
                 raise SqlProcessorException(message)
@@ -330,7 +336,7 @@ class Step:
         check_data = df.limit(100).collect()
         if not check_data:
             message = (
-                f"Data for check must contains at least one row. Please check your sql. "
+                "Data for check must contains at least one row. Please check your sql. "
                 f"check={self.target_config.name}, check_data(limit 100)={check_data}, check_data_count={df.count()}"
             )
             self.collect_report(message=message)
@@ -339,15 +345,15 @@ class Step:
             check_data_as_dict = check_item.as_dict()
             if "actual" not in check_data_as_dict or "expected" not in check_data_as_dict:
                 message = (
-                    f"Data for check must contains expected and actual data. Please check your sql. "
+                    "Data for check must contains expected and actual data. Please check your sql. "
                     f"check={self.target_config.name}, check_data(limit 100)={check_data}"
                 )
                 self.collect_report(message=message)
                 raise SqlProcessorException(message)
             if check_data_as_dict["actual"] != check_data_as_dict["expected"]:
                 message = (
-                    f"check [{self.target_config.name}] failed! "
-                    f"actual={check_data_as_dict['actual']}, expected={check_data_as_dict['expected']}, check_data(limit 100)={check_data}"
+                    f"check [{self.target_config.name}] failed! actual={check_data_as_dict['actual']},"
+                    f" expected={check_data_as_dict['expected']}, check_data(limit 100)={check_data}"
                 )
                 logger.error(message)
                 self.collect_report(message=message)
@@ -403,14 +409,14 @@ class StepFactory:
         include_py_pattern = r"^--\s*include\s*=\s*(.*)\.(\w+|\*)$"
         lines = sql.split("\n")
         resoloved_sqls = []
-        for index, line in enumerate(lines):
+        for _, line in enumerate(lines):
             line = line.replace(";", "")
             line_stripped = line.strip()
             if re.match(include_sql_pattern, line_stripped, flags=re.IGNORECASE):
                 matches = re.match(include_sql_pattern, line_stripped, flags=re.IGNORECASE)
                 if len(matches.groups()) != 1:
                     raise SqlProcessorException(
-                        f"parse include config failed. must provide complete module name and the sql variable name."
+                        "parse include config failed. must provide complete module name and the sql variable name."
                         f"bug got config line {line_stripped}"
                     )
                 file = matches.group(1)
@@ -422,7 +428,7 @@ class StepFactory:
                     import importlib
 
                     func_mod = importlib.import_module("common.file_reader")
-                    read_file_func = getattr(func_mod, "read_file")
+                    read_file_func = func_mod.read_file
                     resoloved_sqls.append(read_file_func(file))
                 except ModuleNotFoundError:
                     logger.info("failed to import common.file_reader, will try default file reader")
@@ -431,7 +437,7 @@ class StepFactory:
                 matches = re.match(include_py_pattern, line_stripped, flags=re.IGNORECASE)
                 if len(matches.groups()) != 2:
                     raise SqlProcessorException(
-                        f"parse include config failed. must provide complete module name and the sql variable name."
+                        "parse include config failed. must provide complete module name and the sql variable name."
                         f"bug got config line {line_stripped}"
                     )
                 module = matches.group(1)

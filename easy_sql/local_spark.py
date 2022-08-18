@@ -23,8 +23,10 @@ class LocalSpark:
                 "spark.default.parallelism": 4,
                 "hive.exec.dynamic.partition.mode": "nonstrict",
                 "spark.sql.warehouse.dir": "/tmp/spark-warehouse-localdw-ut",
-                "spark.driver.extraJavaOptions": "-Dderby.system.home=/tmp/spark-warehouse-metastore-ut "
-                "-Dderby.stream.error.file=/tmp/spark-warehouse-metastore-ut.log",
+                "spark.driver.extraJavaOptions": (
+                    "-Dderby.system.home=/tmp/spark-warehouse-metastore-ut "
+                    "-Dderby.stream.error.file=/tmp/spark-warehouse-metastore-ut.log"
+                ),
             }
             default_conf.update(conf)
             conf = default_conf
@@ -38,7 +40,7 @@ class LocalSpark:
 
                     java_options = re.sub(r"\s*=\s*", "=", conf["spark.driver.extraJavaOptions"].strip()).split()
                     for op in java_options:
-                        if "-Dderby.system.home" == op.split("=")[0].strip():
+                        if op.split("=")[0].strip() == "-Dderby.system.home":
                             print(f"removing dir {op.split('=')[1].strip()}")
                             shutil.rmtree(op.split("=")[1].strip(), ignore_errors=True)
 

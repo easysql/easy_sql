@@ -1,17 +1,22 @@
-from typing import Any, Dict, List, Optional, Union
+from __future__ import annotations
 
-from .sql_processor import *
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+
+from .sql_processor import Column, SqlProcessor, Step
 
 __all__ = ["SqlProcessorDebugger"]
 
 from .sql_processor.backend import Backend, SparkBackend
+
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
 
 
 class SqlProcessorDebugger:
     def __init__(
         self,
         sql_file_path: str,
-        backend: Union["SparkSession", Backend],
+        backend: Union[SparkSession, Backend],
         vars: Dict[str, Any] = None,
         funcs: Dict[str, Any] = None,
         funcs_py_file: str = None,
@@ -186,7 +191,7 @@ class SqlProcessorDebugger:
             self.step_on()
 
     def run(self):
-        for i in range(self.left_step_count):
+        for _ in range(self.left_step_count):
             self.step_on()
 
     def run_to(self, step_no: int):

@@ -2,7 +2,7 @@ import unittest
 
 from .base_test import TEST_CH_URL, TEST_PG_URL
 from .sql_processor.backend import Backend, SparkBackend
-from .sql_processor_debugger import *
+from .sql_processor_debugger import SqlProcessorDebugger
 
 
 class SqlProcessorDebuggerTest(unittest.TestCase):

@@ -26,7 +26,7 @@ def _render_doc_modules_functions(backend: str):
             module = func_mod.__module__
             func_doc = (
                 f"- [`{func_name}{func_sig}`]"
-                f'(https://easy-sql.readthedocs.io/en/latest/autoapi/{module.replace(".", "/")}/index.html#{module}.{mod_name}.{func_name})'
+                f'(https://easy-sql.readthedocs.io/en/latest/autoapi/{module.replace(".", "/")}/index.html#{module}.{mod_name}.{func_name})'  # noqa: B950
             )
             funcs_doc.append(func_doc)
         funcs_doc = "\n".join(funcs_doc)
@@ -40,7 +40,12 @@ def _render_doc_modules_functions(backend: str):
     return "\n".join(groups_doc)
 
 
-def _update_doc(doc_tpl_file: str, doc_file: str, tpl_rex: str, render: Callable[[Sequence[str]], str]):
+def _update_doc(
+    doc_tpl_file: str,
+    doc_file: str,
+    tpl_rex: str,
+    render: Callable[[Sequence[str]], str],
+):
     with open(doc_tpl_file, "r") as f:
         doc_tpl = f.read()
     lines = doc_tpl.split("\n")
@@ -80,7 +85,11 @@ def update_udf_doc():
 
     def render(groups: Sequence[str]) -> str:
         backend = groups[0]
-        backend_display_names = {"spark": "Spark", "pg": "PostgreSQL", "ch": "Clickhouse"}
+        backend_display_names = {
+            "spark": "Spark",
+            "pg": "PostgreSQL",
+            "ch": "Clickhouse",
+        }
 
         udf_names = udfs.get_udfs(backend)
         udf_mods = {"spark": udfs.SparkUdfs, "pg": udfs.PgUdfs, "ch": udfs.ChUdfs}

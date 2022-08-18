@@ -1,8 +1,13 @@
-from typing import Callable, Dict, List, Tuple
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Callable, Dict, List, Tuple
 
 from easy_sql.sql_processor.backend.sql_dialect import SqlDialect, SqlExpr
 
-from ..base import Partition
+if TYPE_CHECKING:
+    from sqlalchemy.engine import ResultProxy
+
+    from ..base import Partition
 
 __all__ = ["ChSqlDialect"]
 
@@ -28,7 +33,7 @@ class ChSqlDialect(SqlDialect):
 
     def drop_db_sql(self, db: str) -> List[str]:
         drop_db = f"drop database if exists {db}"
-        drop_pt_metadata = f"alter table {self.partitions_table_name} delete " f"where db_name = '{db}'"
+        drop_pt_metadata = f"alter table {self.partitions_table_name} delete where db_name = '{db}'"
         return [drop_db, drop_pt_metadata]
 
     def rename_table_sql(self, from_table: str, to_table: str) -> str:
@@ -80,12 +85,10 @@ class ChSqlDialect(SqlDialect):
 
         return [drop_pt, drop_pt_metadata]
 
-    def native_partitions_sql(
-        self, table_name: str
-    ) -> Tuple[str, Callable[["sqlalchemy.engine.ResultProxy"], List[str]]]:
+    def native_partitions_sql(self, table_name: str) -> Tuple[str, Callable[[ResultProxy], List[str]]]:
         return f"show create table {table_name}", self.extract_partition_cols
 
-    def extract_partition_cols(self, native_partitions_sql_result: "sqlalchemy.engine.ResultProxy") -> List[str]:
+    def extract_partition_cols(self, native_partitions_sql_result: ResultProxy) -> List[str]:
         create_table_sql_lines = native_partitions_sql_result.fetchall()[0][0].split("\n")
         pt_cols = []
         for line in create_table_sql_lines:
@@ -106,12 +109,12 @@ class ChSqlDialect(SqlDialect):
         else:
             partition_expr = f'partition by tuple({", ".join([pt.field for pt in partitions])})'
         return (
-            f"create table if not exists "
-            f"{table_name} (\n{cols_expr}\n)\nengine=MergeTree\n{partition_expr}\norder by tuple() settings allow_nullable_key=1;"
+            f"create table if not exists {table_name} (\n{cols_expr}\n)\nengine=MergeTree\n{partition_expr}\norder by"
+            " tuple() settings allow_nullable_key=1;"
         )
 
     def create_temp_table_with_schema_sql(self, temp_table_name: str):
-        return f"create table if not exists " f'{temp_table_name} as {temp_table_name.split("__temp")[0]}'
+        return f'create table if not exists {temp_table_name} as {temp_table_name.split("__temp")[0]}'
 
     def create_partition_automatically(self):
         return True
@@ -137,8 +140,10 @@ class ChSqlDialect(SqlDialect):
             drop_pt_metadata_if_exist, insert_pt_metadata = self._generate_pt_metadata_sql(
                 target_table_name, partitions
             )
-            # Assumption: partition movement requires the two tables to have the same structure, partition key, engine family and storage policy
-            # need to upgrade local clickhouse version (> 21) to support moving feature https://github.com/ClickHouse/ClickHouse/issues/14582
+            # Assumption: partition movement requires the two tables to have
+            # the same structure, partition key, engine family and storage policy,
+            # need to upgrade local clickhouse version (> 21) to
+            # support moving feature https://github.com/ClickHouse/ClickHouse/issues/14582
             move_partition_sqls = []
             for partition in partitions:
                 move_partition_sqls.append(
@@ -150,7 +155,10 @@ class ChSqlDialect(SqlDialect):
     def drop_table_sql(self, table: str) -> List[str]:
         drop_table_sql = f"drop table if exists {table}"
         db, pure_table_name = split_table_name(table)
-        drop_pt_metadata = f"alter table {self.partitions_table_name} delete where db_name = '{db}' and table_name = '{pure_table_name}'"
+        drop_pt_metadata = (
+            f"alter table {self.partitions_table_name} delete where db_name = '{db}' and table_name ="
+            f" '{pure_table_name}'"
+        )
         return [drop_table_sql, drop_pt_metadata]
 
     def support_static_partition(self):
@@ -167,7 +175,10 @@ class ChSqlDialect(SqlDialect):
             raise SqlProcessorAssertionError("clickhouse only supports single-column partitioning.")
         else:
             db, pure_table_name = tuple(table_name.split("."))
-            insert_pt_metadata = f"insert into {self.partitions_table_name} values('{db}', '{pure_table_name}', '{partitions[0].value}', now());"
+            insert_pt_metadata = (
+                f"insert into {self.partitions_table_name} values('{db}', '{pure_table_name}', '{partitions[0].value}',"
+                " now());"
+            )
             return insert_pt_metadata
 
     def create_table_like_sql(self, target_table_name: str, source_table_name: str, partitions: List[Partition]) -> str:
@@ -186,7 +197,8 @@ class ChSqlDialect(SqlDialect):
     def _check_no_none_in_partition_values(self, partitions: List[Partition]):
         if any([pt.value is None for pt in partitions]):
             raise SqlProcessorAssertionError(
-                f"cannot insert data when partition value is None, partitions: {partitions}, there maybe some bug, please check"
+                f"cannot insert data when partition value is None, partitions: {partitions}, there maybe some bug,"
+                " please check"
             )
 
     def _check_partition_field_single(self, partitions: List[Partition]):
