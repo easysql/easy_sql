@@ -64,10 +64,16 @@ class PgSqlDialect(SqlDialect):
             f"select viewname FROM pg_catalog.pg_views where schemaname='{db}'"
         )
 
+    def get_dbs_sql(self) -> str:
+        return "select schemaname from pg_catalog.pg_tables union select schemaname FROM pg_catalog.pg_views"
+
     def create_table_sql(self, table_name: str, select_sql: str) -> str:
         return f"create table {table_name} as {select_sql}"
 
     def support_native_partition(self) -> bool:
+        return True
+
+    def support_move_individual_partition(self) -> bool:
         return True
 
     def delete_partition_sql(self, table_name, partitions: List[Partition]) -> str:
@@ -115,6 +121,9 @@ class PgSqlDialect(SqlDialect):
         return f"create table {table_name} (\n{cols_expr}\n) {partition_expr}"
 
     def create_partition_automatically(self):
+        return False
+
+    def create_temp_table_schema_like_target_schema(self):
         return False
 
     def create_partition_sql(
@@ -176,8 +185,34 @@ class PgSqlDialect(SqlDialect):
     def insert_data_sql(self, table_name: str, col_names_expr: str, select_sql: str, partitions: List[Partition]):
         return f"insert into {table_name}({col_names_expr}) {select_sql}"
 
+    def move_data_sql(self, target_table: str, temp_table: str, partitions: List[Partition]) -> List[str]:
+        sql = []
+        for partition in partitions:
+            pg_partition = PostgrePartition(partition.field, partition.value)
+            temp_partition_table_name = pg_partition.partition_table_name(temp_table)
+            target_partition_table_name = pg_partition.partition_table_name(target_table)
+            sql.append(self.drop_table_sql(target_partition_table_name))
+            sql.append(f"alter table {temp_table} detach partition {temp_partition_table_name}")
+            sql.append((self.rename_table_sql(temp_partition_table_name, target_partition_table_name)))
+            sql.append(
+                f"alter table {target_table} attach partition {target_partition_table_name} "
+                f"for values from ({pg_partition.value_expr}) to ({pg_partition.value_next_expr})"
+            )
+        return sql
+
     def drop_table_sql(self, table: str):
         return f"drop table if exists {table}"
 
     def support_static_partition(self):
         return True
+
+    def create_table_like_sql(self, target_table_name: str, source_table_name: str, partitions: List[Partition]) -> str:
+        if len(partitions) == 0:
+            return f"create table {target_table_name} (like {source_table_name} including constraints)"
+        elif len(partitions) > 1:
+            raise SqlProcessorAssertionError(
+                f"Only support exactly one partition column, found: {[str(p) for p in partitions]}"
+            )
+        else:
+            partition_expr = f"partition by range({partitions[0].field})"
+            return f"create table {target_table_name} (like {source_table_name} including constraints) {partition_expr}"

@@ -52,13 +52,19 @@ class ChSqlDialect(SqlDialect):
     def create_view_sql(self, table_name: str, select_sql: str) -> str:
         return f"create view {table_name} as {select_sql}"
 
-    def get_tables_sql(self, db: str):
+    def get_tables_sql(self, db: str) -> str:
         return f"show tables in {db}"
+
+    def get_dbs_sql(self) -> str:
+        return "show databases"
 
     def create_table_sql(self, table_name: str, select_sql: str):
         return f"create table {table_name} engine=MergeTree order by tuple() as {select_sql}"
 
     def support_native_partition(self) -> bool:
+        return True
+
+    def support_move_individual_partition(self) -> bool:
         return True
 
     def delete_partition_sql(self, table_name, partitions: List[Partition]) -> List[str]:
@@ -107,34 +113,44 @@ class ChSqlDialect(SqlDialect):
             " tuple() settings allow_nullable_key=1;"
         )
 
+    def create_temp_table_with_schema_sql(self, temp_table_name: str):
+        return f'create table if not exists {temp_table_name} as {temp_table_name.split("__temp")[0]}'
+
     def create_partition_automatically(self):
+        return True
+
+    def create_temp_table_schema_as_target(self):
         return True
 
     def insert_data_sql(
         self, table_name: str, col_names_expr: str, select_sql: str, partitions: List[Partition]
     ) -> List[str]:
-        insert_date_sql = f"insert into {table_name}({col_names_expr}) {select_sql};"
-
-        if any([pt.value is None for pt in partitions]):
-            raise SqlProcessorAssertionError(
-                f"cannot insert data when partition value is None, partitions: {partitions}, there maybe some bug,"
-                " please check"
-            )
-
+        insert_data_sql = f"insert into {table_name}({col_names_expr}) {select_sql}"
+        self._check_no_none_in_partition_values(partitions)
         if len(partitions) != 0:
-            if len(partitions) > 1:
-                raise SqlProcessorAssertionError(
-                    "for now clickhouse backend only support table with single field partition"
-                )
-            db, pure_table_name = split_table_name(table_name)
-            drop_pt_metadata_if_exist = (
-                f"alter table {self.partitions_table_name} delete "
-                f"where db_name = '{db}' and table_name = '{pure_table_name}' "
-                f"and partition_value = '{partitions[0].value}'"
+            self._check_partition_field_single(partitions)
+            drop_pt_metadata_if_exist, insert_pt_metadata = self._generate_pt_metadata_sql(table_name, partitions)
+            return [insert_data_sql, drop_pt_metadata_if_exist, insert_pt_metadata]
+        return [insert_data_sql]
+
+    def move_data_sql(self, target_table_name: str, temp_table_name: str, partitions: List[Partition]):
+        self._check_no_none_in_partition_values(partitions)
+        if len(partitions) != 0:
+            self._check_partition_field_single(partitions)
+            drop_pt_metadata_if_exist, insert_pt_metadata = self._generate_pt_metadata_sql(
+                target_table_name, partitions
             )
-            insert_pt_metadata = self.insert_pt_metadata_sql(table_name, partitions)
-            return [insert_date_sql, drop_pt_metadata_if_exist, insert_pt_metadata]
-        return [insert_date_sql]
+            # Assumption: partition movement requires the two tables to have
+            # the same structure, partition key, engine family and storage policy,
+            # need to upgrade local clickhouse version (> 21) to
+            # support moving feature https://github.com/ClickHouse/ClickHouse/issues/14582
+            move_partition_sqls = []
+            for partition in partitions:
+                move_partition_sqls.append(
+                    f"alter table {temp_table_name} move partition '{partition.value}' to table {target_table_name}"
+                )
+            move_data_sql = " ".join(move_partition_sqls)
+            return [move_data_sql, drop_pt_metadata_if_exist, insert_pt_metadata]
 
     def drop_table_sql(self, table: str) -> List[str]:
         drop_table_sql = f"drop table if exists {table}"
@@ -164,3 +180,29 @@ class ChSqlDialect(SqlDialect):
                 " now());"
             )
             return insert_pt_metadata
+
+    def create_table_like_sql(self, target_table_name: str, source_table_name: str, partitions: List[Partition]) -> str:
+        return f"create table if not exists {target_table_name} as {source_table_name}"
+
+    def _generate_pt_metadata_sql(self, table_name: str, partitions: List[Partition]) -> List[str]:
+        db, pure_table_name = split_table_name(table_name)
+        drop_pt_metadata_if_exist = (
+            f"alter table {self.partitions_table_name} delete "
+            f"where db_name = '{db}' and table_name = '{pure_table_name}' "
+            f"and partition_value = '{partitions[0].value}'"
+        )
+        insert_pt_metadata = self.insert_pt_metadata_sql(table_name, partitions)
+        return drop_pt_metadata_if_exist, insert_pt_metadata
+
+    def _check_no_none_in_partition_values(self, partitions: List[Partition]):
+        if any([pt.value is None for pt in partitions]):
+            raise SqlProcessorAssertionError(
+                f"cannot insert data when partition value is None, partitions: {partitions}, there maybe some bug,"
+                " please check"
+            )
+
+    def _check_partition_field_single(self, partitions: List[Partition]):
+        if len(partitions) > 1:
+            raise SqlProcessorAssertionError(
+                "for now clickhouse backend only support table with single field partition"
+            )

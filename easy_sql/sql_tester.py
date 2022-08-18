@@ -8,9 +8,8 @@ import unittest
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
-import xlrd
+import openpyxl
 from bson import json_util
-from xlrd import Book, open_workbook
 
 __all__ = ["SqlTester", "TableData", "TestCase", "WorkPath", "work_path", "SqlReader", "TableColumnTypes"]
 
@@ -20,9 +19,11 @@ from easy_sql.sql_processor.backend import Backend, Partition, Row, SparkBackend
 from easy_sql.sql_processor.backend.rdb import Col, RdbBackend
 
 if TYPE_CHECKING:
+    from openpyxl.cell import Cell
+    from openpyxl.workbook import Workbook
+    from openpyxl.worksheet.worksheet import Worksheet
     from pyspark.sql import SparkSession
     from pyspark.sql.types import StructType
-    from xlrd.sheet import Cell, Sheet
 
 debug_log_enable = True
 
@@ -329,7 +330,7 @@ class TestCase:
         return os.path.basename(self.sql_file_path) if self.sql_file_path else None
 
     def parse_test_case_of_label(
-        self, wb: Book, label: str, row_start_idx: int, rows: List[List[Cell]], table_column_types: TableColumnTypes
+        self, wb: Workbook, label: str, row_start_idx: int, rows: List[List[Cell]], table_column_types: TableColumnTypes
     ):
         log_debug(f"start to parse case from row {row_start_idx} for label {label}")
         if label == "CASE":
@@ -349,7 +350,7 @@ class TestCase:
         else:
             raise AssertionError(f"unknown label: {label}")
 
-    def parse_includes(self, wb: Book, row_start_idx: int, rows: List[List[Cell]]):
+    def parse_includes(self, wb: Workbook, row_start_idx: int, rows: List[List[Cell]]):
         for i, row in enumerate(rows):
             include_name, include_value = row[1].value.strip(), row[2].value.strip()
             if include_name:
@@ -376,7 +377,7 @@ class TestCase:
                 self.func_file_paths.append(func_path.value)
                 log_debug(f"find func_path at row {row_start_idx + 1}: func_relative_path={func_path.value}")
 
-    def parse_vars(self, wb: Book, row_start_idx: int, rows: List[List[Cell]]):
+    def parse_vars(self, wb: Workbook, row_start_idx: int, rows: List[List[Cell]]):
         if len(rows) < 2:
             raise AssertionError(
                 f"parse test case at row {row_start_idx + 1} failed: there must be value set for VARS, found None"
@@ -391,7 +392,7 @@ class TestCase:
                         f" {type(var_value)})"
                     )
 
-    def parse_var_from_cell(self, wb: Book, var_name: Cell, var_value: Cell) -> Tuple[str, Any]:
+    def parse_var_from_cell(self, wb: Workbook, var_name: Cell, var_value: Cell) -> Tuple[str, Any]:
         name = var_name.value.strip()
         if name.lower() == "data_date":
             value = self.parse_cell_value_as_date(wb, var_value.value).strftime("%Y-%m-%d")
@@ -399,7 +400,7 @@ class TestCase:
             value = var_value.value
         return name, value
 
-    def parse_cell_value_as_date(self, wb: Book, value: Any) -> datetime:
+    def parse_cell_value_as_date(self, wb: Workbook, value: Any) -> datetime:
         if value is None or (isinstance(value, str) and value.strip() == ""):
             return None
         elif isinstance(value, str) and value.strip() != "":
@@ -408,16 +409,20 @@ class TestCase:
                 raise AssertionError("date column must be of format `yyyy-MM-dd` or `yyyy-MM-dd HH:mm:ss`")
             format = "%Y-%m-%d" if len(value) == len("2000-01-01") else "%Y-%m-%d %H:%M:%S"
             return datetime.strptime(value, format)
-        return datetime(*xlrd.xldate_as_tuple(value, wb.datemode))
+        return value
 
-    def parse_output(self, wb: Book, row_start_idx: int, rows: List[List[Cell]], table_column_types: TableColumnTypes):
+    def parse_output(
+        self, wb: Workbook, row_start_idx: int, rows: List[List[Cell]], table_column_types: TableColumnTypes
+    ):
         self.outputs.append(self.parse_table(wb, "OUTPUT", row_start_idx, rows, table_column_types))
 
-    def parse_input(self, wb: Book, row_start_idx: int, rows: List[List[Cell]], table_column_types: TableColumnTypes):
+    def parse_input(
+        self, wb: Workbook, row_start_idx: int, rows: List[List[Cell]], table_column_types: TableColumnTypes
+    ):
         self.inputs.append(self.parse_table(wb, "INPUT", row_start_idx, rows, table_column_types))
 
     def parse_table(
-        self, wb: Book, label: str, row_start_idx: int, rows: List[List[Cell]], table_column_types: TableColumnTypes
+        self, wb: Workbook, label: str, row_start_idx: int, rows: List[List[Cell]], table_column_types: TableColumnTypes
     ) -> TableData:
         cells = rows[0]
         if len(cells) < 2 or not cells[1].value or not str(cells[1].value).strip():
@@ -506,7 +511,7 @@ class TestCase:
 
     def _parse_table_row_values(
         self,
-        wb: Book,
+        wb: Workbook,
         table_name: str,
         columns: List[str],
         row_idx: int,
@@ -564,25 +569,25 @@ class TestDataFile:
     def __init__(self, test_data_file: str, sql_reader: SqlReader, backend: str = "spark"):
         self.test_data_file = test_data_file
         self.sql_reader = sql_reader
-        self.wb = open_workbook(self.test_data_file)
+        self.wb = openpyxl.load_workbook(self.test_data_file)
         self.backend = backend
 
     def parse_test_cases(self, table_column_types: TableColumnTypes) -> List[TestCase]:
         wb = self.wb
         test_cases = []
-        for sheet_name in wb.sheet_names():
+        for sheet_name in wb.sheetnames:
             if not sheet_name.lower().startswith("suit"):
                 continue
-            for case in self.parse_test_cases_from_sheet(wb.sheet_by_name(sheet_name), table_column_types):
+            for case in self.parse_test_cases_from_sheet(wb[sheet_name], table_column_types):
                 test_cases.append(case)
         return test_cases
 
-    def parse_test_cases_from_sheet(self, sheet: Sheet, table_column_types: TableColumnTypes) -> List[TestCase]:
+    def parse_test_cases_from_sheet(self, sheet: Worksheet, table_column_types: TableColumnTypes) -> List[TestCase]:
         cases = []
         last_row_idx = -1
         cases_rows = []
         cases_start_indices = []
-        for row_idx, row in enumerate(sheet.get_rows()):
+        for row_idx, row in enumerate(sheet.rows):
             cells = list(row)
             if cells[0].value and cells[0].value.strip() == "CASE":
                 if last_row_idx == -1:

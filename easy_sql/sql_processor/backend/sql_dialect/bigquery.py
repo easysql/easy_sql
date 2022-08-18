@@ -180,6 +180,9 @@ class BqSqlDialect(SqlDialect):
                 f" '{partitions[0].value}';"
             )
 
+    def create_table_like_sql(self, target_table_name: str, source_table_name: str, partitions: List[Partition]) -> str:
+        return f"create table {target_table_name} like {source_table_name}"
+
     @staticmethod
     def transaction(statement: str) -> str:
         return f"BEGIN TRANSACTION;\n{statement}\nCOMMIT TRANSACTION;"
