@@ -146,24 +146,24 @@ class BqSqlDialect(SqlDialect):
 
     def insert_pt_metadata_sql(self, table_name: str, partitions: List[Partition]) -> str:
         if len(partitions) == 0:
-            return ''
+            return ""
         elif len(partitions) > 1:
-            raise SqlProcessorAssertionError('BigQuery only supports single-column partitioning.')
+            raise SqlProcessorAssertionError("BigQuery only supports single-column partitioning.")
         else:
             if not self.contains_db(table_name):
                 raise SqlProcessorAssertionError("BigQuery table must be qualified with a dataset.")
-            db, pure_table_name = tuple(table_name.split('.'))
+            db, pure_table_name = tuple(table_name.split("."))
             return f"insert into {db}.__table_partitions__ values ('{pure_table_name}', '{partitions[0].value}', CURRENT_TIMESTAMP());"
 
     def delete_pt_metadata_sql(self, table_name: str, partitions: List[Partition]) -> str:
         if len(partitions) == 0:
-            return ''
+            return ""
         elif len(partitions) > 1:
-            raise SqlProcessorAssertionError('BigQuery only supports single-column partitioning.')
+            raise SqlProcessorAssertionError("BigQuery only supports single-column partitioning.")
         else:
             if not self.contains_db(table_name):
                 raise SqlProcessorAssertionError("BigQuery table must be qualified with a dataset.")
-            db, pure_table_name = tuple(table_name.split('.'))
+            db, pure_table_name = tuple(table_name.split("."))
             return f"delete {db}.__table_partitions__ where table_name = '{pure_table_name}' and partition_value = '{partitions[0].value}';"
 
     def create_table_like_sql(self, target_table_name: str, source_table_name: str, partitions: List[Partition]) -> str:
