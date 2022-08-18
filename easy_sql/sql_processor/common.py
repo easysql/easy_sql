@@ -13,6 +13,10 @@ def _exec_sql(spark: SparkSession, sql: str) -> DataFrame:
     return spark.sql(sql)
 
 
+def is_int_type(type_name):
+    return any([type_name.startswith(t) for t in ["integer", "long", "decimal", "short"]])
+
+
 class Column:
     def __init__(self, name: str, value: Any):
         self.name, self.value = name, value

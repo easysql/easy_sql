@@ -3,15 +3,12 @@ import os
 from typing import List
 
 from .backend.rdb import RdbBackend
+from .common import is_int_type
 from .funcs_common import AlertFunc, ColumnFuncs
 from .funcs_common import PartitionFuncs as PartitionFuncsBase
 from .funcs_common import TableFuncs
 
 __all__ = ["PartitionFuncs", "ColumnFuncs", "AlertFunc", "TableFuncs", "ModelFuncs"]
-
-
-def is_int_type(type_name):
-    any([type_name.startswith(t) for t in ["integer", "long", "decimal", "short"]])
 
 
 class ModelFuncs:

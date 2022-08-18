@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from easy_sql.sql_processor.context import ProcessorContext
 
 from .backend import SparkBackend
-from .common import SqlProcessorAssertionError, _exec_sql
+from .common import SqlProcessorAssertionError, _exec_sql, is_int_type
 from .funcs_common import AlertFunc, ColumnFuncs
 from .funcs_common import PartitionFuncs as PartitionFuncsBase
 from .funcs_common import TableFuncs
@@ -147,9 +147,6 @@ class ModelFuncs:
         output_ref_cols = [col.strip() for col in output_ref_cols.split(",") if col.strip()]
         model = PipelineModel.load(model_save_path)
         data = _exec_sql(self.spark, f"select {feature_cols} from {table_name}")
-
-        def is_int_type(type_name):
-            any([type_name.startswith(t) for t in ["integer", "long", "decimal", "short"]])
 
         int_cols = [f.name for f in data.schema.fields if is_int_type(f.dataType.typeName())]
         for col in int_cols:
