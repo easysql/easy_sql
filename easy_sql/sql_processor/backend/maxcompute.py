@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 import time
 from enum import Enum
 from random import random
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 
 from ...logger import logger
-from .base import *
+from .base import Backend, Row, SaveMode, Table
+
+if TYPE_CHECKING:
+    from .base import TableMeta
 
 # TODO: SqlExpr should be a common class
 from .rdb import SqlExpr
@@ -65,7 +70,7 @@ class MaxComputeRow(Row):
 
 
 class MaxComputeTable(Table):
-    def __init__(self, backend: "MaxComputeBackend", sql: str, table_name: str = None):
+    def __init__(self, backend: MaxComputeBackend, sql: str, table_name: str = None):
         self.sql = sql
         self.backend = backend
         # TODO: consider and the job id, for batch delete views
@@ -96,7 +101,7 @@ class MaxComputeTable(Table):
         return table
 
     def is_empty(self) -> bool:
-        return 0 == self.count()
+        return self.count() == 0
 
     def field_names(self) -> List[str]:
         return self.schema.names
@@ -104,7 +109,7 @@ class MaxComputeTable(Table):
     def field_types(self) -> List[str]:
         return self.schema.types
 
-    def first(self) -> "MaxComputeRow":
+    def first(self) -> MaxComputeRow:
         import numpy
 
         row = [x.values for x in self.df.head(1)]
@@ -112,14 +117,14 @@ class MaxComputeTable(Table):
         value = [bool(v) if isinstance(v, numpy.bool_) else v for v in value]
         return MaxComputeRow(schema=self.schema, values=tuple(value))
 
-    def limit(self, count: int) -> "MaxComputeTable":
+    def limit(self, count: int) -> MaxComputeTable:
         return MaxComputeTable(self.backend, f"select * from {self.table_name} limit {count}")
 
-    def with_column(self, name: str, value: any) -> "MaxComputeTable":
+    def with_column(self, name: str, value: any) -> MaxComputeTable:
         value_expr = self.backend.sql_expr.for_value(value).replace("''", "'")
         return MaxComputeTable(self.backend, f"select *, {value_expr} as {name} from {self.table_name}")
 
-    def collect(self, count: int = 1000) -> List["Row"]:
+    def collect(self, count: int = 1000) -> List[Row]:
         return [MaxComputeRow(schema=self.schema, values=tuple(r.values)) for r in self.df.head(count)]
 
     def show(self, count: int = 20):
@@ -215,7 +220,7 @@ class MaxComputeBackend(Backend):
         logger.info(f"will exec sql: {sql}")
         return self.conn.execute_sql(sql)
 
-    def exec_sql(self, sql: str) -> "MaxComputeTable":
+    def exec_sql(self, sql: str) -> MaxComputeTable:
         # TODO: extract all temp table names and replace as the mapped temp view name
         return MaxComputeTable(self, sql)
 
@@ -241,32 +246,32 @@ class MaxComputeBackend(Backend):
     def clear_temp_tables(self, exclude: List[str] = None):
         self._clear_temp_views(exclude)
 
-    def create_temp_table(self, table: "MaxComputeTable", name: str):
+    def create_temp_table(self, table: MaxComputeTable, name: str):
         logger.info(f"create_temp_table with: table={table}, name={name}")
         self.conn.execute_sql(f"create or replace view {name} as select * from {table.table_name}")
         self.append_temp_view(name)
 
-    def create_cache_table(self, table: "MaxComputeTable", name: str):
+    def create_cache_table(self, table: MaxComputeTable, name: str):
         logger.info(f"create_cache_table with: table={table}, name={name}")
         self.conn.execute_sql(f"create or replace view {name} as select * from {table.table_name}")
         self.append_temp_view(name)
 
-    def broadcast_table(self, table: "MaxComputeTable", name: str):
+    def broadcast_table(self, table: MaxComputeTable, name: str):
         logger.info(f"broadcast_table with: table={table}, name={name}")
         self.conn.execute_sql(f"create or replace view {name} as select * from {table.table_name}")
         self.append_temp_view(name)
 
-    def table_exists(self, table: "TableMeta"):
+    def table_exists(self, table: TableMeta):
         return self.conn.exist_table(table.table_name)
 
-    def refresh_table_partitions(self, table: "TableMeta"):
+    def refresh_table_partitions(self, table: TableMeta):
         pass
 
     def save_table(
         self,
-        source_table_meta: "TableMeta",
-        target_table_meta: "TableMeta",
-        save_mode: "SaveMode",
+        source_table_meta: TableMeta,
+        target_table_meta: TableMeta,
+        save_mode: SaveMode,
         create_target_table: bool,
     ):
         logger.info(
