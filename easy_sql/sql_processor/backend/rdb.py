@@ -723,28 +723,34 @@ class RdbBackend(Backend):
         for v in values:
             _exec_sql(self.conn, stmt, **dict([(col, _v) for _v, col in zip(v, cols)]))
 
-    def _overwrite(self, source_table: str, target_table: str, original_source_table: 'TableMeta'):
+    def _overwrite(
+        self, source_table: str, target_table: str, original_source_table: "TableMeta", target_cols: List[Dict]
+    ):
         col_names = ", ".join([col["name"] for col in target_cols])
         full_target_table_name = target_table.get_full_table_name(self.temp_schema)
         # write data to temp table to support the case when read from and write to the same table
-        temp_table_name = f'{full_target_table_name}__temp'
+        temp_table_name = f"{full_target_table_name}__temp"
         _exec_sql(self.conn, self.sql_dialect.drop_table_sql(temp_table_name))
         if self.table_exists(target_table):
-            _exec_sql(self.conn, self.sql_dialect.create_table_like_sql(temp_table_name, target_table.table_name,
-                                                                        target_table.partitions))
+            _exec_sql(
+                self.conn,
+                self.sql_dialect.create_table_like_sql(
+                    temp_table_name, target_table.table_name, target_table.partitions
+                ),
+            )
         RdbTable.from_table_meta(self, source_table).save_to_table(target_table.clone_with_name(temp_table_name))
         if original_source_table.has_partitions():
             save_partitions = self._get_save_partitions(original_source_table, source_table, target_table)
             for save_partition in save_partitions:
                 _exec_sql(self.conn, self.sql_dialect.delete_partition_sql(target_table.table_name, save_partition))
                 if not self.sql_dialect.create_partition_automatically():
-                    _exec_sql(
-                        self.conn, self.sql_dialect.create_partition_sql(full_target_table_name, save_partition)
-                    )
+                    _exec_sql(self.conn, self.sql_dialect.create_partition_sql(full_target_table_name, save_partition))
 
                 if self.sql_dialect.support_move_individual_partition():
-                    _exec_sql(self.conn,
-                              self.sql_dialect.move_data_sql(full_target_table_name, temp_table_name, save_partition))
+                    _exec_sql(
+                        self.conn,
+                        self.sql_dialect.move_data_sql(full_target_table_name, temp_table_name, save_partition),
+                    )
                 else:
                     filter_expr = " and ".join(
                         [f"{pt.field} = {self.sql_expr.for_value(pt.value)}" for pt in save_partition]
@@ -754,7 +760,7 @@ class RdbBackend(Backend):
                         self.sql_dialect.insert_data_sql(
                             full_target_table_name,
                             col_names,
-                            f'select {col_names} from {temp_table_name} where {filter_expr}',
+                            f"select {col_names} from {temp_table_name} where {filter_expr}",
                             save_partition,
                         ),
                     )
@@ -763,7 +769,9 @@ class RdbBackend(Backend):
             _exec_sql(self.conn, self.sql_dialect.drop_table_sql(full_target_table_name))
             _exec_sql(self.conn, self.sql_dialect.rename_table_sql(temp_table_name, full_target_table_name))
 
-    def _append(self,  source_table: str, target_table: str, original_source_table: 'TableMeta') -> None:
+    def _append(
+        self, source_table: str, target_table: str, original_source_table: "TableMeta", target_cols: List[Dict]
+    ) -> None:
         col_names = ", ".join([col["name"] for col in target_cols])
         full_target_table_name = target_table.get_full_table_name(self.temp_schema)
         if original_source_table.has_partitions():
@@ -782,7 +790,7 @@ class RdbBackend(Backend):
                     self.sql_dialect.insert_data_sql(
                         full_target_table_name,
                         col_names,
-                        f'select {col_names} from {source_table.get_full_table_name(self.temp_schema)} where {filter_expr}',
+                        f"select {col_names} from {source_table.get_full_table_name(self.temp_schema)} where {filter_expr}",
                         save_partition,
                     ),
                 )
@@ -792,7 +800,7 @@ class RdbBackend(Backend):
                 self.sql_dialect.insert_data_sql(
                     full_target_table_name,
                     col_names,
-                    f'select {col_names} from {source_table.get_full_table_name(self.temp_schema)}',
+                    f"select {col_names} from {source_table.get_full_table_name(self.temp_schema)}",
                     [],
                 ),
             )
