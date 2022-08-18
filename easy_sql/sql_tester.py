@@ -30,12 +30,12 @@ def log_debug(msg: str):
 
 class TableData:
     def __init__(
-            self,
-            name: str,
-            columns: List[str],
-            column_types: List[str],
-            values: List[List[Any]],
-            value_descriptions: List[str],
+        self,
+        name: str,
+        columns: List[str],
+        column_types: List[str],
+        values: List[List[Any]],
+        value_descriptions: List[str],
     ):
         self.name, self.columns, self.column_types, self.values, self.value_descriptions = (
             name,
@@ -107,7 +107,7 @@ work_path = WorkPath()
 
 class TableColumnTypes:
     def __init__(
-            self, predefined_table_col_types: Dict[str, Dict[str, str]], partition_col_types: Dict[str, str], backend: str
+        self, predefined_table_col_types: Dict[str, Dict[str, str]], partition_col_types: Dict[str, str], backend: str
     ):
         self.table_col_types = predefined_table_col_types
         assert set(partition_col_types.values()).issubset(
@@ -131,7 +131,7 @@ class TableColumnTypes:
         return self.table_col_types[table_name][col_name].lower().strip()
 
     def column_types_to_schema(
-            self, backend: Backend, columns: List[str], types: List[str]
+        self, backend: Backend, columns: List[str], types: List[str]
     ) -> Union["StructType", List[Col]]:
         if isinstance(backend, SparkBackend):
             return self.column_types_to_schema_spark(backend.spark, columns, types)
@@ -199,7 +199,7 @@ class TableColumnTypes:
         return StructType(fields)
 
     def cast_as_type(
-            self, table_name: str, col_name: str, col_value: Any, date_converter: Callable = None, col_type: str = None
+        self, table_name: str, col_name: str, col_value: Any, date_converter: Callable = None, col_type: str = None
     ) -> Tuple[str, Any]:
         col_type = self.get_col_type(table_name, col_name) if col_type is None else col_type
         if self.backend == "clickhouse":
@@ -496,15 +496,15 @@ class TestCase:
         return False
 
     def _parse_table_row_values(
-            self,
-            wb: Workbook,
-            table_name: str,
-            columns: List[str],
-            row_idx: int,
-            row_start_idx: int,
-            value_cells: List[Cell],
-            column_types: List[str],
-            table_column_types: TableColumnTypes,
+        self,
+        wb: Workbook,
+        table_name: str,
+        columns: List[str],
+        row_idx: int,
+        row_start_idx: int,
+        value_cells: List[Cell],
+        column_types: List[str],
+        table_column_types: TableColumnTypes,
     ):
         row_values = []
         for col_idx in range(len(columns)):
@@ -588,7 +588,7 @@ class TestDataFile:
         return cases
 
     def parse_test_case(
-            self, case_start_idx: int, case_rows: List[List[Cell]], table_column_types: TableColumnTypes
+        self, case_start_idx: int, case_rows: List[List[Cell]], table_column_types: TableColumnTypes
     ) -> TestCase:
         if self.backend == "clickhouse":
             default_col_type = "String"
@@ -614,7 +614,7 @@ class TestDataFile:
                         case_start_idx + last_label_idx,
                         case_rows[last_label_idx:i],
                         table_column_types,
-                        )
+                    )
                 last_label, last_label_idx = label, i
         if last_label:
             case.parse_test_case_of_label(
@@ -678,13 +678,13 @@ class TestResult:
 
 class TestCaseRunner:
     def __init__(
-            self,
-            env: str,
-            dry_run: bool,
-            backend_creator: Callable,
-            table_column_types: TableColumnTypes,
-            unit_test_case: unittest.TestCase,
-            sql_processor_creator: Callable,
+        self,
+        env: str,
+        dry_run: bool,
+        backend_creator: Callable,
+        table_column_types: TableColumnTypes,
+        unit_test_case: unittest.TestCase,
+        sql_processor_creator: Callable,
     ):
         self.unit_test_case = unit_test_case or unittest.TestCase()
         self.env, self.dry_run, self.backend_creator = env, dry_run, backend_creator
@@ -801,25 +801,25 @@ class TestCaseRunner:
                 import re
 
                 if not re.match(
-                        r"[\s\S]*Permission bigquery.datasets.delete denied on dataset[\s\S]*(or it may not exist)[\s\S]*",
-                        str(e.args[0]),
+                    r"[\s\S]*Permission bigquery.datasets.delete denied on dataset[\s\S]*(or it may not exist)[\s\S]*",
+                    str(e.args[0]),
                 ):
                     raise e
 
 
 class SqlTester:
     def __init__(
-            self,
-            backend_creator: Callable[[TestCase], Backend] = None,
-            table_column_types: TableColumnTypes = None,
-            sql_reader_creator: Callable[[], "SqlReader"] = None,
-            sql_processor_creator: Callable[[Backend, str, TestCase], SqlProcessor] = None,
-            unit_test_case: unittest.TestCase = None,
-            dry_run: bool = True,
-            env: str = "test",
-            work_dir: str = None,
-            backend: str = None,
-            scala_udf_initializer: str = None,
+        self,
+        backend_creator: Callable[[TestCase], Backend] = None,
+        table_column_types: TableColumnTypes = None,
+        sql_reader_creator: Callable[[], "SqlReader"] = None,
+        sql_processor_creator: Callable[[Backend, str, TestCase], SqlProcessor] = None,
+        unit_test_case: unittest.TestCase = None,
+        dry_run: bool = True,
+        env: str = "test",
+        work_dir: str = None,
+        backend: str = None,
+        scala_udf_initializer: str = None,
     ):
         if work_dir is not None:
             work_path.set_work_path(os.path.abspath(work_dir))
