@@ -50,7 +50,7 @@ class ChSqlDialect(SqlDialect):
     def get_tables_sql(self, db: str) -> str:
         return f"show tables in {db}"
 
-    def get_schemas_sql(self) -> str:
+    def get_dbs_sql(self) -> str:
         return "show databases"
 
     def create_table_sql(self, table_name: str, select_sql: str):

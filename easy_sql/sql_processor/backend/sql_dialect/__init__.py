@@ -119,7 +119,7 @@ class SqlDialect:
     def get_tables_sql(self, db) -> str:
         raise NotImplementedError()
 
-    def get_schemas_sql(self) -> str:
+    def get_dbs_sql(self) -> str:
         raise NotImplementedError()
 
     def create_table_sql(self, table_name: str, select_sql: str) -> str:
