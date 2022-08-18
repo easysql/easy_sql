@@ -67,7 +67,7 @@ class SqlProcessorReporter(ReportCollector):
 
     def init(self, steps: List[Step]):
         self._steps = steps
-        self.step_reports: [str, StepReport] = dict([(step.id, StepReport(step)) for step in steps])
+        self.step_reports: dict[str, StepReport] = {step.id: StepReport(step) for step in steps}
 
     def collect_report(self, step: Step, status: str = None, message: str = None):
         report = self.step_reports[step.id]
