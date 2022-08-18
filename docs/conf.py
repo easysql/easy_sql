@@ -57,7 +57,8 @@ autoapi_options = [
     "show-module-summary",
     "members",
     "undoc-members",
-    "imported-members" "show-inheritance",
+    "imported-members",
+    "show-inheritance",
     "show-inheritance-diagram",
 ]
 autoapi_member_order = "groupwise"

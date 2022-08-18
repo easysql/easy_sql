@@ -1,8 +1,13 @@
-from typing import Callable, Dict, List, Tuple, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Callable, Dict, List, Tuple, Union
 
 from easy_sql.sql_processor.backend.sql_dialect import SqlDialect
 
-from ..base import Partition
+if TYPE_CHECKING:
+    from sqlalchemy.engine import ResultProxy
+
+    from ..base import Partition
 
 __all__ = ["PgSqlDialect"]
 
@@ -60,7 +65,7 @@ class PgSqlDialect(SqlDialect):
         )
 
     def get_dbs_sql(self) -> str:
-        return f"select schemaname from pg_catalog.pg_tables union " f"select schemaname FROM pg_catalog.pg_views"
+        return "select schemaname from pg_catalog.pg_tables union select schemaname FROM pg_catalog.pg_views"
 
     def create_table_sql(self, table_name: str, select_sql: str) -> str:
         return f"create table {table_name} as {select_sql}"
@@ -79,9 +84,7 @@ class PgSqlDialect(SqlDialect):
         partition = PostgrePartition(partitions[0].field, partitions[0].value)
         return f"drop table if exists {partition.partition_table_name(table_name)}"
 
-    def native_partitions_sql(
-        self, table_name: str
-    ) -> Tuple[str, Callable[["sqlalchemy.engine.ResultProxy"], List[str]]]:
+    def native_partitions_sql(self, table_name: str) -> Tuple[str, Callable[[ResultProxy], List[str]]]:
         if "." not in table_name:
             raise SqlProcessorAssertionError(
                 "table name must be of format {DB}.{TABLE} when query native partitions, found: " + table_name
@@ -96,7 +99,7 @@ class PgSqlDialect(SqlDialect):
         """
         return sql, self.extract_partition_cols
 
-    def extract_partition_cols(self, native_partitions_sql_result: "sqlalchemy.engine.ResultProxy") -> List[str]:
+    def extract_partition_cols(self, native_partitions_sql_result: ResultProxy) -> List[str]:
         partition_values = [v[0] for v in native_partitions_sql_result.fetchall()]
         if not partition_values:
             raise Exception("no partition values found, table may not exist")
@@ -160,12 +163,13 @@ class PgSqlDialect(SqlDialect):
                 f"create table {temp_table_name} (like {target_table_name} including defaults including constraints)"
             )
             sqls.append(
-                f"alter table {temp_table_name} add constraint p "
-                f"check ({partition.field_name} >= {partition.value_expr} and {partition.field_name} < {partition.value_next_expr})"
+                f"alter table {temp_table_name} add constraint p check ({partition.field_name} >="
+                f" {partition.value_expr} and {partition.field_name} < {partition.value_next_expr})"
             )
             filter_expr = f"{partition.field_name} = {partition.value_expr}"
             sqls.append(
-                f"insert into {temp_table_name}({col_names_expr}) select {col_names_expr} from {source_table_name} where {filter_expr}"
+                f"insert into {temp_table_name}({col_names_expr}) select {col_names_expr} from"
+                f" {source_table_name} where {filter_expr}"
             )
             sqls.append(f"drop table if exists {partition_table_name}")
             sqls.append(
@@ -211,7 +215,4 @@ class PgSqlDialect(SqlDialect):
             )
         else:
             partition_expr = f"partition by range({partitions[0].field})"
-            return (
-                f"create table {target_table_name} (like {source_table_name} including constraints) "
-                f"{partition_expr}"
-            )
+            return f"create table {target_table_name} (like {source_table_name} including constraints) {partition_expr}"

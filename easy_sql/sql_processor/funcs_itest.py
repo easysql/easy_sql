@@ -1,5 +1,6 @@
 import json
 import unittest
+from pathlib import Path
 from typing import Tuple
 
 from easy_sql.base_test import TEST_CH_URL, TEST_PG_URL
@@ -69,8 +70,9 @@ class FuncsRdbTest(unittest.TestCase):
         iof.write_csv("tc", "file:///tmp/easysql-ut/test_write_csv")
         iof.rename_csv_output("file:///tmp/easysql-ut/test_write_csv", "/tmp/easysql-ut/test_write.csv")
         iof.write_json_local("tc", "/tmp/easysql-ut/test_write.json")
-        self.assertEqual(len(json.loads(open("/tmp/easysql-ut/test_write.json").read())), 2)
-        json.dump({"a": "0"}, open("/tmp/easysql-ut/test_write.json", "w"))
+        self.assertEqual(len(json.loads(Path("/tmp/easysql-ut/test_write.json").read_text())), 2)
+        with open("/tmp/easysql-ut/test_write.json", "w") as test_write_file:
+            json.dump({"a": "0"}, test_write_file)
         iof.update_json_local(
             ProcessorContext(VarsContext({"a": 1}, {"b": [1, 2]}), TemplatesContext()),
             "a,",
@@ -78,8 +80,8 @@ class FuncsRdbTest(unittest.TestCase):
             "",
             "/tmp/easysql-ut/test_write.json",
         )
-        self.assertEqual(json.loads(open("/tmp/easysql-ut/test_write.json").read())["a"], 1)
-        self.assertEqual(json.loads(open("/tmp/easysql-ut/test_write.json").read())["b"], [1, 2])
+        self.assertEqual(json.loads(Path("/tmp/easysql-ut/test_write.json").read_text())["a"], 1)
+        self.assertEqual(json.loads(Path("/tmp/easysql-ut/test_write.json").read_text())["b"], [1, 2])
         iof.update_json_local(
             ProcessorContext(VarsContext({"a": 2}, {"b": [1, 2]}), TemplatesContext()),
             "a,",
@@ -87,7 +89,7 @@ class FuncsRdbTest(unittest.TestCase):
             "c.d",
             "/tmp/easysql-ut/test_write.json",
         )
-        self.assertEqual(json.loads(open("/tmp/easysql-ut/test_write.json").read())["c"]["d"]["a"], 2)
+        self.assertEqual(json.loads(Path("/tmp/easysql-ut/test_write.json").read_text())["c"]["d"]["a"], 2)
 
     def run_test(self, backend: Backend, types: Tuple[str, str, str]):
         try:
@@ -111,7 +113,7 @@ class FuncsRdbTest(unittest.TestCase):
         pf = PartitionFuncs(backend) if isinstance(backend, RdbBackend) else SparkPartitionFuncs(backend)
 
         class _ReportCollector(ReportCollector):
-            def collect_report(self, step: "Step", status: str = None, message: str = None):
+            def collect_report(self, step: Step, status: str = None, message: str = None):
                 pass
 
         step = Step("1", _ReportCollector(), FuncRunner({"bool": lambda x: x == "1"}), select_sql="select 0 as a")

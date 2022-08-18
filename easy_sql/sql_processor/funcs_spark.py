@@ -1,11 +1,16 @@
+from __future__ import annotations
+
 import json
 import os
-from typing import Dict, List, Union
+from typing import TYPE_CHECKING, Dict, List, Union
 
-from pyspark.sql import SparkSession
+if TYPE_CHECKING:
+    from pyspark.sql import DataFrame, SparkSession
+    from pyspark.sql.types import Row
+    from easy_sql.sql_processor.context import ProcessorContext
 
 from .backend import SparkBackend
-from .common import SqlProcessorAssertionError, _exec_sql
+from .common import SqlProcessorAssertionError, _exec_sql, is_int_type
 from .funcs_common import AlertFunc, ColumnFuncs
 from .funcs_common import PartitionFuncs as PartitionFuncsBase
 from .funcs_common import TableFuncs
@@ -96,9 +101,6 @@ class IOFuncs:
         )
 
     def write_json_local(self, table: str, output_file: str):
-        from pyspark.sql import DataFrame
-        from pyspark.sql.types import Row
-
         data: DataFrame = _exec_sql(self.spark, f"select * from {table}")
         data: List[Row] = data.collect()
         data: List[Dict] = [row.asDict() for row in data]
@@ -107,19 +109,15 @@ class IOFuncs:
             f.write(json.dumps(data, ensure_ascii=False, indent=4, sort_keys=False))
 
     def update_json_local(self, context, vars: str, list_vars: str, json_attr: str, output_file: str):
-        from easy_sql.sql_processor.context import ProcessorContext
-
         context: ProcessorContext = context
-        vars_value = dict(
-            [(var.strip(), context.vars_context.vars.get(var.strip(), None)) for var in vars.split(",") if var.strip()]
-        )
-        list_vars_value = dict(
-            [
-                (var.strip(), context.vars_context.list_vars.get(var.strip(), None))
-                for var in list_vars.split(",")
-                if var.strip()
-            ]
-        )
+        vars_value = {
+            var.strip(): context.vars_context.vars.get(var.strip(), None) for var in vars.split(",") if var.strip()
+        }
+        list_vars_value = {
+            var.strip(): context.vars_context.list_vars.get(var.strip(), None)
+            for var in list_vars.split(",")
+            if var.strip()
+        }
 
         data = {}
         if os.path.exists(output_file):
@@ -150,7 +148,6 @@ class ModelFuncs:
         model = PipelineModel.load(model_save_path)
         data = _exec_sql(self.spark, f"select {feature_cols} from {table_name}")
 
-        is_int_type = lambda type_name: any([type_name.startswith(t) for t in ["integer", "long", "decimal", "short"]])
         int_cols = [f.name for f in data.schema.fields if is_int_type(f.dataType.typeName())]
         for col in int_cols:
             data = data.withColumn(col, expr(f"cast({col} as double)"))

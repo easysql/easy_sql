@@ -48,7 +48,9 @@ def get_spark(app_name: str, conf: Dict = None):
         spark.conf.set("spark.shuffle.service.enabled", "true")
 
     # spark.conf.set("hive.exec.dynamic.partition", "true")
-    # default strict. In strict mode, the user must specify at least one static partition in case the user accidentally overwrites all partitions. In nonstrict mode all partitions are allowed to be dynamic.
+    # default strict. In strict mode, the user must specify at least one static partition,
+    # in case the user accidentally overwrites all partitions.
+    # In nonstrict mode all partitions are allowed to be dynamic.
     spark.conf.set("hive.exec.dynamic.partition.mode", "nonstrict")
 
     return spark

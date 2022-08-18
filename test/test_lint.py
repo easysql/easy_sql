@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 
-from easy_sql.sql_processor.backend.rdb import RdbBackend, SqlExpr, _exec_sql
+from easy_sql.sql_processor.backend.rdb import RdbBackend, SqlExpr
 from easy_sql.sql_processor.sql_processor import SqlProcessor
 
 partition_col_converter = (

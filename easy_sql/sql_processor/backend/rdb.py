@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 import time
 from datetime import datetime
@@ -18,7 +20,10 @@ from ...udf import udfs
 from .base import Col
 
 if TYPE_CHECKING:
-    import sqlalchemy
+    from sqlalchemy.engine import ResultProxy
+    from sqlalchemy.engine.base import Connection, Engine
+    from sqlalchemy.engine.reflection import Inspector
+    from sqlalchemy.sql.elements import TextClause
 
 
 class TimeLog:
@@ -38,10 +43,7 @@ class TimeLog:
         logger.info(self.end_log_tpl.format(time_took=time_took))
 
 
-def _exec_sql(
-    conn, sql: Union[str, "sqlalchemy.sql.elements.TextClause", List[str]], *args, **kwargs
-) -> "sqlalchemy.engine.ResultProxy":
-    from sqlalchemy.engine.base import Connection
+def _exec_sql(conn, sql: Union[str, TextClause, List[str]], *args, **kwargs) -> ResultProxy:
     from sqlalchemy.sql.elements import TextClause
 
     conn: Connection = conn
@@ -85,8 +87,8 @@ class RdbTable(Table):
                 else:
                     if pt.value is not None:
                         logger.warning(
-                            f"partition column already exists in table {table_meta.table_name}, "
-                            f"but right now we provided a new value {pt.value} for partition column {pt.field}. Will ignore it."
+                            f"partition column already exists in table {table_meta.table_name}, but right now we"
+                            f" provided a new value {pt.value} for partition column {pt.field}. Will ignore it."
                         )
         return table
 
@@ -133,7 +135,10 @@ class RdbTable(Table):
                         temp_table_name = f"{prefix}_newcol_{name[:30]}_source"
                         self._exec_sql(self.db_config.create_view_sql(temp_table_name, self.sql))
                         field_names = self._field_names(f"{self.backend.temp_schema}.{temp_table_name}")
-                        select_sql = f'select {", ".join(field_names)}, {value} as {name} from {self.backend.temp_schema}.{temp_table_name}'
+                        select_sql = (
+                            f'select {", ".join(field_names)}, {value} as {name} from'
+                            f" {self.backend.temp_schema}.{temp_table_name}"
+                        )
 
                     self._exec_sql(self.db_config.create_view_sql(newcol_table_name, select_sql))
                     self.sql = f"select * from {self.backend.temp_schema}.{newcol_table_name}"
@@ -155,17 +160,14 @@ class RdbTable(Table):
         return self._field_names(f"{self.backend.temp_schema}.{field_names_result_table_name}")
 
     def _field_names(self, table_name: str) -> List[str]:
-        from sqlalchemy.engine import ResultProxy
-
         result: ResultProxy = self._exec_sql(f"select * from {table_name} limit 0")
         result.close()
         return list(result.keys())
 
-    def first(self) -> "RdbRow":
+    def first(self) -> RdbRow:
         all_action_are_limit = all([action[0] == "limit" for action in self._actions])
         if all_action_are_limit:
             min_limit = min([action[1] for action in self._actions]) if len(self._actions) > 0 else 1
-            from sqlalchemy.engine import ResultProxy
 
             result: ResultProxy = self._exec_sql(self.sql)
             if min_limit <= 0:
@@ -177,7 +179,6 @@ class RdbTable(Table):
             return RdbRow(list(result.keys()), row)
 
         self._execute_actions()
-        from sqlalchemy.engine import ResultProxy
 
         result: ResultProxy = self._exec_sql(self.sql)
         with TimeLog(
@@ -186,18 +187,17 @@ class RdbTable(Table):
             row = result.first()
         return RdbRow(list(result.keys()), row)
 
-    def limit(self, count: int) -> "RdbTable":
+    def limit(self, count: int) -> RdbTable:
         return RdbTable(self.backend, self.sql, self._actions + [("limit", count)])
 
-    def with_column(self, name: str, value: any) -> "RdbTable":
+    def with_column(self, name: str, value: any) -> RdbTable:
         return RdbTable(self.backend, self.sql, self._actions + [("newcol", name, value)])
 
-    def collect(self) -> List["RdbRow"]:
+    def collect(self) -> List[RdbRow]:
         return self._collect()
 
-    def _collect(self, row_count: int = None) -> List["RdbRow"]:
+    def _collect(self, row_count: int = None) -> List[RdbRow]:
         self._execute_actions()
-        from sqlalchemy.engine import ResultProxy
 
         result: ResultProxy = self._exec_sql(self.sql)
         # collect at most 1000 rows for now
@@ -215,7 +215,8 @@ class RdbTable(Table):
                     raise e
         if row_count is None and len(rows) == max_rows:
             logger.warning(
-                f"found {max_rows} items, but there may be more, will only fetch {max_rows} items at most for sql: {self.sql}"
+                f"found {max_rows} items, but there may be more, will only fetch {max_rows} items at most for sql:"
+                f" {self.sql}"
             )
         rows = [RdbRow(list(result.keys()), row) for row in rows]
         result.close()
@@ -248,13 +249,14 @@ class RdbTable(Table):
         if temp_table_name != name:
             if "." in name:
                 raise SqlProcessorAssertionError(
-                    f"renaming should only happen in temp database, "
+                    "renaming should only happen in temp database, "
                     f"so name must be pure TABLE_NAME when renaming tables, found: {name}"
                 )
             if temp_table_name != name:
                 if self.backend.table_exists(TableMeta(name)):
                     raise SqlProcessorAssertionError(
-                        f"we are trying to replace an existing temp table, it is not supported right now. table name: {name}"
+                        "we are trying to replace an existing temp table, it is not supported right now. table name:"
+                        f" {name}"
                     )
                 self._exec_sql(
                     self.db_config.create_view_sql(name, f"select * from {self.backend.temp_schema}.{temp_table_name}")
@@ -270,8 +272,8 @@ class RdbTable(Table):
         for pt in target_table.partitions:
             if pt.field not in field_names:
                 raise Exception(
-                    f"does not found partition field `{pt.field}` in source table for target table {target_table.table_name}, "
-                    f"all fields are in source table: {field_names}"
+                    f"does not found partition field `{pt.field}` in source table for target table"
+                    f" {target_table.table_name}, all fields are in source table: {field_names}"
                 )
 
         cols = self.backend.inspector.get_columns(temp_table_name, self.backend.temp_schema)
@@ -315,7 +317,8 @@ class RdbTable(Table):
                     self.db_config.insert_data_sql(
                         target_table_name,
                         col_names,
-                        f"select {converted_col_names} from {self.backend.temp_schema}.{temp_table_name} where {filter_expr}",
+                        f"select {converted_col_names} from {self.backend.temp_schema}.{temp_table_name} where"
+                        f" {filter_expr}",
                         partitions,
                     )
                 )
@@ -347,7 +350,7 @@ class RdbRow(Row):
     def as_tuple(self):
         return self._values
 
-    def __eq__(self, other: "RdbRow"):
+    def __eq__(self, other: RdbRow):
         if (
             not isinstance(
                 other,
@@ -375,7 +378,8 @@ class RdbRow(Row):
 
 
 class RdbBackend(Backend):
-    """table_partitions_table_name; means the table name which save the static partition info for all partition tables in data warehouse,
+    """table_partitions_table_name;
+    means the table name which save the static partition info for all partition tables in data warehouse,
     for now need support backend type: [clickhouse]
     others backend has another method to manage static partition info or just support static partition"""
 
@@ -393,7 +397,6 @@ class RdbBackend(Backend):
 
     def __init_inner(self, url: str, credentials: str = None):
         from sqlalchemy import create_engine
-        from sqlalchemy.engine.base import Connection, Engine
 
         self.temp_schema = f"sp_temp_{int(time.mktime(time.gmtime()))}_{int(random() * 10000):04d}"
 
@@ -424,7 +427,7 @@ class RdbBackend(Backend):
             if len(url_raw_parts) == 4:  # db in url
                 url_raw_parts = url_raw_parts[:-1]
             elif len(url_raw_parts) == 3:  # db not in url
-                url_raw_parts = url_raw_parts
+                pass
             else:
                 raise Exception(f"unrecognized url: {url}")
             url = f'{"/".join(url_raw_parts + [self.temp_schema])}{url_params}'
@@ -453,7 +456,6 @@ class RdbBackend(Backend):
     @property
     def inspector(self):
         from sqlalchemy import inspect
-        from sqlalchemy.engine.reflection import Inspector
 
         # inspector object has cache built-in, so we should recreate the object if required
         inspector: Inspector = inspect(self.engine)
@@ -461,12 +463,12 @@ class RdbBackend(Backend):
 
     def reset(self):
         if self.conn:
-            try:
+            try:  # noqa: SIM105
                 self.conn.close()
             except Exception:
                 pass
         if self.engine:
-            try:
+            try:  # noqa: SIM105
                 self.engine.dispose()
             except Exception:
                 pass
@@ -488,7 +490,7 @@ class RdbBackend(Backend):
     def exec_native_sql(self, sql: str) -> Any:
         return _exec_sql(self.conn, sql)
 
-    def exec_sql(self, sql: str) -> "RdbTable":
+    def exec_sql(self, sql: str) -> RdbTable:
         return RdbTable(self, sql)
 
     def _tables(self, db: str) -> List[str]:
@@ -525,27 +527,27 @@ class RdbBackend(Backend):
                     else:
                         raise e
 
-    def create_temp_table(self, table: "RdbTable", name: str):
+    def create_temp_table(self, table: RdbTable, name: str):
         logger.info(f"create_temp_table with: table={table}, name={name}")
         table.save_to_temp_table(name)
 
-    def create_cache_table(self, table: "RdbTable", name: str):
+    def create_cache_table(self, table: RdbTable, name: str):
         logger.info(f"create_cache_table with: table={table}, name={name}")
         table.save_to_temp_table(name)
 
-    def broadcast_table(self, table: "RdbTable", name: str):
+    def broadcast_table(self, table: RdbTable, name: str):
         logger.info(f"broadcast_table with: table={table}, name={name}")
         table.save_to_temp_table(name)
 
     def db_exists(self, db_name: str) -> bool:
         return db_name in self._dbs()
 
-    def table_exists(self, table: "TableMeta"):
+    def table_exists(self, table: TableMeta):
         db_name, table_name = table.dbname, table.pure_table_name
         db_name = db_name or self.temp_schema
         return self.db_exists(db_name) and table_name in self._tables(db_name)
 
-    def refresh_table_partitions(self, table: "TableMeta"):
+    def refresh_table_partitions(self, table: TableMeta):
         if self.sql_dialect.support_native_partition():
             native_partitions_sql, extract_partition_cols = self.sql_dialect.native_partitions_sql(table.table_name)
             pt_cols = extract_partition_cols(_exec_sql(self.conn, native_partitions_sql))
@@ -560,7 +562,7 @@ class RdbBackend(Backend):
             pt_cols = [pt.field for pt in original_source_table.partitions]
             pt_values_list = _exec_sql(
                 self.conn,
-                f'select distinct {", ".join(pt_cols)} ' f"from {source_table.get_full_table_name(self.temp_schema)}",
+                f'select distinct {", ".join(pt_cols)} from {source_table.get_full_table_name(self.temp_schema)}',
             ).fetchall()
             for pt_values in pt_values_list:
                 save_partitions_list.append([Partition(field, value) for field, value in zip(pt_cols, pt_values)])
@@ -569,7 +571,7 @@ class RdbBackend(Backend):
         return save_partitions_list
 
     def save_table(
-        self, source_table: "TableMeta", target_table: "TableMeta", save_mode: "SaveMode", create_target_table: bool
+        self, source_table: TableMeta, target_table: TableMeta, save_mode: SaveMode, create_target_table: bool
     ):
         logger.info(
             f"save table with: source_table={source_table}, target_table={target_table}, "
@@ -676,7 +678,7 @@ class RdbBackend(Backend):
             )
 
     def create_table_with_data(
-        self, full_table_name: str, values: List[List[Any]], schema: List[Col], partitions: List["Partition"]
+        self, full_table_name: str, values: List[List[Any]], schema: List[Col], partitions: List[Partition]
     ):
         db, _ = full_table_name[: full_table_name.index(".")], full_table_name[full_table_name.index(".") + 1 :]
         _exec_sql(self.conn, self.sql_dialect.create_db_sql(db))
@@ -689,12 +691,9 @@ class RdbBackend(Backend):
         cols = [col.name for col in schema]
         pt_cols = [p.field for p in partitions]
         pt_values_list = [[row[cols.index(p)] for p in pt_cols] for row in values]
-        partitions = set(
-            [
-                tuple([Partition(field, value) for field, value in zip(pt_cols, pt_values)])
-                for pt_values in pt_values_list
-            ]
-        )
+        partitions = {
+            tuple([Partition(field, value) for field, value in zip(pt_cols, pt_values)]) for pt_values in pt_values_list
+        }
         if partitions and not self.sql_dialect.create_partition_automatically():
             for partition in partitions:
                 if partition:
@@ -704,7 +703,7 @@ class RdbBackend(Backend):
         converted_col_names = ", ".join(self.sql_dialect.convert_pt_col_expr([f":{col}" for col in cols], pt_cols))
         stmt = text(f'insert into {full_table_name} ({", ".join(cols)}) VALUES ({converted_col_names})')
         for v in values:
-            _exec_sql(self.conn, stmt, **dict([(col, _v) for _v, col in zip(v, cols)]))
+            _exec_sql(self.conn, stmt, **{col: _v for _v, col in zip(v, cols)})
 
         if partitions and not self.sql_dialect.support_static_partition():
             _exec_sql(self.conn, self.sql_dialect.create_pt_meta_table_sql(db))
@@ -722,10 +721,10 @@ class RdbBackend(Backend):
 
         stmt = text(f'insert into {table_name} ({", ".join(cols)}) VALUES ({", ".join([f":{col}" for col in cols])})')
         for v in values:
-            _exec_sql(self.conn, stmt, **dict([(col, _v) for _v, col in zip(v, cols)]))
+            _exec_sql(self.conn, stmt, **{col: _v for _v, col in zip(v, cols)})
 
     def _overwrite(
-        self, source_table: str, target_table: str, original_source_table: "TableMeta", target_cols: List[Dict]
+        self, source_table: str, target_table: str, original_source_table: TableMeta, target_cols: List[Dict]
     ):
         col_names = ", ".join([col["name"] for col in target_cols])
         full_target_table_name = target_table.get_full_table_name(self.temp_schema)
@@ -771,7 +770,7 @@ class RdbBackend(Backend):
             _exec_sql(self.conn, self.sql_dialect.rename_table_sql(temp_table_name, full_target_table_name))
 
     def _append(
-        self, source_table: str, target_table: str, original_source_table: "TableMeta", target_cols: List[Dict]
+        self, source_table: str, target_table: str, original_source_table: TableMeta, target_cols: List[Dict]
     ) -> None:
         col_names = ", ".join([col["name"] for col in target_cols])
         full_target_table_name = target_table.get_full_table_name(self.temp_schema)
@@ -791,7 +790,8 @@ class RdbBackend(Backend):
                     self.sql_dialect.insert_data_sql(
                         full_target_table_name,
                         col_names,
-                        f"select {col_names} from {source_table.get_full_table_name(self.temp_schema)} where {filter_expr}",
+                        f"select {col_names} from {source_table.get_full_table_name(self.temp_schema)} where"
+                        f" {filter_expr}",
                         save_partition,
                     ),
                 )

@@ -1,12 +1,18 @@
-from typing import Any, Callable, Dict, List, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Union
 
 from ..logger import logger
 from .backend import Backend, SparkBackend
-from .common import Column
 from .context import ProcessorContext, TemplatesContext, VarsContext
 from .funcs import FuncRunner
 from .report import SqlProcessorReporter, StepStatus
 from .step import Step, StepFactory
+
+if TYPE_CHECKING:
+    from pyspark.sql import SparkSession
+
+    from .common import Column
 
 
 def extract_funcs_from_pyfile(funcs_py_file):
@@ -16,14 +22,14 @@ def extract_funcs_from_pyfile(funcs_py_file):
 
     sys.path.insert(0, os.path.dirname(funcs_py_file))
     func_mod = importlib.import_module(os.path.basename(funcs_py_file)[:-3])
-    funcs = dict([(func, getattr(func_mod, func)) for func in dir(func_mod) if callable(getattr(func_mod, func))])
+    funcs = {func: getattr(func_mod, func) for func in dir(func_mod) if callable(getattr(func_mod, func))}
     return funcs
 
 
 class SqlProcessor:
     def __init__(
         self,
-        backend: Union["SparkSession", Backend],
+        backend: Union[SparkSession, Backend],
         sql: str,
         extra_cols: List[Column] = None,
         variables: dict = None,
@@ -59,7 +65,7 @@ class SqlProcessor:
         self.backend.init_udfs(scala_udf_initializer=scala_udf_initializer)
 
     @property
-    def variables(self) -> [str, Any]:
+    def variables(self) -> Union[str, Any]:
         return self.context.vars_context.vars
 
     @property

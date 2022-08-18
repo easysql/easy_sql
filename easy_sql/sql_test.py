@@ -19,8 +19,10 @@ def create_backend(backend: str, env: str, case: TestCase, work_path: WorkPath):
 
         custom_conf = {
             "spark.sql.warehouse.dir": f"/tmp/spark-warehouse-{env}",
-            "spark.driver.extraJavaOptions": f"-Dderby.system.home=/tmp/spark-metastore-{env} "
-            f"-Dderby.stream.error.file=/tmp/spark-metastore-{env}.log",
+            "spark.driver.extraJavaOptions": (
+                f"-Dderby.system.home=/tmp/spark-metastore-{env} "
+                f"-Dderby.stream.error.file=/tmp/spark-metastore-{env}.log"
+            ),
         }
         if case.udf_file_paths or case.func_file_paths:
             paths = case.udf_file_paths + case.func_file_paths

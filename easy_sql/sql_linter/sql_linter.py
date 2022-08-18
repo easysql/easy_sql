@@ -1,11 +1,12 @@
+from __future__ import annotations
+
 import re
-from typing import Any, Dict, List, Sequence
+from typing import TYPE_CHECKING, Any, Dict, List, Sequence
 
 import regex
 from sqlfluff.core import Lexer, Linter, Parser, SQLBaseError
 from sqlfluff.core.config import FluffConfig
 from sqlfluff.core.parser import CodeSegment, RegexLexer
-from sqlfluff.core.parser.segments import BaseSegment
 
 from easy_sql.sql_linter.rules import __all__
 from easy_sql.sql_linter.sql_linter_reportor import LintReporter
@@ -13,9 +14,12 @@ from easy_sql.sql_processor.funcs import FuncRunner
 from easy_sql.sql_processor.report import SqlProcessorReporter
 from easy_sql.sql_processor.step import Step, StepFactory
 
+if TYPE_CHECKING:
+    from sqlfluff.core.parser.segments import BaseSegment
+
 
 class SqlLinter:
-    def __init__(self, sql: str, include_rules: [str] = None, exclude_rules: [str] = None):
+    def __init__(self, sql: str, include_rules: List[str] = None, exclude_rules: List[str] = None):
         self.origin_sql = sql
         self.fixed_sql_list = []
         self.supported_backend = ["spark", "postgres", "clickhouse", "bigquery"]
@@ -78,7 +82,7 @@ class SqlLinter:
                 config["core"]["rules"] = "core"
 
     @staticmethod
-    def _update_excluded_rule_for_config(config: Dict[str, Any], rules: [str] = None):
+    def _update_excluded_rule_for_config(config: Dict[str, Any], rules: List[str] = None):
         if rules is not None:
             config["core"]["exclude_rules"] = ",".join(rules)
         else:
@@ -97,7 +101,7 @@ class SqlLinter:
         return True
 
     def _check_lexable(self, tokens: Sequence[BaseSegment]) -> bool:
-        for i, token in enumerate(tokens):
+        for _, token in enumerate(tokens):
             if token.is_type("unlexable"):
                 self.reporter.report_warning("Unlexable segment found: " + str(token.raw_segments))
                 return False

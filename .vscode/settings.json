@@ -5,7 +5,7 @@
     "python.testing.unittestArgs": [
         "-v",
         "-s",
-        "./easy_sql",
+        "./",
         "-p",
         "*test.py"
     ],

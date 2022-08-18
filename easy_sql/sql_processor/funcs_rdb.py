@@ -3,6 +3,7 @@ import os
 from typing import List
 
 from .backend.rdb import RdbBackend
+from .common import is_int_type
 from .funcs_common import AlertFunc, ColumnFuncs
 from .funcs_common import PartitionFuncs as PartitionFuncsBase
 from .funcs_common import TableFuncs
@@ -42,8 +43,10 @@ class ModelFuncs:
             "spark.hadoop.fs.AbstractFileSystem.gs.impl": "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS",
             "parentProject": "data-dev-workbench-prod-3fd9",
             "spark.sql.warehouse.dir": "/tmp/spark-warehouse-localdw",
-            "spark.driver.extraJavaOptions": "-Dderby.system.home=/tmp/spark-warehouse-metastore "
-            "-Dderby.stream.error.file=/tmp/spark-warehouse-metastore.log",
+            "spark.driver.extraJavaOptions": (
+                "-Dderby.system.home=/tmp/spark-warehouse-metastore "
+                "-Dderby.stream.error.file=/tmp/spark-warehouse-metastore.log"
+            ),
             "credentialsFile": f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-prod.json",
         }
 
@@ -67,7 +70,6 @@ class ModelFuncs:
         output_ref_cols = [col.strip() for col in output_ref_cols.split(",") if col.strip()]
         model = PipelineModel.load(model_save_path)
 
-        is_int_type = lambda type_name: any([type_name.startswith(t) for t in ["integer", "long", "decimal", "short"]])
         int_cols = [f.name for f in data.schema.fields if is_int_type(f.dataType.typeName())]
         for col in int_cols:
             data = data.withColumn(col, expr(f"cast({col} as double)"))
@@ -116,8 +118,10 @@ class ModelFuncs:
             "spark.executor.memory": "1g",
             "spark.executor.cores": "1",
             "spark.sql.warehouse.dir": "/tmp/spark-warehouse-localdw",
-            "spark.driver.extraJavaOptions": "-Dderby.system.home=/tmp/spark-warehouse-metastore "
-            "-Dderby.stream.error.file=/tmp/spark-warehouse-metastore.log",
+            "spark.driver.extraJavaOptions": (
+                "-Dderby.system.home=/tmp/spark-warehouse-metastore "
+                "-Dderby.stream.error.file=/tmp/spark-warehouse-metastore.log"
+            ),
             "spark.driver.extraClassPath": os.path.join(file_dir, "../../../deps/lib/*"),
         }
 
@@ -140,7 +144,6 @@ class ModelFuncs:
         output_ref_cols = [col.strip() for col in output_ref_cols.split(",") if col.strip()]
         model = PipelineModel.load(model_save_path)
 
-        is_int_type = lambda type_name: any([type_name.startswith(t) for t in ["integer", "long", "decimal", "short"]])
         int_cols = [f.name for f in data.schema.fields if is_int_type(f.dataType.typeName())]
         for col in int_cols:
             data = data.withColumn(col, expr(f"cast({col} as double)"))
@@ -180,8 +183,9 @@ class ModelFuncs:
             ORDER BY {id_col}"""
         else:
             msg = (
-                f'Backend of type {type(self.backend)}-{self.backend.backend_type if isinstance(self.backend, RdbBackend) else ""} '
-                f"is not supported yet"
+                "Backend of type"
+                f' {type(self.backend)}-{self.backend.backend_type if isinstance(self.backend, RdbBackend) else ""} is'
+                " not supported yet"
             )
             raise Exception(msg)
 
@@ -190,20 +194,27 @@ class PartitionFuncs(PartitionFuncsBase):
     def __check_backend(self):
         if not isinstance(self.backend, RdbBackend):
             msg = (
-                f'Backend of type {type(self.backend)}-{self.backend.backend_type if isinstance(self.backend, RdbBackend) else ""} '
-                f"is not supported yet"
+                "Backend of type"
+                f' {type(self.backend)}-{self.backend.backend_type if isinstance(self.backend, RdbBackend) else ""} is'
+                " not supported yet"
             )
             raise Exception(msg)
 
     def _get_bigquery_partition_values(self, table_name):
         db, table = self.__parse_table_name(table_name)
-        sql = f"select distinct partition_value from {db}.__table_partitions__ where table_name = '{table}' order by partition_value"
+        sql = (
+            f"select distinct partition_value from {db}.__table_partitions__ where table_name = '{table}' order by"
+            " partition_value"
+        )
         partition_values = [str(v[0]) for v in self.backend.exec_sql(sql).collect()]
         return partition_values
 
     def _get_clickhouse_partition_values(self, table_name):
         db, table = self.__parse_table_name(table_name)
-        sql = f"SELECT distinct partition_value FROM {self.backend.partitions_table_name} where db_name = '{db}' and table_name = '{table}';"
+        sql = (
+            f"SELECT distinct partition_value FROM {self.backend.partitions_table_name} where db_name = '{db}' and"
+            f" table_name = '{table}';"
+        )
         partition_values = [str(v[0]) for v in self.backend.exec_sql(sql).collect()]
         partition_values.sort()
         return partition_values
@@ -224,7 +235,7 @@ class PartitionFuncs(PartitionFuncsBase):
         """
         partition_values = [str(v[1]) for v in self.backend.exec_sql(sql).collect()]
         for p in partition_values:
-            if not p.upper().startswith("FOR VALUES FROM (") or not ") TO (" in p.upper():
+            if not p.upper().startswith("FOR VALUES FROM (") or ") TO (" not in p.upper():
                 raise Exception("unable to parse partition: " + p)
         partition_values = [v[len("FOR VALUES FROM (") : v.upper().index(") TO (")] for v in partition_values]
         partition_values = [v.strip("'") if v.startswith("'") else int(v) for v in partition_values]
@@ -241,8 +252,9 @@ class PartitionFuncs(PartitionFuncsBase):
             return self._get_bigquery_partition_values(table_name)
         else:
             msg = (
-                f'Backend of type {type(self.backend)}-{self.backend.backend_type if isinstance(self.backend, RdbBackend) else ""} '
-                f"is not supported yet"
+                "Backend of type"
+                f' {type(self.backend)}-{self.backend.backend_type if isinstance(self.backend, RdbBackend) else ""} is'
+                " not supported yet"
             )
             raise Exception(msg)
 

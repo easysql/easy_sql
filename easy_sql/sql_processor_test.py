@@ -310,7 +310,7 @@ select ${not_existed3}
         ]
         for sql in check_fail_sqls:
             processor = SqlProcessor(LocalSpark.get(), sql)
-            self.assertRaises(SqlProcessorException, lambda: processor.run())
+            self.assertRaises(SqlProcessorException, processor.run)
 
     def test_should_not_fail_and_log_no_data_when_no_data_found_in_log_target(self):
         processor = SqlProcessor(LocalSpark.get(), "-- target=log.no_data\nselect 1 as actual, 0 as expected where 1=0")
@@ -387,7 +387,7 @@ class FuncRunnerTest(unittest.TestCase):
             "pt"
         ).saveAsTable("data_table1")
         # failure case1: 被检测表是空的
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             processor = SqlProcessor(
                 spark, "-- target=check.ensure_dwd_partition_exists(${__step__}, empty_table, 20210101)", [], {}
             )
@@ -395,7 +395,7 @@ class FuncRunnerTest(unittest.TestCase):
         self.assertIn("partition 20210101 not exists: empty_table", processor.reporter.step_reports["step-1"].messages)
 
         # failure case2: 检测分区在被检测表中确实不存在
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             processor = SqlProcessor(
                 spark, "-- target=check.ensure_dwd_partition_exists(${__step__}, data_table, 20210103)", [], {}
             )
@@ -415,7 +415,7 @@ class FuncRunnerTest(unittest.TestCase):
         processor.run(dry_run=True)
 
         # failure case: 检测分区存在，但全部外键均为空
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             processor = SqlProcessor(
                 spark,
                 "-- target=check.ensure_dwd_partition_exists(${__step__}, data_table, 20210101, fk1, fk2)",
@@ -429,7 +429,7 @@ class FuncRunnerTest(unittest.TestCase):
         )
 
         # failure case: 检测分区 < first_partition，全部外键均为空
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             processor = SqlProcessor(
                 spark,
                 "-- target=check.ensure_dwd_partition_exists(${__step__}, data_table, 20201101, fk1, fk2)",
@@ -463,7 +463,7 @@ class FuncRunnerTest(unittest.TestCase):
             "pt"
         ).saveAsTable("data_table")
         # failure case1: 被检测表是空的
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             processor = SqlProcessor(
                 spark,
                 "-- target=check.ensure_partition_or_first_partition_exists(${__step__}, empty_table, 20210101)",
@@ -476,7 +476,7 @@ class FuncRunnerTest(unittest.TestCase):
         )
 
         # failure case2: 检测分区在被检测表中确实不存在
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             processor = SqlProcessor(
                 spark,
                 "-- target=check.ensure_partition_or_first_partition_exists(${__step__}, data_table, 20210102)",
@@ -489,10 +489,11 @@ class FuncRunnerTest(unittest.TestCase):
         )
 
         # failure case3: 检测多张表，message 中应该只有检查失败的表
-        with self.assertRaises(Exception):
+        with self.assertRaises(Exception):  # noqa: B017
             processor = SqlProcessor(
                 spark,
-                "-- target=check.ensure_partition_or_first_partition_exists(${__step__}, empty_table, data_table, 20210101)",
+                "-- target=check.ensure_partition_or_first_partition_exists(${__step__}, empty_table, data_table,"
+                " 20210101)",
                 [],
                 {},
             )
