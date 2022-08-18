@@ -1,8 +1,14 @@
-from typing import Callable, Dict, List, Tuple
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Callable, Dict, List, Tuple
 
 from easy_sql.sql_processor.backend.sql_dialect import SqlDialect, SqlExpr
 
-from ..base import Partition
+if TYPE_CHECKING:
+    from sqlalchemy.engine import ResultProxy
+    from sqlalchemy.types import TypeEngine
+
+    from ..base import Partition
 
 __all__ = ["BqSqlDialect"]
 
@@ -77,9 +83,7 @@ class BqSqlDialect(SqlDialect):
         delete_pt_metadata = f"delete {db}.__table_partitions__ where table_name = '{pure_table_name}' and partition_value = '{partitions[0].value}';"
         return self.transaction(f"{delete_pt_sql}\n{delete_pt_metadata}")
 
-    def native_partitions_sql(
-        self, table_name: str
-    ) -> Tuple[str, Callable[["sqlalchemy.engine.ResultProxy"], List[str]]]:
+    def native_partitions_sql(self, table_name: str) -> Tuple[str, Callable[[ResultProxy], List[str]]]:
         db = table_name.split(".")[0] if self.contains_db(table_name) else {self.db}
         pure_table_name = table_name.split(".")[1] if self.contains_db(table_name) else {table_name}
         return (
@@ -97,7 +101,7 @@ class BqSqlDialect(SqlDialect):
         return pt_cols
 
     def create_table_with_partitions_sql(
-        self, table_name: str, cols: List[Dict[str, "sqlalchemy.types.TypeEngine"]], partitions: List[Partition]
+        self, table_name: str, cols: List[Dict[str, TypeEngine]], partitions: List[Partition]
     ):
         cols_expr = ",\n".join(
             f"{col['name']} {self.sql_expr.for_bigquery_type(col['name'], col['type'])}" for col in cols
