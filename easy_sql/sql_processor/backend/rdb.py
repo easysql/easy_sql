@@ -495,8 +495,8 @@ class RdbBackend(Backend):
         all_tables = _exec_sql(self.conn, self.sql_dialect.get_tables_sql(db)).fetchall()
         return sorted([table[0] for table in all_tables])
 
-    def _schemas(self) -> List[str]:
-        all_schemas = _exec_sql(self.conn, self.sql_dialect.get_schemas_sql()).fetchall()
+    def _dbs(self) -> List[str]:
+        all_schemas = _exec_sql(self.conn, self.sql_dialect.get_dbs_sql()).fetchall()
         return sorted([schema[0] for schema in all_schemas])
 
     def temp_tables(self) -> List[str]:
@@ -537,10 +537,13 @@ class RdbBackend(Backend):
         logger.info(f"broadcast_table with: table={table}, name={name}")
         table.save_to_temp_table(name)
 
+    def db_exists(self, db_name: str) -> bool:
+        return db_name in self._dbs()
+
     def table_exists(self, table: "TableMeta"):
-        schema, table_name = table.dbname, table.pure_table_name
-        schema = schema or self.temp_schema
-        return table_name in self._tables(schema)
+        db_name, table_name = table.dbname, table.pure_table_name
+        db_name = db_name or self.temp_schema
+        return self.db_exists(db_name) and table_name in self._tables(db_name)
 
     def refresh_table_partitions(self, table: "TableMeta"):
         if self.sql_dialect.support_native_partition():
@@ -574,9 +577,7 @@ class RdbBackend(Backend):
         )
 
         if not self.sql_dialect.support_static_partition():
-            # will fail when saving without target table's db created
-            # so should create target table's db if create_target_table is set
-            if not self.table_exists(target_table) and create_target_table:
+            if not self.db_exists(target_table.dbname) and create_target_table:
                 _exec_sql(self.conn, self.sql_dialect.create_db_sql(target_table.dbname))
             _exec_sql(self.conn, self.sql_dialect.create_pt_meta_table_sql(target_table.dbname))
 

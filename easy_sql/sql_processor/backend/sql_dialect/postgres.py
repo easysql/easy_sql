@@ -59,7 +59,7 @@ class PgSqlDialect(SqlDialect):
             f"select viewname FROM pg_catalog.pg_views where schemaname='{db}'"
         )
 
-    def get_schemas_sql(self) -> str:
+    def get_dbs_sql(self) -> str:
         return f"select schemaname from pg_catalog.pg_tables union " f"select schemaname FROM pg_catalog.pg_views"
 
     def create_table_sql(self, table_name: str, select_sql: str) -> str:
