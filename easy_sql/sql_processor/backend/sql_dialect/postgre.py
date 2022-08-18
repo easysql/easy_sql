@@ -1,8 +1,13 @@
-from typing import Callable, Dict, List, Tuple, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Callable, Dict, List, Tuple, Union
 
 from easy_sql.sql_processor.backend.sql_dialect import SqlDialect
 
-from ..base import Partition
+if TYPE_CHECKING:
+    from sqlalchemy.engine import ResultProxy
+
+    from ..base import Partition
 
 __all__ = ["PgSqlDialect"]
 
@@ -73,9 +78,7 @@ class PgSqlDialect(SqlDialect):
         partition = PostgrePartition(partitions[0].field, partitions[0].value)
         return f"drop table if exists {partition.partition_table_name(table_name)}"
 
-    def native_partitions_sql(
-        self, table_name: str
-    ) -> Tuple[str, Callable[["sqlalchemy.engine.ResultProxy"], List[str]]]:
+    def native_partitions_sql(self, table_name: str) -> Tuple[str, Callable[[ResultProxy], List[str]]]:
         if "." not in table_name:
             raise SqlProcessorAssertionError(
                 "table name must be of format {DB}.{TABLE} when query native partitions, found: " + table_name
@@ -90,7 +93,7 @@ class PgSqlDialect(SqlDialect):
         """
         return sql, self.extract_partition_cols
 
-    def extract_partition_cols(self, native_partitions_sql_result: "sqlalchemy.engine.ResultProxy") -> List[str]:
+    def extract_partition_cols(self, native_partitions_sql_result: ResultProxy) -> List[str]:
         partition_values = [v[0] for v in native_partitions_sql_result.fetchall()]
         if not partition_values:
             raise Exception("no partition values found, table may not exist")
