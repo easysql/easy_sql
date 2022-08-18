@@ -1,8 +1,13 @@
-from typing import Callable, Dict, List, Tuple
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Callable, Dict, List, Tuple
 
 from easy_sql.sql_processor.backend.sql_dialect import SqlDialect, SqlExpr
 
-from ..base import Partition
+if TYPE_CHECKING:
+    from sqlalchemy.engine import ResultProxy
+
+    from ..base import Partition
 
 __all__ = ["ChSqlDialect"]
 
@@ -74,12 +79,10 @@ class ChSqlDialect(SqlDialect):
 
         return [drop_pt, drop_pt_metadata]
 
-    def native_partitions_sql(
-        self, table_name: str
-    ) -> Tuple[str, Callable[["sqlalchemy.engine.ResultProxy"], List[str]]]:
+    def native_partitions_sql(self, table_name: str) -> Tuple[str, Callable[[ResultProxy], List[str]]]:
         return f"show create table {table_name}", self.extract_partition_cols
 
-    def extract_partition_cols(self, native_partitions_sql_result: "sqlalchemy.engine.ResultProxy") -> List[str]:
+    def extract_partition_cols(self, native_partitions_sql_result: ResultProxy) -> List[str]:
         create_table_sql_lines = native_partitions_sql_result.fetchall()[0][0].split("\n")
         pt_cols = []
         for line in create_table_sql_lines:
