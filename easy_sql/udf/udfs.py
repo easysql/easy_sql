@@ -2,13 +2,11 @@ from typing import Any, Callable, Dict, List, Union
 
 
 def _all_udfs(cls: Any):
-    return dict(
-        [
-            (attr, getattr(cls, attr))
-            for attr in dir(cls)
-            if callable(getattr(cls, attr)) and not attr.startswith("_") and attr != "all"
-        ]
-    )
+    return {
+        attr: getattr(cls, attr)
+        for attr in dir(cls)
+        if callable(getattr(cls, attr)) and not attr.startswith("_") and attr != "all"
+    }
 
 
 def get_udfs(type: str) -> Union[Dict[str, Callable[[], Union[str, List[str]]]], Dict[str, Callable]]:

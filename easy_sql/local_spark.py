@@ -38,7 +38,7 @@ class LocalSpark:
 
                     java_options = re.sub(r"\s*=\s*", "=", conf["spark.driver.extraJavaOptions"].strip()).split()
                     for op in java_options:
-                        if "-Dderby.system.home" == op.split("=")[0].strip():
+                        if op.split("=")[0].strip() == "-Dderby.system.home":
                             print(f"removing dir {op.split('=')[1].strip()}")
                             shutil.rmtree(op.split("=")[1].strip(), ignore_errors=True)
 
