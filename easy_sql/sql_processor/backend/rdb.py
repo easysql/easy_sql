@@ -10,7 +10,7 @@ from .base import Backend, Partition, Row, SaveMode, Table, TableMeta
 from .sql_dialect import SqlDialect, SqlExpr
 from .sql_dialect.bigquery import BqSqlDialect
 from .sql_dialect.clickhouse import ChSqlDialect
-from .sql_dialect.postgre import PgSqlDialect
+from .sql_dialect.postgres import PgSqlDialect
 
 __all__ = ["RdbBackend", "SqlExpr"]
 
@@ -495,6 +495,10 @@ class RdbBackend(Backend):
         all_tables = _exec_sql(self.conn, self.sql_dialect.get_tables_sql(db)).fetchall()
         return sorted([table[0] for table in all_tables])
 
+    def _dbs(self) -> List[str]:
+        all_schemas = _exec_sql(self.conn, self.sql_dialect.get_dbs_sql()).fetchall()
+        return sorted([schema[0] for schema in all_schemas])
+
     def temp_tables(self) -> List[str]:
         return self._tables(self.temp_schema)
 
@@ -533,10 +537,13 @@ class RdbBackend(Backend):
         logger.info(f"broadcast_table with: table={table}, name={name}")
         table.save_to_temp_table(name)
 
+    def db_exists(self, db_name: str) -> bool:
+        return db_name in self._dbs()
+
     def table_exists(self, table: "TableMeta"):
-        schema, table_name = table.dbname, table.pure_table_name
-        schema = schema or self.temp_schema
-        return table_name in self._tables(schema)
+        db_name, table_name = table.dbname, table.pure_table_name
+        db_name = db_name or self.temp_schema
+        return self.db_exists(db_name) and table_name in self._tables(db_name)
 
     def refresh_table_partitions(self, table: "TableMeta"):
         if self.sql_dialect.support_native_partition():
@@ -570,6 +577,8 @@ class RdbBackend(Backend):
         )
 
         if not self.sql_dialect.support_static_partition():
+            if not self.db_exists(target_table.dbname) and create_target_table:
+                _exec_sql(self.conn, self.sql_dialect.create_db_sql(target_table.dbname))
             _exec_sql(self.conn, self.sql_dialect.create_pt_meta_table_sql(target_table.dbname))
 
         if not self.table_exists(target_table) and not create_target_table:
@@ -714,3 +723,85 @@ class RdbBackend(Backend):
         stmt = text(f'insert into {table_name} ({", ".join(cols)}) VALUES ({", ".join([f":{col}" for col in cols])})')
         for v in values:
             _exec_sql(self.conn, stmt, **dict([(col, _v) for _v, col in zip(v, cols)]))
+
+    def _overwrite(
+        self, source_table: str, target_table: str, original_source_table: "TableMeta", target_cols: List[Dict]
+    ):
+        col_names = ", ".join([col["name"] for col in target_cols])
+        full_target_table_name = target_table.get_full_table_name(self.temp_schema)
+        # write data to temp table to support the case when read from and write to the same table
+        temp_table_name = f"{full_target_table_name}__temp"
+        _exec_sql(self.conn, self.sql_dialect.drop_table_sql(temp_table_name))
+        if self.table_exists(target_table):
+            _exec_sql(
+                self.conn,
+                self.sql_dialect.create_table_like_sql(
+                    temp_table_name, target_table.table_name, target_table.partitions
+                ),
+            )
+        RdbTable.from_table_meta(self, source_table).save_to_table(target_table.clone_with_name(temp_table_name))
+        if original_source_table.has_partitions():
+            save_partitions = self._get_save_partitions(original_source_table, source_table, target_table)
+            for save_partition in save_partitions:
+                _exec_sql(self.conn, self.sql_dialect.delete_partition_sql(target_table.table_name, save_partition))
+                if not self.sql_dialect.create_partition_automatically():
+                    _exec_sql(self.conn, self.sql_dialect.create_partition_sql(full_target_table_name, save_partition))
+
+                if self.sql_dialect.support_move_individual_partition():
+                    _exec_sql(
+                        self.conn,
+                        self.sql_dialect.move_data_sql(full_target_table_name, temp_table_name, save_partition),
+                    )
+                else:
+                    filter_expr = " and ".join(
+                        [f"{pt.field} = {self.sql_expr.for_value(pt.value)}" for pt in save_partition]
+                    )
+                    _exec_sql(
+                        self.conn,
+                        self.sql_dialect.insert_data_sql(
+                            full_target_table_name,
+                            col_names,
+                            f"select {col_names} from {temp_table_name} where {filter_expr}",
+                            save_partition,
+                        ),
+                    )
+            _exec_sql(self.conn, self.sql_dialect.drop_table_sql(temp_table_name))
+        else:
+            _exec_sql(self.conn, self.sql_dialect.drop_table_sql(full_target_table_name))
+            _exec_sql(self.conn, self.sql_dialect.rename_table_sql(temp_table_name, full_target_table_name))
+
+    def _append(
+        self, source_table: str, target_table: str, original_source_table: "TableMeta", target_cols: List[Dict]
+    ) -> None:
+        col_names = ", ".join([col["name"] for col in target_cols])
+        full_target_table_name = target_table.get_full_table_name(self.temp_schema)
+        if original_source_table.has_partitions():
+            save_partitions = self._get_save_partitions(original_source_table, source_table, target_table)
+            for save_partition in save_partitions:
+                if not self.sql_dialect.create_partition_automatically():
+                    _exec_sql(
+                        self.conn,
+                        self.sql_dialect.create_partition_sql(full_target_table_name, save_partition, True),
+                    )
+                filter_expr = " and ".join(
+                    [f"{pt.field} = {self.sql_expr.for_value(pt.value)}" for pt in save_partition]
+                )
+                _exec_sql(
+                    self.conn,
+                    self.sql_dialect.insert_data_sql(
+                        full_target_table_name,
+                        col_names,
+                        f"select {col_names} from {source_table.get_full_table_name(self.temp_schema)} where {filter_expr}",
+                        save_partition,
+                    ),
+                )
+        else:
+            _exec_sql(
+                self.conn,
+                self.sql_dialect.insert_data_sql(
+                    full_target_table_name,
+                    col_names,
+                    f"select {col_names} from {source_table.get_full_table_name(self.temp_schema)}",
+                    [],
+                ),
+            )

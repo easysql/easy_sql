@@ -98,6 +98,9 @@ class SqlDialect:
     def support_native_partition(self) -> bool:
         raise NotImplementedError()
 
+    def support_move_individual_partition(self) -> bool:
+        raise NotImplementedError()
+
     def create_db_sql(self, db: str) -> str:
         raise NotImplementedError()
 
@@ -114,6 +117,9 @@ class SqlDialect:
         raise NotImplementedError()
 
     def get_tables_sql(self, db) -> str:
+        raise NotImplementedError()
+
+    def get_dbs_sql(self) -> str:
         raise NotImplementedError()
 
     def create_table_sql(self, table_name: str, select_sql: str) -> str:
@@ -170,6 +176,9 @@ class SqlDialect:
     ) -> Union[str, List[str]]:
         raise NotImplementedError()
 
+    def move_data_sql(self, target_table_name: str, temp_table_name: str, partitions: List[Partition]) -> List[str]:
+        raise NotImplementedError()
+
     def drop_table_sql(self, table: str) -> str:
         raise NotImplementedError()
 
@@ -180,4 +189,7 @@ class SqlDialect:
         raise NotImplementedError()
 
     def delete_pt_metadata_sql(self, table_name: str, partitions: List[Partition]) -> str:
+        raise NotImplementedError()
+
+    def create_table_like_sql(self, target_table_name: str, source_table_name: str, partitions: List[Partition]) -> str:
         raise NotImplementedError()

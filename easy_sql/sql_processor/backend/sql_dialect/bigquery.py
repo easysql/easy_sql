@@ -166,6 +166,9 @@ class BqSqlDialect(SqlDialect):
             db, pure_table_name = tuple(table_name.split("."))
             return f"delete {db}.__table_partitions__ where table_name = '{pure_table_name}' and partition_value = '{partitions[0].value}';"
 
+    def create_table_like_sql(self, target_table_name: str, source_table_name: str, partitions: List[Partition]) -> str:
+        return f"create table {target_table_name} like {source_table_name}"
+
     @staticmethod
     def transaction(statement: str) -> str:
         return f"BEGIN TRANSACTION;\n{statement}\nCOMMIT TRANSACTION;"
