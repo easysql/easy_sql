@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 import re
 from typing import TYPE_CHECKING, Any, Dict, List
@@ -123,7 +125,7 @@ class VarsContext(VarsReplacer):
         self.func_runner = None
         self.debug_log = debug_log
 
-    def init(self, func_runner: "FuncRunner"):
+    def init(self, func_runner: FuncRunner):
         self.func_runner = func_runner
 
     def replace_variables(self, text: str, include_funcs: bool = True) -> str:
