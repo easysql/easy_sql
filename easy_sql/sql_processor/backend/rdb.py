@@ -263,9 +263,6 @@ class RdbTable(Table):
                 )
 
     def save_to_table(self, target_table: TableMeta):
-        if self.backend.table_exists(target_table):
-            raise SqlProcessorAssertionError("does not support to save to an existing table")
-
         temp_table_name = self.resolve_to_temp_table()
 
         field_names = self.field_names()
@@ -277,11 +274,14 @@ class RdbTable(Table):
                 )
 
         cols = self.backend.inspector.get_columns(temp_table_name, self.backend.temp_schema)
-        db = target_table.table_name[: target_table.table_name.index(".")]
-        self._exec_sql(self.db_config.create_db_sql(db))
-        self._exec_sql(
-            self.db_config.create_table_with_partitions_sql(target_table.table_name, cols, target_table.partitions)
-        )
+        if self.backend.table_exists(target_table):
+            cols = self.backend.inspector.get_columns(target_table.pure_table_name, target_table.dbname)
+        else:
+            db = target_table.table_name[: target_table.table_name.index(".")]
+            self._exec_sql(self.db_config.create_db_sql(db))
+            self._exec_sql(
+                self.db_config.create_table_with_partitions_sql(target_table.table_name, cols, target_table.partitions)
+            )
 
         target_table_name = target_table.get_full_table_name(self.backend.temp_schema)
 
@@ -604,68 +604,10 @@ class RdbBackend(Backend):
         )
         self._ensure_contain_target_cols(source_cols, target_cols)
 
-        full_target_table_name = target_table.get_full_table_name(self.temp_schema)
-        col_names = ", ".join([col["name"] for col in target_cols])
         if save_mode == SaveMode.overwrite:
-            # write data to temp table to support the case when read from and write to the same table
-            temp_table_name = f"{full_target_table_name}__temp"
-            _exec_sql(self.conn, self.sql_dialect.drop_table_sql(temp_table_name))
-            RdbTable.from_table_meta(self, source_table).save_to_table(target_table.clone_with_name(temp_table_name))
-            if original_source_table.has_partitions():
-                save_partitions = self._get_save_partitions(original_source_table, source_table, target_table)
-                for save_partition in save_partitions:
-                    _exec_sql(self.conn, self.sql_dialect.delete_partition_sql(target_table.table_name, save_partition))
-                    if not self.sql_dialect.create_partition_automatically():
-                        _exec_sql(
-                            self.conn, self.sql_dialect.create_partition_sql(full_target_table_name, save_partition)
-                        )
-
-                    filter_expr = " and ".join(
-                        [f"{pt.field} = {self.sql_expr.for_value(pt.value)}" for pt in save_partition]
-                    )
-                    _exec_sql(
-                        self.conn,
-                        self.sql_dialect.insert_data_sql(
-                            full_target_table_name,
-                            col_names,
-                            f"select {col_names} from {temp_table_name} where {filter_expr}",
-                            save_partition,
-                        ),
-                    )
-                _exec_sql(self.conn, self.sql_dialect.drop_table_sql(temp_table_name))
-            else:
-                _exec_sql(self.conn, self.sql_dialect.drop_table_sql(full_target_table_name))
-                _exec_sql(self.conn, self.sql_dialect.rename_table_sql(temp_table_name, full_target_table_name))
-
+            self._overwrite(source_table, target_table, original_source_table, target_cols)
         elif save_mode == SaveMode.append:
-            if original_source_table.has_partitions():
-                save_partitions = self._get_save_partitions(original_source_table, source_table, target_table)
-                for save_partition in save_partitions:
-                    if not self.sql_dialect.create_partition_automatically():
-                        _exec_sql(
-                            self.conn,
-                            self.sql_dialect.create_partition_sql(full_target_table_name, save_partition, True),
-                        )
-                    _exec_sql(
-                        self.conn,
-                        self.sql_dialect.insert_data_sql(
-                            full_target_table_name,
-                            col_names,
-                            f"select {col_names} from {source_table.get_full_table_name(self.temp_schema)}",
-                            save_partition,
-                        ),
-                    )
-            else:
-                _exec_sql(
-                    self.conn,
-                    self.sql_dialect.insert_data_sql(
-                        full_target_table_name,
-                        col_names,
-                        f"select {col_names} from {source_table.get_full_table_name(self.temp_schema)}",
-                        [],
-                    ),
-                )
-
+            self._append(source_table, target_table, original_source_table, target_cols)
         else:
             raise SqlProcessorAssertionError(f"unknown save mode {save_mode}")
 
@@ -724,7 +666,7 @@ class RdbBackend(Backend):
             _exec_sql(self.conn, stmt, **{col: _v for _v, col in zip(v, cols)})
 
     def _overwrite(
-        self, source_table: str, target_table: str, original_source_table: TableMeta, target_cols: List[Dict]
+        self, source_table: TableMeta, target_table: TableMeta, original_source_table: TableMeta, target_cols: List[Dict]
     ):
         col_names = ", ".join([col["name"] for col in target_cols])
         full_target_table_name = target_table.get_full_table_name(self.temp_schema)
@@ -770,7 +712,7 @@ class RdbBackend(Backend):
             _exec_sql(self.conn, self.sql_dialect.rename_table_sql(temp_table_name, full_target_table_name))
 
     def _append(
-        self, source_table: str, target_table: str, original_source_table: TableMeta, target_cols: List[Dict]
+        self, source_table: TableMeta, target_table: TableMeta, original_source_table: TableMeta, target_cols: List[Dict]
     ) -> None:
         col_names = ", ".join([col["name"] for col in target_cols])
         full_target_table_name = target_table.get_full_table_name(self.temp_schema)
