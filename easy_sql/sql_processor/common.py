@@ -1,9 +1,14 @@
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 from ..logger import logger
 
+if TYPE_CHECKING:
+    from pyspark.sql import DataFrame, SparkSession
 
-def _exec_sql(spark: "pyspark.sql.SparkSession", sql: str) -> "pyspark.sql.DataFrame":
+
+def _exec_sql(spark: SparkSession, sql: str) -> DataFrame:
     logger.info(f"will exec sql: {sql}")
     return spark.sql(sql)
 
