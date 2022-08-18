@@ -1,16 +1,22 @@
+from __future__ import annotations
+
 import traceback
 from datetime import datetime, timedelta
-from typing import List, Optional, Union
-from . import SqlProcessorException, Step
-from .backend import Backend
+from typing import TYPE_CHECKING, List, Optional, Union
+
 from ..logger import logger
-__all__ = [
-    'ColumnFuncs', 'TableFuncs', 'PartitionFuncs', 'AlertFunc'
-]
+from . import SqlProcessorException
+
+if TYPE_CHECKING:
+    from .backend import Backend
+    from .context import ProcessorContext
+    from .step import Step
+
+
+__all__ = ["ColumnFuncs", "TableFuncs", "PartitionFuncs", "AlertFunc"]
 
 
 class ColumnFuncs:
-
     def __init__(self, backend: Backend):
         self.backend = backend
 
@@ -19,42 +25,61 @@ class ColumnFuncs:
 
     def all_cols_with_exclusion_expr(self, table_name: str, *cols_to_exclude: str) -> str:
         pure_table_name = table_name.split(".")[1] if "." in table_name else table_name
-        fields = self.backend.exec_sql(f'select * from {table_name} limit 0').field_names()
-        return ', '.join([f'{pure_table_name}.{col}'
-                          for col in fields
-                          if col not in cols_to_exclude or (col.find('.') != -1 and col.split('.')[-1] not in cols_to_exclude)])
+        fields = self.backend.exec_sql(f"select * from {table_name} limit 0").field_names()
+        return ", ".join(
+            [
+                f"{pure_table_name}.{col}"
+                for col in fields
+                if col not in cols_to_exclude or (col.find(".") != -1 and col.split(".")[-1] not in cols_to_exclude)
+            ]
+        )
 
-    def all_cols_prefixed_with_exclusion_expr(self, table_name: str,prefix:str, *cols_to_exclude: str) -> str:
+    def all_cols_prefixed_with_exclusion_expr(self, table_name: str, prefix: str, *cols_to_exclude: str) -> str:
         # this function not support pg yet
         pure_table_name = table_name.split(".")[1] if "." in table_name else table_name
-        fields = self.backend.exec_sql(f'select * from {table_name} limit 0').field_names()
-        return ', '.join([f'{pure_table_name}.{col} as `{prefix}{col}`'
-                          for col in fields
-                          if col not in cols_to_exclude or (col.find('.') != -1 and col.split('.')[-1] not in cols_to_exclude)])
+        fields = self.backend.exec_sql(f"select * from {table_name} limit 0").field_names()
+        return ", ".join(
+            [
+                f"{pure_table_name}.{col} as `{prefix}{col}`"
+                for col in fields
+                if col not in cols_to_exclude or (col.find(".") != -1 and col.split(".")[-1] not in cols_to_exclude)
+            ]
+        )
 
 
 class TableFuncs:
-
     def __init__(self, backend: Backend):
         self.backend = backend
 
     def ensure_no_null_data_in_table(self, step: Step, table_name: str, query: str = None) -> bool:
-        fields = self.backend.exec_sql(f'select * from {table_name} limit 0').field_names()
-        return self._check_not_null_columns_in_table(step, table_name, fields, query, 'ensure_no_null_data_in_table')
+        fields = self.backend.exec_sql(f"select * from {table_name} limit 0").field_names()
+        return self._check_not_null_columns_in_table(step, table_name, fields, query, "ensure_no_null_data_in_table")
 
-    def check_not_null_column_in_table(self, step: Step, table_name: str, not_null_column: str, query: str = None) -> bool:
-        return self._check_not_null_columns_in_table(step, table_name, [not_null_column], query, 'check_not_null_column_in_table')
+    def check_not_null_column_in_table(
+        self, step: Step, table_name: str, not_null_column: str, query: str = None
+    ) -> bool:
+        return self._check_not_null_columns_in_table(
+            step, table_name, [not_null_column], query, "check_not_null_column_in_table"
+        )
 
-    def _check_not_null_columns_in_table(self, step: Step, table_name: str, not_null_columns: List[str],
-                                         query: str = None, context: str = 'check_not_null_column_in_table') -> bool:
+    def _check_not_null_columns_in_table(
+        self,
+        step: Step,
+        table_name: str,
+        not_null_columns: List[str],
+        query: str = None,
+        context: str = "check_not_null_column_in_table",
+    ) -> bool:
         null_counts = {}
         for field in not_null_columns:
-            condition_sql = f'{field} is null'
-            sql = f'select count(1) from {table_name} where ' + (condition_sql if query is None else f'({condition_sql}) and ({query})')
+            condition_sql = f"{field} is null"
+            sql = f"select count(1) from {table_name} where " + (
+                condition_sql if query is None else f"({condition_sql}) and ({query})"
+            )
             null_count = self.backend.exec_sql(sql).collect()[0][0]
             null_counts[field] = null_count
         if sum(null_counts.values()) != 0:
-            null_count_msg = '\n'.join([f'{v} null rows({k})' for k, v in null_counts.items() if v != 0])
+            null_count_msg = "\n".join([f"{v} null rows({k})" for k, v in null_counts.items() if v != 0])
             msg = f"{context} {table_name} failed, found: \n{null_count_msg}"
             logger.info(msg)
             step.collect_report(message=msg)
@@ -64,7 +89,6 @@ class TableFuncs:
 
 
 class PartitionFuncs:
-
     def __init__(self, backend: Backend):
         self.backend = backend
 
@@ -85,10 +109,12 @@ class PartitionFuncs:
         return partition_value in self._get_partition_values_as_str(table_name)
 
     def ensure_partition_exists(self, step, *args) -> bool:
-        from easy_sql.sql_processor import Step
         step: Step = step
         if len(args) < 2:
-            raise Exception(f'must contains at least one table and exactly one partition_value when calling ensure_partition_exists, got {args}')
+            raise Exception(
+                "must contains at least one table and exactly one partition_value when calling"
+                f" ensure_partition_exists, got {args}"
+            )
         partition_value = args[-1]
         tables = args[:-1]
         partition_not_exists_tables = []
@@ -99,18 +125,19 @@ class PartitionFuncs:
             except Exception:
                 partition_not_exists_tables.append(table)
         if len(partition_not_exists_tables) > 0:
-            message = f'partition {partition_value} not exists: {partition_not_exists_tables}'
+            message = f"partition {partition_value} not exists: {partition_not_exists_tables}"
             logger.info(message)
             step.collect_report(message=message)
             return False
         return True
 
     def ensure_dwd_partition_exists(self, step, *args) -> bool:
-        from easy_sql.sql_processor import Step
         step: Step = step
         if len(args) < 2:
-            raise Exception(f'must contains one table and exactly one partition_value and one or more foreign key columns'
-                            f' when calling ensure_dwd_partition_exists, got {args}')
+            raise Exception(
+                "must contains one table and exactly one partition_value and one or more foreign key columns"
+                f" when calling ensure_dwd_partition_exists, got {args}"
+            )
         table_name = args[0]
         partition_value = args[1]
         foreign_key_cols = args[2:]
@@ -119,12 +146,12 @@ class PartitionFuncs:
             if not self.partition_exists(table_name, partition_value):
                 first_partition = self.get_first_partition_optional(table_name)
                 if not first_partition or partition_value > first_partition:
-                    message = f'partition {partition_value} not exists: {table_name}'
+                    message = f"partition {partition_value} not exists: {table_name}"
                     logger.info(message)
                     step.collect_report(message=message)
                     check_ok = False
         except Exception:
-            message = f'partition {partition_value} not exists: {table_name}'
+            message = f"partition {partition_value} not exists: {table_name}"
             logger.info(message)
             step.collect_report(message=message)
             check_ok = False
@@ -134,16 +161,26 @@ class PartitionFuncs:
             if len(partition_values) > 0:  # this indicates first partition exists
                 partition_col, first_partition = self.get_partition_col(table_name), str(partition_values[0])
                 partition_value_to_use = partition_value if partition_value > first_partition else first_partition
-                partition_value_to_use_expr = f"'{partition_value_to_use}'" if isinstance(partition_values[0], str) else partition_value_to_use
-                sql = f"select count(1) as total_count from {table_name} where {partition_col}={partition_value_to_use_expr}"
+                partition_value_to_use_expr = (
+                    f"'{partition_value_to_use}'" if isinstance(partition_values[0], str) else partition_value_to_use
+                )
+                sql = (
+                    f"select count(1) as total_count from {table_name} where"
+                    f" {partition_col}={partition_value_to_use_expr}"
+                )
                 total_count = self.backend.exec_sql(sql).collect()[0][0]
                 if total_count > 0:
-                    fk_col_non_null_expr = ' or '.join([f'{fk_col} is not null' for fk_col in foreign_key_cols])
-                    sql = f"select 1 as nonnull_count from {table_name} " \
-                          f"where ({fk_col_non_null_expr}) and {partition_col}={partition_value_to_use_expr} limit 1"
+                    fk_col_non_null_expr = " or ".join([f"{fk_col} is not null" for fk_col in foreign_key_cols])
+                    sql = (
+                        f"select 1 as nonnull_count from {table_name} "
+                        f"where ({fk_col_non_null_expr}) and {partition_col}={partition_value_to_use_expr} limit 1"
+                    )
                     any_fk_col_non_null_rows = self.backend.exec_sql(sql).collect()
                     if len(any_fk_col_non_null_rows) == 0:
-                        message = f'all fk cols are null in partition: table_name={table_name}, partition={partition_value_to_use}'
+                        message = (
+                            f"all fk cols are null in partition: table_name={table_name},"
+                            f" partition={partition_value_to_use}"
+                        )
                         logger.info(message)
                         step.collect_report(message=message)
                         check_ok = False
@@ -151,10 +188,12 @@ class PartitionFuncs:
         return check_ok
 
     def ensure_partition_or_first_partition_exists(self, step, *args) -> bool:
-        from easy_sql.sql_processor import Step
         step: Step = step
         if len(args) < 2:
-            raise Exception(f'must contains at least one table and exactly one partition_value when calling ensure_partition_exists, got {args}')
+            raise Exception(
+                "must contains at least one table and exactly one partition_value when calling"
+                f" ensure_partition_exists, got {args}"
+            )
         partition_value = args[-1]
         tables = args[:-1]
         partition_not_exists_tables = []
@@ -167,7 +206,7 @@ class PartitionFuncs:
             except Exception:
                 partition_not_exists_tables.append(table)
         if len(partition_not_exists_tables) > 0:
-            message = f'partition {partition_value} not exists: {partition_not_exists_tables}'
+            message = f"partition {partition_value} not exists: {partition_not_exists_tables}"
             logger.info(message)
             step.collect_report(message=message)
             return False
@@ -178,11 +217,13 @@ class PartitionFuncs:
 
     def previous_partition_exists(self, table_name: str, curr_partition_value_as_dt: str) -> bool:
         partition_values = self._get_partition_values_as_str(table_name)
-        partition_date_format = '%Y-%m-%d' if '-' in curr_partition_value_as_dt else '%Y%m%d'
+        partition_date_format = "%Y-%m-%d" if "-" in curr_partition_value_as_dt else "%Y%m%d"
         try:
             curr_partition_value_as_dt = datetime.strptime(curr_partition_value_as_dt, partition_date_format)
         except ValueError:
-            raise SqlProcessorException(f'partition value must be date of format `%Y-%m-%d` or `%Y%m%d`, found {curr_partition_value_as_dt}')
+            raise SqlProcessorException(
+                f"partition value must be date of format `%Y-%m-%d` or `%Y%m%d`, found {curr_partition_value_as_dt}"
+            )
         previous_partition_value = (curr_partition_value_as_dt - timedelta(days=1)).strftime(partition_date_format)
         return previous_partition_value in partition_values
 
@@ -201,14 +242,14 @@ class PartitionFuncs:
     def get_first_partition(self, table_name: str) -> str:
         first_partition = self.get_first_partition_optional(table_name)
         if not first_partition:
-            raise Exception(f'no partition found for table {table_name}')
+            raise Exception(f"no partition found for table {table_name}")
         return first_partition
 
     def get_last_partition(self, table_name: str) -> str:
         partition_values = self._get_partition_values(table_name)
         last_partition = partition_values[-1] if len(partition_values) > 0 else None
         if not last_partition:
-            raise Exception(f'no partition found for table {table_name}')
+            raise Exception(f"no partition found for table {table_name}")
         return str(last_partition)
 
     def get_partition_cols(self, table_name: str) -> List[str]:
@@ -217,7 +258,7 @@ class PartitionFuncs:
     def get_partition_col(self, table_name: str):
         partition_cols = self.get_partition_cols(table_name=table_name)
         if not partition_cols:
-            raise Exception(f'no partition columns found for table {table_name}')
+            raise Exception(f"no partition columns found for table {table_name}")
         return partition_cols[0]
 
     def has_partition_col(self, table_name: str):
@@ -225,8 +266,7 @@ class PartitionFuncs:
 
 
 class Alerter:
-
-    def send_alert(self, msg: str, mentioned_users: str = ''):
+    def send_alert(self, msg: str, mentioned_users: str = ""):
         raise NotImplementedError()
 
 
@@ -235,10 +275,9 @@ class AlertFunc:
         self.backend = backend
         self.alerter = alerter
 
-    def alert(self, step, context, rule_name: str, pass_condition: str, alert_template: str, mentioned_users: str):
-        from .step import Step
-        from .context import ProcessorContext
-        step: Step = step
+    def alert(
+        self, step: Step, context, rule_name: str, pass_condition: str, alert_template: str, mentioned_users: str
+    ):
         context: ProcessorContext = context
         # Fetch 10 rows at most
         alert_data = self.backend.exec_sql(step.select_sql).limit(10).collect()
@@ -257,4 +296,5 @@ class AlertFunc:
         def exception_handler(e):
             logger.error(f"{traceback.format_exc()}")
             self.alerter.send_alert(f"执行{rule_name}失败: {e}", mentioned_users)
+
         return exception_handler

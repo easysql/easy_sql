@@ -6,7 +6,7 @@ on:
       - "*"
     tags-ignore:
       - "v*"
-  pull_request: 
+  pull_request:
     branches:
         - master
 
@@ -30,7 +30,7 @@ jobs:
         key: poetry-1  # increment to reset cache
     - name: Install Poetry
       uses: snok/install-poetry@v1.3.1
-    - run: poetry build    
+    - run: poetry build
 
   unit-test:
     runs-on: ubuntu-latest
@@ -65,11 +65,11 @@ jobs:
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-ut
-    - run: poetry install --no-interaction -E "spark linter" 
+    - run: poetry install --no-interaction -E "spark linter"
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: poetry run make unit-test
     - run: poetry run make test-coverage
-  
+
   e2e-test-spark:
     runs-on: ubuntu-latest
     strategy:
@@ -97,13 +97,13 @@ jobs:
       uses: snok/install-poetry@v1.3.1
       with:
         virtualenvs-in-project: true
-    - name: Load cached Poetry dependencies 
+    - name: Load cached Poetry dependencies
       id: cached-poetry-dependencies
       uses: actions/cache@v2
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-spark
-    - run: poetry install --no-interaction -E "spark cli" 
+    - run: poetry install --no-interaction -E "spark cli"
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: poetry run make e2e-test-spark
 
@@ -141,13 +141,13 @@ jobs:
       uses: snok/install-poetry@v1.3.1
       with:
         virtualenvs-in-project: true
-    - name: Load cached Poetry dependencies 
+    - name: Load cached Poetry dependencies
       id: cached-poetry-dependencies
       uses: actions/cache@v2
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-pg
-    - run: poetry install --no-interaction -E "pg cli" 
+    - run: poetry install --no-interaction -E "pg cli"
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: poetry run make e2e-test-postgres
       env:
@@ -181,13 +181,13 @@ jobs:
       uses: snok/install-poetry@v1.3.1
       with:
         virtualenvs-in-project: true
-    - name: Load cached Poetry dependencies 
+    - name: Load cached Poetry dependencies
       id: cached-poetry-dependencies
       uses: actions/cache@v2
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-ch
-    - run: poetry install --no-interaction -E "clickhouse cli" 
+    - run: poetry install --no-interaction -E "clickhouse cli"
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: poetry run make e2e-test-clickhouse
       env:
@@ -236,13 +236,13 @@ jobs:
       uses: snok/install-poetry@v1.3.1
       with:
         virtualenvs-in-project: true
-    - name: Load cached Poetry dependencies 
+    - name: Load cached Poetry dependencies
       id: cached-poetry-dependencies
       uses: actions/cache@v2
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-all
-    - run: poetry install --no-interaction -E "clickhouse pg spark cli linter" 
+    - run: poetry install --no-interaction -E "clickhouse pg spark cli linter"
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: poetry run make test-coverage-all
       env:

@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 import re
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections import Callable
+
+    from pyspark.sql.types import DataType
 
 
 class UDF:
-    from collections import Callable
-    from pyspark.sql.types import DataType
-
     def __init__(self, func: Callable, return_type: DataType):
         self.func = func
         self.return_type = return_type

@@ -1,9 +1,5 @@
 from sqlfluff.core.parser import CodeSegment
-from sqlfluff.core.rules.base import (
-    BaseRule, LintFix,
-    LintResult,
-    RuleContext,
-)
+from sqlfluff.core.rules.base import BaseRule, LintFix, LintResult, RuleContext
 
 
 class Rule_BigQuery_L001(BaseRule):
@@ -33,15 +29,14 @@ class Rule_BigQuery_L001(BaseRule):
 
     def _eval(self, context: RuleContext):
         """check from table have schema"""
-        if context.segment.is_type("table_reference"):
-            if len(context.segment.segments) != 3:
-                return LintResult(
-                    anchor=context.segment,
-                    fixes=[
-                        LintFix.create_before(
-                            context.segment,
-                            [CodeSegment(raw="${temp_db}.")],
-                        )
-                    ],
-                    description=f"No schema found when select from table `{context.segment.raw}`.",
-                )
+        if context.segment.is_type("table_reference") and len(context.segment.segments) != 3:
+            return LintResult(
+                anchor=context.segment,
+                fixes=[
+                    LintFix.create_before(
+                        context.segment,
+                        [CodeSegment(raw="${temp_db}.")],
+                    )
+                ],
+                description=f"No schema found when select from table `{context.segment.raw}`.",
+            )

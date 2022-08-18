@@ -51,7 +51,7 @@ sqlalchemy-bigquery==1.4.3
 pyodps==0.10.7.1
 ```
 
-To use other tools / functionalities, install the dependencies as listed below: 
+To use other tools / functionalities, install the dependencies as listed below:
 
 ```
 # for Linter only
