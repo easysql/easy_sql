@@ -153,7 +153,7 @@ class MaxComputeTable(Table):
         else:
             if dynamic_partitions:
                 raise Exception(
-                    f"In ALL_STATIC partition mode, no dynamic partition is supported. "
+                    "In ALL_STATIC partition mode, no dynamic partition is supported. "
                     f"Now there are the following dynamic partitions: {dynamic_partitions}"
                 )
             fields = [f"{p.field}='{p.value}'" for p in target_table_meta.partitions]
@@ -282,7 +282,7 @@ class MaxComputeBackend(Backend):
         if not self.table_exists(target_table_meta) and not create_target_table:
             raise Exception(
                 f"target table {target_table_meta.table_name} does not exist, "
-                f"and create_target_table is False, "
+                "and create_target_table is False, "
                 f"cannot save table {source_table_meta.table_name} to {target_table_meta.table_name}"
             )
 

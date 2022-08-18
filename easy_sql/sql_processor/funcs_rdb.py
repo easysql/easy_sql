@@ -46,8 +46,10 @@ class ModelFuncs:
             "spark.hadoop.fs.AbstractFileSystem.gs.impl": "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS",
             "parentProject": "data-dev-workbench-prod-3fd9",
             "spark.sql.warehouse.dir": "/tmp/spark-warehouse-localdw",
-            "spark.driver.extraJavaOptions": "-Dderby.system.home=/tmp/spark-warehouse-metastore "
-            "-Dderby.stream.error.file=/tmp/spark-warehouse-metastore.log",
+            "spark.driver.extraJavaOptions": (
+                "-Dderby.system.home=/tmp/spark-warehouse-metastore "
+                "-Dderby.stream.error.file=/tmp/spark-warehouse-metastore.log"
+            ),
             "credentialsFile": f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-prod.json",
         }
 
@@ -119,8 +121,10 @@ class ModelFuncs:
             "spark.executor.memory": "1g",
             "spark.executor.cores": "1",
             "spark.sql.warehouse.dir": "/tmp/spark-warehouse-localdw",
-            "spark.driver.extraJavaOptions": "-Dderby.system.home=/tmp/spark-warehouse-metastore "
-            "-Dderby.stream.error.file=/tmp/spark-warehouse-metastore.log",
+            "spark.driver.extraJavaOptions": (
+                "-Dderby.system.home=/tmp/spark-warehouse-metastore "
+                "-Dderby.stream.error.file=/tmp/spark-warehouse-metastore.log"
+            ),
             "spark.driver.extraClassPath": os.path.join(file_dir, "../../../deps/lib/*"),
         }
 
@@ -182,8 +186,9 @@ class ModelFuncs:
             ORDER BY {id_col}"""
         else:
             msg = (
-                f'Backend of type {type(self.backend)}-{self.backend.backend_type if isinstance(self.backend, RdbBackend) else ""} '
-                f"is not supported yet"
+                "Backend of type"
+                f' {type(self.backend)}-{self.backend.backend_type if isinstance(self.backend, RdbBackend) else ""} is'
+                " not supported yet"
             )
             raise Exception(msg)
 
@@ -192,20 +197,27 @@ class PartitionFuncs(PartitionFuncsBase):
     def __check_backend(self):
         if not isinstance(self.backend, RdbBackend):
             msg = (
-                f'Backend of type {type(self.backend)}-{self.backend.backend_type if isinstance(self.backend, RdbBackend) else ""} '
-                f"is not supported yet"
+                "Backend of type"
+                f' {type(self.backend)}-{self.backend.backend_type if isinstance(self.backend, RdbBackend) else ""} is'
+                " not supported yet"
             )
             raise Exception(msg)
 
     def _get_bigquery_partition_values(self, table_name):
         db, table = self.__parse_table_name(table_name)
-        sql = f"select distinct partition_value from {db}.__table_partitions__ where table_name = '{table}' order by partition_value"
+        sql = (
+            f"select distinct partition_value from {db}.__table_partitions__ where table_name = '{table}' order by"
+            " partition_value"
+        )
         partition_values = [str(v[0]) for v in self.backend.exec_sql(sql).collect()]
         return partition_values
 
     def _get_clickhouse_partition_values(self, table_name):
         db, table = self.__parse_table_name(table_name)
-        sql = f"SELECT distinct partition_value FROM {self.backend.partitions_table_name} where db_name = '{db}' and table_name = '{table}';"
+        sql = (
+            f"SELECT distinct partition_value FROM {self.backend.partitions_table_name} where db_name = '{db}' and"
+            f" table_name = '{table}';"
+        )
         partition_values = [str(v[0]) for v in self.backend.exec_sql(sql).collect()]
         partition_values.sort()
         return partition_values
@@ -243,8 +255,9 @@ class PartitionFuncs(PartitionFuncsBase):
             return self._get_bigquery_partition_values(table_name)
         else:
             msg = (
-                f'Backend of type {type(self.backend)}-{self.backend.backend_type if isinstance(self.backend, RdbBackend) else ""} '
-                f"is not supported yet"
+                "Backend of type"
+                f' {type(self.backend)}-{self.backend.backend_type if isinstance(self.backend, RdbBackend) else ""} is'
+                " not supported yet"
             )
             raise Exception(msg)
 

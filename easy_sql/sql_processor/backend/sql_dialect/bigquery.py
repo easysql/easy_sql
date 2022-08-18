@@ -73,14 +73,18 @@ class BqSqlDialect(SqlDialect):
         db, pure_table_name = tuple(table_name.split("."))
         if not partitions or len(partitions) == 0:
             raise Exception(
-                f"cannot delete partition when partitions not specified: table_name={table_name}, partitions={partitions}"
+                f"cannot delete partition when partitions not specified: table_name={table_name},"
+                f" partitions={partitions}"
             )
         if len(partitions) > 1:
             raise SqlProcessorAssertionError("BigQuery only supports single-column partitioning.")
         pt_expr = f"""{partitions[0].field} = '{partitions[0].value}'"""
 
         delete_pt_sql = f"delete {db}.{pure_table_name} where {pt_expr};"
-        delete_pt_metadata = f"delete {db}.__table_partitions__ where table_name = '{pure_table_name}' and partition_value = '{partitions[0].value}';"
+        delete_pt_metadata = (
+            f"delete {db}.__table_partitions__ where table_name = '{pure_table_name}' and partition_value ="
+            f" '{partitions[0].value}';"
+        )
         return self.transaction(f"{delete_pt_sql}\n{delete_pt_metadata}")
 
     def native_partitions_sql(self, table_name: str) -> Tuple[str, Callable[[ResultProxy], List[str]]]:
@@ -124,7 +128,7 @@ class BqSqlDialect(SqlDialect):
         if any([pt.value is None for pt in partitions]):
             raise SqlProcessorAssertionError(
                 f"cannot insert data when partition value is None, partitions: {partitions}, "
-                f"there maybe some bug, please check"
+                "there maybe some bug, please check"
             )
 
         insert_date_sql = f"insert into {table_name}({col_names_expr}) {select_sql};"
@@ -157,7 +161,10 @@ class BqSqlDialect(SqlDialect):
             if not self.contains_db(table_name):
                 raise SqlProcessorAssertionError("BigQuery table must be qualified with a dataset.")
             db, pure_table_name = tuple(table_name.split("."))
-            return f"insert into {db}.__table_partitions__ values ('{pure_table_name}', '{partitions[0].value}', CURRENT_TIMESTAMP());"
+            return (
+                f"insert into {db}.__table_partitions__ values ('{pure_table_name}', '{partitions[0].value}',"
+                " CURRENT_TIMESTAMP());"
+            )
 
     def delete_pt_metadata_sql(self, table_name: str, partitions: List[Partition]) -> str:
         if len(partitions) == 0:
@@ -168,7 +175,10 @@ class BqSqlDialect(SqlDialect):
             if not self.contains_db(table_name):
                 raise SqlProcessorAssertionError("BigQuery table must be qualified with a dataset.")
             db, pure_table_name = tuple(table_name.split("."))
-            return f"delete {db}.__table_partitions__ where table_name = '{pure_table_name}' and partition_value = '{partitions[0].value}';"
+            return (
+                f"delete {db}.__table_partitions__ where table_name = '{pure_table_name}' and partition_value ="
+                f" '{partitions[0].value}';"
+            )
 
     @staticmethod
     def transaction(statement: str) -> str:

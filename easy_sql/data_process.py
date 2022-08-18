@@ -231,12 +231,12 @@ class EasySqlConfig:
             "spark.submit.deployMode=client",
             f"spark.app.name={self.task_name}",
             "spark.sql.warehouse.dir=/tmp/spark-warehouse-localdw",
-            "spark.driver.extraJavaOptions="
-            '"-Dderby.system.home=/tmp/spark-warehouse-metastore -Dderby.stream.error.file=/tmp/spark-warehouse-metastore.log"',
+            'spark.driver.extraJavaOptions="-Dderby.system.home=/tmp/spark-warehouse-metastore'
+            ' -Dderby.stream.error.file=/tmp/spark-warehouse-metastore.log"',
             f'spark.files="{resolve_file(self.sql_file, abs_path=True)}'
             f'{"," + resolve_file(self.udf_file_path, abs_path=True) if self.udf_file_path else ""}'
             f'{"," + resolve_file(self.func_file_path, abs_path=True) if self.func_file_path else ""}'
-            f'"',
+            '"',
         ]
         customized_conf_keys = [c[: c.index("=")] for c in self.customized_backend_conf]
         customized_backend_conf = self.customized_backend_conf.copy()
@@ -293,7 +293,7 @@ def _parse_backend(sql: str):
 
 if __name__ == "__main__":
     # test cases:
-    # print(shell_command('source/dm/dm_source.sales_count.spark.sql', '20210505', 'day', '1', 'test-task', 'test-task', None, None, None))
+    # print(shell_command('source/dm/dm_source.sales_count.spark.sql', '20210505', 'day', '1', 'test-task', 'test-task', None, None, None)) # noqa: B950
     # print(shell_command('sales/dm/indicator/sql/dm_sales.order_count.sql', '20210505', 'day', '1', 'test-task', 'test-task',
     #                     None, None, None, None, None, '1').replace('--conf', '\n --conf'))
     # print(shell_command('sales/samples/dm_source.sales_count.ch.sql', '20210505', 'day', '1', 'test-task', 'test-task',

@@ -23,8 +23,10 @@ class LocalSpark:
                 "spark.default.parallelism": 4,
                 "hive.exec.dynamic.partition.mode": "nonstrict",
                 "spark.sql.warehouse.dir": "/tmp/spark-warehouse-localdw-ut",
-                "spark.driver.extraJavaOptions": "-Dderby.system.home=/tmp/spark-warehouse-metastore-ut "
-                "-Dderby.stream.error.file=/tmp/spark-warehouse-metastore-ut.log",
+                "spark.driver.extraJavaOptions": (
+                    "-Dderby.system.home=/tmp/spark-warehouse-metastore-ut "
+                    "-Dderby.stream.error.file=/tmp/spark-warehouse-metastore-ut.log"
+                ),
             }
             default_conf.update(conf)
             conf = default_conf

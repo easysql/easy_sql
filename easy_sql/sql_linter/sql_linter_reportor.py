@@ -23,13 +23,7 @@ class LintReporter:
         logger = logging.getLogger("linter_logger")
         logger.setLevel(log_level)
         info_formater = colorlog.ColoredFormatter(
-            fmt=(
-                "%(white)s%(message)s"
-                "%(red)s%(warn)s "
-                "%(green)s%(pass)s "
-                "%(blue)s%(pos_info)s "
-                "%(white)s%(description)s "
-            )
+            fmt="%(white)s%(message)s%(red)s%(warn)s %(green)s%(pass)s %(blue)s%(pos_info)s %(white)s%(description)s "
         )
         python_version = sys.version_info
         if python_version.major == 3 and python_version.minor == 6:

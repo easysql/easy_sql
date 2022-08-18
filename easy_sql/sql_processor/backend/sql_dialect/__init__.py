@@ -52,8 +52,8 @@ class SqlExpr:
 
         if not isinstance(value, (str, int, float, datetime, date)):
             raise SqlProcessorAssertionError(
-                f"when create new columns, the current supported value types are [str, int, float, datetime, date], found: "
-                f"value={value}, type={type(value)}"
+                "when create new columns, the current supported value types are [str, int, float, datetime, date],"
+                f" found: value={value}, type={type(value)}"
             )
         if isinstance(value, (str,)):
             return f"'{value}'"

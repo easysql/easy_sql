@@ -47,7 +47,7 @@ create or replace function trim_all(value text) returns text
     LANGUAGE SQL
     IMMUTABLE
     RETURNS NULL ON NULL INPUT
-"""
+"""  # noqa : B950
 
     @staticmethod
     def split():

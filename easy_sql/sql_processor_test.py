@@ -492,7 +492,8 @@ class FuncRunnerTest(unittest.TestCase):
         with self.assertRaises(Exception):  # noqa: B017
             processor = SqlProcessor(
                 spark,
-                "-- target=check.ensure_partition_or_first_partition_exists(${__step__}, empty_table, data_table, 20210101)",
+                "-- target=check.ensure_partition_or_first_partition_exists(${__step__}, empty_table, data_table,"
+                " 20210101)",
                 [],
                 {},
             )

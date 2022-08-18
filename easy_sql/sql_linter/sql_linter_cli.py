@@ -73,9 +73,11 @@ def fix_process(
 @click.option("--include", help="comma separated rule to be included", default="", required=False, type=str)
 @click.option(
     "--backend",
-    help="backend for this file, "
-    "if easy sql it will parse from the sql file if not specify, "
-    "if normal sql it will default to spark",
+    help=(
+        "backend for this file, "
+        "if easy sql it will parse from the sql file if not specify, "
+        "if normal sql it will default to spark"
+    ),
     default=None,
     required=False,
     type=str,
@@ -93,9 +95,11 @@ def fix(path: str, config_path: str, exclude: str, include: str, backend: str, i
 @click.option("--include", help="comma separated rule to be included", default="", required=False, type=str)
 @click.option(
     "--backend",
-    help="backend for this file, "
-    "if easy sql it will parse from the sql file if not specify, "
-    "if normal sql it will default to spark",
+    help=(
+        "backend for this file, "
+        "if easy sql it will parse from the sql file if not specify, "
+        "if normal sql it will default to spark"
+    ),
     default=None,
     required=False,
     type=str,

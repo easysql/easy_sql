@@ -33,7 +33,7 @@ class ChSqlDialect(SqlDialect):
 
     def drop_db_sql(self, db: str) -> List[str]:
         drop_db = f"drop database if exists {db}"
-        drop_pt_metadata = f"alter table {self.partitions_table_name} delete " f"where db_name = '{db}'"
+        drop_pt_metadata = f"alter table {self.partitions_table_name} delete where db_name = '{db}'"
         return [drop_db, drop_pt_metadata]
 
     def rename_table_sql(self, from_table: str, to_table: str) -> str:
@@ -103,8 +103,8 @@ class ChSqlDialect(SqlDialect):
         else:
             partition_expr = f'partition by tuple({", ".join([pt.field for pt in partitions])})'
         return (
-            f"create table if not exists "
-            f"{table_name} (\n{cols_expr}\n)\nengine=MergeTree\n{partition_expr}\norder by tuple() settings allow_nullable_key=1;"
+            f"create table if not exists {table_name} (\n{cols_expr}\n)\nengine=MergeTree\n{partition_expr}\norder by"
+            " tuple() settings allow_nullable_key=1;"
         )
 
     def create_partition_automatically(self):
@@ -117,7 +117,8 @@ class ChSqlDialect(SqlDialect):
 
         if any([pt.value is None for pt in partitions]):
             raise SqlProcessorAssertionError(
-                f"cannot insert data when partition value is None, partitions: {partitions}, there maybe some bug, please check"
+                f"cannot insert data when partition value is None, partitions: {partitions}, there maybe some bug,"
+                " please check"
             )
 
         if len(partitions) != 0:
@@ -138,7 +139,10 @@ class ChSqlDialect(SqlDialect):
     def drop_table_sql(self, table: str) -> List[str]:
         drop_table_sql = f"drop table if exists {table}"
         db, pure_table_name = split_table_name(table)
-        drop_pt_metadata = f"alter table {self.partitions_table_name} delete where db_name = '{db}' and table_name = '{pure_table_name}'"
+        drop_pt_metadata = (
+            f"alter table {self.partitions_table_name} delete where db_name = '{db}' and table_name ="
+            f" '{pure_table_name}'"
+        )
         return [drop_table_sql, drop_pt_metadata]
 
     def support_static_partition(self):
@@ -155,5 +159,8 @@ class ChSqlDialect(SqlDialect):
             raise SqlProcessorAssertionError("clickhouse only supports single-column partitioning.")
         else:
             db, pure_table_name = tuple(table_name.split("."))
-            insert_pt_metadata = f"insert into {self.partitions_table_name} values('{db}', '{pure_table_name}', '{partitions[0].value}', now());"
+            insert_pt_metadata = (
+                f"insert into {self.partitions_table_name} values('{db}', '{pure_table_name}', '{partitions[0].value}',"
+                " now());"
+            )
             return insert_pt_metadata

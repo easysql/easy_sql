@@ -238,7 +238,10 @@ class Step:
     def _write_for_output_step(self, backend: Backend, table: BackendTable, context: ProcessorContext, dry_run: bool):
         extra_cols, variables = context.extra_cols, context.vars
         if "." not in self.target_config.name:
-            message = f"table name for hive or output must be a full name, it should be of format DB.TABLE_NAME, got `{self.target_config.name}`"
+            message = (
+                "table name for hive or output must be a full name, it should be of format DB.TABLE_NAME, got"
+                f" `{self.target_config.name}`"
+            )
             self.collect_report(message=message)
             raise SqlProcessorException(message)
 
@@ -323,8 +326,7 @@ class Step:
         if self.target_config.is_target_name_a_func():
             if not self.func_runner.run_func(self.target_config.name, context.vars_context):
                 message = (
-                    f"check failed! check function returned False. "
-                    f"check={self.target_config.name}, vars={context.vars}"
+                    f"check failed! check function returned False. check={self.target_config.name}, vars={context.vars}"
                 )
                 self.collect_report(message=message)
                 raise SqlProcessorException(message)
@@ -334,7 +336,7 @@ class Step:
         check_data = df.limit(100).collect()
         if not check_data:
             message = (
-                f"Data for check must contains at least one row. Please check your sql. "
+                "Data for check must contains at least one row. Please check your sql. "
                 f"check={self.target_config.name}, check_data(limit 100)={check_data}, check_data_count={df.count()}"
             )
             self.collect_report(message=message)
@@ -343,15 +345,15 @@ class Step:
             check_data_as_dict = check_item.as_dict()
             if "actual" not in check_data_as_dict or "expected" not in check_data_as_dict:
                 message = (
-                    f"Data for check must contains expected and actual data. Please check your sql. "
+                    "Data for check must contains expected and actual data. Please check your sql. "
                     f"check={self.target_config.name}, check_data(limit 100)={check_data}"
                 )
                 self.collect_report(message=message)
                 raise SqlProcessorException(message)
             if check_data_as_dict["actual"] != check_data_as_dict["expected"]:
                 message = (
-                    f"check [{self.target_config.name}] failed! "
-                    f"actual={check_data_as_dict['actual']}, expected={check_data_as_dict['expected']}, check_data(limit 100)={check_data}"
+                    f"check [{self.target_config.name}] failed! actual={check_data_as_dict['actual']},"
+                    f" expected={check_data_as_dict['expected']}, check_data(limit 100)={check_data}"
                 )
                 logger.error(message)
                 self.collect_report(message=message)
@@ -414,7 +416,7 @@ class StepFactory:
                 matches = re.match(include_sql_pattern, line_stripped, flags=re.IGNORECASE)
                 if len(matches.groups()) != 1:
                     raise SqlProcessorException(
-                        f"parse include config failed. must provide complete module name and the sql variable name."
+                        "parse include config failed. must provide complete module name and the sql variable name."
                         f"bug got config line {line_stripped}"
                     )
                 file = matches.group(1)
@@ -435,7 +437,7 @@ class StepFactory:
                 matches = re.match(include_py_pattern, line_stripped, flags=re.IGNORECASE)
                 if len(matches.groups()) != 2:
                     raise SqlProcessorException(
-                        f"parse include config failed. must provide complete module name and the sql variable name."
+                        "parse include config failed. must provide complete module name and the sql variable name."
                         f"bug got config line {line_stripped}"
                     )
                 module = matches.group(1)

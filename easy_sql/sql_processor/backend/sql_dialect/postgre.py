@@ -154,12 +154,13 @@ class PgSqlDialect(SqlDialect):
                 f"create table {temp_table_name} (like {target_table_name} including defaults including constraints)"
             )
             sqls.append(
-                f"alter table {temp_table_name} add constraint p "
-                f"check ({partition.field_name} >= {partition.value_expr} and {partition.field_name} < {partition.value_next_expr})"
+                f"alter table {temp_table_name} add constraint p check ({partition.field_name} >="
+                f" {partition.value_expr} and {partition.field_name} < {partition.value_next_expr})"
             )
             filter_expr = f"{partition.field_name} = {partition.value_expr}"
             sqls.append(
-                f"insert into {temp_table_name}({col_names_expr}) select {col_names_expr} from {source_table_name} where {filter_expr}"
+                f"insert into {temp_table_name}({col_names_expr}) select {col_names_expr} from"
+                f" {source_table_name} where {filter_expr}"
             )
             sqls.append(f"drop table if exists {partition_table_name}")
             sqls.append(

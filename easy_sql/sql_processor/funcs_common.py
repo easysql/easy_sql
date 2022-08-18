@@ -112,7 +112,8 @@ class PartitionFuncs:
         step: Step = step
         if len(args) < 2:
             raise Exception(
-                f"must contains at least one table and exactly one partition_value when calling ensure_partition_exists, got {args}"
+                "must contains at least one table and exactly one partition_value when calling"
+                f" ensure_partition_exists, got {args}"
             )
         partition_value = args[-1]
         tables = args[:-1]
@@ -134,7 +135,7 @@ class PartitionFuncs:
         step: Step = step
         if len(args) < 2:
             raise Exception(
-                f"must contains one table and exactly one partition_value and one or more foreign key columns"
+                "must contains one table and exactly one partition_value and one or more foreign key columns"
                 f" when calling ensure_dwd_partition_exists, got {args}"
             )
         table_name = args[0]
@@ -163,7 +164,10 @@ class PartitionFuncs:
                 partition_value_to_use_expr = (
                     f"'{partition_value_to_use}'" if isinstance(partition_values[0], str) else partition_value_to_use
                 )
-                sql = f"select count(1) as total_count from {table_name} where {partition_col}={partition_value_to_use_expr}"
+                sql = (
+                    f"select count(1) as total_count from {table_name} where"
+                    f" {partition_col}={partition_value_to_use_expr}"
+                )
                 total_count = self.backend.exec_sql(sql).collect()[0][0]
                 if total_count > 0:
                     fk_col_non_null_expr = " or ".join([f"{fk_col} is not null" for fk_col in foreign_key_cols])
@@ -173,7 +177,10 @@ class PartitionFuncs:
                     )
                     any_fk_col_non_null_rows = self.backend.exec_sql(sql).collect()
                     if len(any_fk_col_non_null_rows) == 0:
-                        message = f"all fk cols are null in partition: table_name={table_name}, partition={partition_value_to_use}"
+                        message = (
+                            f"all fk cols are null in partition: table_name={table_name},"
+                            f" partition={partition_value_to_use}"
+                        )
                         logger.info(message)
                         step.collect_report(message=message)
                         check_ok = False
@@ -184,7 +191,8 @@ class PartitionFuncs:
         step: Step = step
         if len(args) < 2:
             raise Exception(
-                f"must contains at least one table and exactly one partition_value when calling ensure_partition_exists, got {args}"
+                "must contains at least one table and exactly one partition_value when calling"
+                f" ensure_partition_exists, got {args}"
             )
         partition_value = args[-1]
         tables = args[:-1]

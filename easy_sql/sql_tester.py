@@ -128,7 +128,8 @@ class TableColumnTypes:
             if col_name in self.partition_col_types:
                 return self.partition_col_types[col_name]
             raise Exception(
-                f"column {col_name} not found for table {table_name}, known columns:: {list(self.table_col_types[table_name].keys())}"
+                f"column {col_name} not found for table {table_name}, known columns::"
+                f" {list(self.table_col_types[table_name].keys())}"
             )
         if self.backend == "clickhouse":
             return self.table_col_types[table_name][col_name].strip()
@@ -242,7 +243,8 @@ class TableColumnTypes:
 
             if col_type.replace(" ", "").startswith("map<"):
                 raise AssertionError(
-                    f"map type not supported right now when parsing value `{col_value}` for column: {table_name}.{col_name}"
+                    f"map type not supported right now when parsing value `{col_value}` for column:"
+                    f" {table_name}.{col_name}"
                 )
             if col_type.startswith("decimal(") or col_type == "double":
                 return col_type, float(col_value)
@@ -264,7 +266,8 @@ class TableColumnTypes:
                 vals = str(col_value).strip().split("|")
                 if len(vals) < 2:
                     raise AssertionError(
-                        f"must provide all the values of type {col_type} for {table_name}.{col_name}. Incomplete value `{col_value}`"
+                        f"must provide all the values of type {col_type} for {table_name}.{col_name}. Incomplete value"
+                        f" `{col_value}`"
                     )
                 latest_value = str(vals[0]).strip()
                 first_show_time = str(vals[1]).strip() if not date_converter else date_converter(vals[1])
@@ -352,11 +355,13 @@ class TestCase:
             if include_name:
                 if not include_value:
                     raise AssertionError(
-                        f"parse test case at row {row_start_idx + 1 + i} failed: there must be value set for INCLUDES, found None"
+                        f"parse test case at row {row_start_idx + 1 + i} failed: there must be value set for INCLUDES,"
+                        " found None"
                     )
                 self.includes[include_name] = include_value
                 log_debug(
-                    f"find includes at row {row_start_idx + 1}: include_name={include_name}, include_value={include_value}"
+                    f"find includes at row {row_start_idx + 1}: include_name={include_name},"
+                    f" include_value={include_value}"
                 )
 
     def parse_udfs(self, row_start_idx: int, rows: List[List[Cell]]):
@@ -382,7 +387,8 @@ class TestCase:
                     var_name, var_value = self.parse_var_from_cell(wb, var_name, var_value)
                     self.vars[var_name] = var_value
                     log_debug(
-                        f"find vars at row {row_start_idx + 1}: name={var_name}, value={var_value} (type: {type(var_value)})"
+                        f"find vars at row {row_start_idx + 1}: name={var_name}, value={var_value} (type:"
+                        f" {type(var_value)})"
                     )
 
     def parse_var_from_cell(self, wb: Book, var_name: Cell, var_value: Cell) -> Tuple[str, Any]:
@@ -416,11 +422,13 @@ class TestCase:
         cells = rows[0]
         if len(cells) < 2 or not cells[1].value or not str(cells[1].value).strip():
             raise AssertionError(
-                f"parse test case at row {row_start_idx + 1} failed: there must be table name set for {label}, found None"
+                f"parse test case at row {row_start_idx + 1} failed: there must be table name set for {label}, found"
+                " None"
             )
         if len(cells) < 3 or not cells[2].value or not str(cells[2].value).strip():
             raise AssertionError(
-                f"parse test case at row {row_start_idx + 1} failed: there must be at least one column set for {label}, found 0"
+                f"parse test case at row {row_start_idx + 1} failed: there must be at least one column set for {label},"
+                " found 0"
             )
 
         table_name = str(cells[1].value)
@@ -479,7 +487,8 @@ class TestCase:
                     )
 
         log_debug(
-            f'find {label.lower()} table at row {row_start_idx + 1}: {table_name}{{{", ".join(columns)}}}, data length is {len(values)}'
+            f'find {label.lower()} table at row {row_start_idx + 1}: {table_name}{{{", ".join(columns)}}}, data length'
+            f" is {len(values)}"
         )
         print(f"table data for `{table_name}`: ")
         for v in values:
@@ -744,7 +753,10 @@ class TestCaseRunner:
 
         schema = self.table_column_types.column_types_to_schema(backend, output.columns, output.column_types)
         backend.create_temp_table_with_data(f"{full_tempview_name}__expected", output.values, schema)
-        select_output_sql = f'select {", ".join(output.columns)} from {full_tempview_name}__expected order by {", ".join(output.columns)}'
+        select_output_sql = (
+            f'select {", ".join(output.columns)} from {full_tempview_name}__expected order by'
+            f' {", ".join(output.columns)}'
+        )
         expected_output = backend.exec_sql(select_output_sql).collect()
         return actual_output, expected_output
 
@@ -856,7 +868,8 @@ class SqlTester:
             test_result = self.run_test(f)
             test_results.append(test_result)
             print(
-                f"============= running test from file {os.path.basename(f)} [END: {test_result.simple_stat_str}]=============="
+                f"============= running test from file {os.path.basename(f)} [END:"
+                f" {test_result.simple_stat_str}]=============="
             )
         TestResult.print_results(test_results)
         failed_count = sum([len(test_result.failed_cases) for test_result in test_results])

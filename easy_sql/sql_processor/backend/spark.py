@@ -161,9 +161,9 @@ class SparkBackend(Backend):
             if p.field not in schema.fieldNames():
                 if p.value is None:
                     raise SqlProcessorAssertionError(
-                        f"partition column value is None when create table with partitions but partitions is not in dataframe. "
-                        f"this should not happen. "
-                        f"table_name={dbname}.{table_name}, p.field={p.field}, p.value={p.value}"
+                        "partition column value is None when create table with partitions but partitions is not in"
+                        f" dataframe. this should not happen. table_name={dbname}.{table_name}, p.field={p.field},"
+                        f" p.value={p.value}"
                     )
                 df = df.withColumn(p.field, lit(p.value))
 
@@ -220,8 +220,8 @@ class SparkBackend(Backend):
         temp_res.createOrReplaceTempView("res")
 
         save_sql = (
-            f"insert {'into' if save_mode == SaveMode.append else save_mode.name} table {target_table_meta.table_name} {partition_expr} "
-            f"select * from res"
+            f"insert {'into' if save_mode == SaveMode.append else save_mode.name} table"
+            f" {target_table_meta.table_name} {partition_expr} select * from res"
         )
         self.exec_native_sql(save_sql)
 

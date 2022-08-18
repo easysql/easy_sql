@@ -109,7 +109,6 @@ class IOFuncs:
             f.write(json.dumps(data, ensure_ascii=False, indent=4, sort_keys=False))
 
     def update_json_local(self, context, vars: str, list_vars: str, json_attr: str, output_file: str):
-
         context: ProcessorContext = context
         vars_value = {
             var.strip(): context.vars_context.vars.get(var.strip(), None) for var in vars.split(",") if var.strip()

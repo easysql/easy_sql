@@ -87,8 +87,8 @@ class RdbTable(Table):
                 else:
                     if pt.value is not None:
                         logger.warning(
-                            f"partition column already exists in table {table_meta.table_name}, "
-                            f"but right now we provided a new value {pt.value} for partition column {pt.field}. Will ignore it."
+                            f"partition column already exists in table {table_meta.table_name}, but right now we"
+                            f" provided a new value {pt.value} for partition column {pt.field}. Will ignore it."
                         )
         return table
 
@@ -135,7 +135,10 @@ class RdbTable(Table):
                         temp_table_name = f"{prefix}_newcol_{name[:30]}_source"
                         self._exec_sql(self.db_config.create_view_sql(temp_table_name, self.sql))
                         field_names = self._field_names(f"{self.backend.temp_schema}.{temp_table_name}")
-                        select_sql = f'select {", ".join(field_names)}, {value} as {name} from {self.backend.temp_schema}.{temp_table_name}'
+                        select_sql = (
+                            f'select {", ".join(field_names)}, {value} as {name} from'
+                            f" {self.backend.temp_schema}.{temp_table_name}"
+                        )
 
                     self._exec_sql(self.db_config.create_view_sql(newcol_table_name, select_sql))
                     self.sql = f"select * from {self.backend.temp_schema}.{newcol_table_name}"
@@ -212,7 +215,8 @@ class RdbTable(Table):
                     raise e
         if row_count is None and len(rows) == max_rows:
             logger.warning(
-                f"found {max_rows} items, but there may be more, will only fetch {max_rows} items at most for sql: {self.sql}"
+                f"found {max_rows} items, but there may be more, will only fetch {max_rows} items at most for sql:"
+                f" {self.sql}"
             )
         rows = [RdbRow(list(result.keys()), row) for row in rows]
         result.close()
@@ -245,13 +249,14 @@ class RdbTable(Table):
         if temp_table_name != name:
             if "." in name:
                 raise SqlProcessorAssertionError(
-                    f"renaming should only happen in temp database, "
+                    "renaming should only happen in temp database, "
                     f"so name must be pure TABLE_NAME when renaming tables, found: {name}"
                 )
             if temp_table_name != name:
                 if self.backend.table_exists(TableMeta(name)):
                     raise SqlProcessorAssertionError(
-                        f"we are trying to replace an existing temp table, it is not supported right now. table name: {name}"
+                        "we are trying to replace an existing temp table, it is not supported right now. table name:"
+                        f" {name}"
                     )
                 self._exec_sql(
                     self.db_config.create_view_sql(name, f"select * from {self.backend.temp_schema}.{temp_table_name}")
@@ -267,8 +272,8 @@ class RdbTable(Table):
         for pt in target_table.partitions:
             if pt.field not in field_names:
                 raise Exception(
-                    f"does not found partition field `{pt.field}` in source table for target table {target_table.table_name}, "
-                    f"all fields are in source table: {field_names}"
+                    f"does not found partition field `{pt.field}` in source table for target table"
+                    f" {target_table.table_name}, all fields are in source table: {field_names}"
                 )
 
         cols = self.backend.inspector.get_columns(temp_table_name, self.backend.temp_schema)
@@ -312,7 +317,8 @@ class RdbTable(Table):
                     self.db_config.insert_data_sql(
                         target_table_name,
                         col_names,
-                        f"select {converted_col_names} from {self.backend.temp_schema}.{temp_table_name} where {filter_expr}",
+                        f"select {converted_col_names} from {self.backend.temp_schema}.{temp_table_name} where"
+                        f" {filter_expr}",
                         partitions,
                     )
                 )
@@ -372,7 +378,8 @@ class RdbRow(Row):
 
 
 class RdbBackend(Backend):
-    """table_partitions_table_name; means the table name which save the static partition info for all partition tables in data warehouse,
+    """table_partitions_table_name;
+    means the table name which save the static partition info for all partition tables in data warehouse,
     for now need support backend type: [clickhouse]
     others backend has another method to manage static partition info or just support static partition"""
 
@@ -548,7 +555,7 @@ class RdbBackend(Backend):
             pt_cols = [pt.field for pt in original_source_table.partitions]
             pt_values_list = _exec_sql(
                 self.conn,
-                f'select distinct {", ".join(pt_cols)} ' f"from {source_table.get_full_table_name(self.temp_schema)}",
+                f'select distinct {", ".join(pt_cols)} from {source_table.get_full_table_name(self.temp_schema)}',
             ).fetchall()
             for pt_values in pt_values_list:
                 save_partitions_list.append([Partition(field, value) for field, value in zip(pt_cols, pt_values)])
