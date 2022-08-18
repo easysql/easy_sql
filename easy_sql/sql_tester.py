@@ -326,7 +326,7 @@ class TestCase:
         return os.path.basename(self.sql_file_path) if self.sql_file_path else None
 
     def parse_test_case_of_label(
-            self, wb: Workbook, label: str, row_start_idx: int, rows: List[List[Cell]], table_column_types: TableColumnTypes
+        self, wb: Workbook, label: str, row_start_idx: int, rows: List[List[Cell]], table_column_types: TableColumnTypes
     ):
         log_debug(f"start to parse case from row {row_start_idx} for label {label}")
         if label == "CASE":
