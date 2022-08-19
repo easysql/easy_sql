@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from sqlalchemy.engine.base import Connection, Engine
     from sqlalchemy.engine.reflection import Inspector
     from sqlalchemy.sql.elements import TextClause
+    from sqlalchemy.types import TypeEngine
 
 
 class TimeLog:
@@ -460,6 +461,19 @@ class RdbBackend(Backend):
         # inspector object has cache built-in, so we should recreate the object if required
         inspector: Inspector = inspect(self.engine)
         return inspector
+
+    def get_columns(self, table_name, schema=None, raw=False, **kw) -> List[Dict]:
+        cols = self.inspector.get_columns(table_name, schema, **kw)
+        if not raw:
+            for col in cols:
+                col_type: TypeEngine = col["type"]
+                col["type"] = col_type.compile(self.inspector.dialect)
+        return cols
+
+    def get_column_names(self, table_name, schema=None, raw=False, **kw) -> List[str]:
+        cols = self.get_columns(table_name, schema=None, raw=True, **kw)
+        names = [col["name"] for col in cols if "name" in col]
+        return names
 
     def reset(self):
         if self.conn:
