@@ -471,7 +471,7 @@ class RdbBackend(Backend):
         return cols
 
     def get_column_names(self, table_name, schema=None, raw=False, **kw) -> List[str]:
-        cols = self.get_columns(table_name, schema=None, raw=True, **kw)
+        cols = self.get_columns(table_name, schema, raw, **kw)
         names = [col["name"] for col in cols if "name" in col]
         return names
 
@@ -618,7 +618,7 @@ class RdbBackend(Backend):
         self._ensure_contain_target_cols(source_col_names, target_col_names)
 
         if save_mode == SaveMode.overwrite:
-            self._overwrite(source_table, target_table, original_source_table, source_col_names)
+            self._overwrite(source_table, target_table, original_source_table, target_col_names)
         elif save_mode == SaveMode.append:
             self._append(source_table, target_table, original_source_table, target_col_names)
         else:
