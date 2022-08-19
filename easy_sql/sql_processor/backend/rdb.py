@@ -666,7 +666,11 @@ class RdbBackend(Backend):
             _exec_sql(self.conn, stmt, **{col: _v for _v, col in zip(v, cols)})
 
     def _overwrite(
-        self, source_table: TableMeta, target_table: TableMeta, original_source_table: TableMeta, target_cols: List[Dict]
+        self,
+        source_table: TableMeta,
+        target_table: TableMeta,
+        original_source_table: TableMeta,
+        target_cols: List[Dict],
     ):
         col_names = ", ".join([col["name"] for col in target_cols])
         full_target_table_name = target_table.get_full_table_name(self.temp_schema)
@@ -712,7 +716,11 @@ class RdbBackend(Backend):
             _exec_sql(self.conn, self.sql_dialect.rename_table_sql(temp_table_name, full_target_table_name))
 
     def _append(
-        self, source_table: TableMeta, target_table: TableMeta, original_source_table: TableMeta, target_cols: List[Dict]
+        self,
+        source_table: TableMeta,
+        target_table: TableMeta,
+        original_source_table: TableMeta,
+        target_cols: List[Dict],
     ) -> None:
         col_names = ", ".join([col["name"] for col in target_cols])
         full_target_table_name = target_table.get_full_table_name(self.temp_schema)
