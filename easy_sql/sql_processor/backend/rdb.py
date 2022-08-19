@@ -274,9 +274,9 @@ class RdbTable(Table):
                     f" {target_table.table_name}, all fields are in source table: {field_names}"
                 )
 
-        cols = self.backend.inspector.get_columns(temp_table_name, self.backend.temp_schema)
+        cols = self.backend.get_columns(temp_table_name, self.backend.temp_schema)
         if self.backend.table_exists(target_table):
-            cols = self.backend.inspector.get_columns(target_table.pure_table_name, target_table.dbname)
+            cols = self.backend.get_columns(target_table.pure_table_name, target_table.dbname)
         else:
             db = target_table.table_name[: target_table.table_name.index(".")]
             self._exec_sql(self.db_config.create_db_sql(db))
