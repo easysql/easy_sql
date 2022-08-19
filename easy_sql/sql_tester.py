@@ -352,7 +352,7 @@ class TestCase:
 
     def parse_includes(self, wb: Workbook, row_start_idx: int, rows: List[List[Cell]]):
         for i, row in enumerate(rows):
-            include_name, include_value = row[1].value.strip(), row[2].value.strip()
+            include_name, include_value = row[1].value and row[1].value.strip(), row[2].value and row[2].value.strip()
             if include_name:
                 if not include_value:
                     raise AssertionError(
