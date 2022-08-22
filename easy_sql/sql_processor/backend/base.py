@@ -39,6 +39,10 @@ class Backend:
     def is_rdb_backend(self):
         return self.is_postgres_backend or self.is_clickhouse_backend or self.is_bigquery_backend
 
+    @property
+    def is_flink_backend(self):
+        return str(self.__class__) == "<class 'easy_sql.sql_processor.backend.flink.FlinkBackend'>"
+
     def reset(self):
         raise NotImplementedError()
 
@@ -102,7 +106,9 @@ class Backend:
         self, table_name: str, values: List[List[Any]], schema: Union[StructType, List[Col]]
     ):
         raise NotImplementedError()
-
+    
+    def register_tables(self, *tables):
+        raise NotImplementedError()
 
 class Partition:
     def __init__(self, field: str, value=None):

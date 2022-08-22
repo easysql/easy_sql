@@ -44,19 +44,20 @@ def read_sql(sql_file: str):
         return f.read()
 
 
-@click.command(name="data_process")
-@click.option("--sql-file", "-f", type=str)
-@click.option("--vars", "-v", type=str, required=False)
-@click.option("--dry-run", type=str, required=False, help="if dry run, one of [true, 1, false, 0]")
-@click.option("--print-command", "-p", is_flag=True)
-def data_process(sql_file: str, vars: str, dry_run: str, print_command: bool):
-    _data_process(sql_file, vars, dry_run, print_command)
+@click.command(name='data_process')
+@click.option('--sql-file', '-f', type=str)
+@click.option('--vars', '-v', type=str, required=False)
+@click.option('--dry-run', type=str, required=False, help='if dry run, one of [true, 1, false, 0]')
+@click.option('--print-command', '-p', is_flag=True)
+@click.option("--table-config-file", type=str, required=False)
+def data_process(sql_file: str, vars: str, dry_run: str, print_command: bool, table_config_file: str):
+    _data_process(sql_file, vars, dry_run, print_command, table_config_file)
 
 
-def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], print_command: bool):
-    if not sql_file.endswith(".sql"):
-        raise Exception(f"sql_file must ends with .sql, found `{sql_file}`")
-    dry_run = dry_run if dry_run is not None else "0"
+def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], print_command: bool, table_config_file: Optional[str] = None):
+    if not sql_file.endswith('.sql'):
+        raise Exception(f'sql_file must ends with .sql, found `{sql_file}`')
+    dry_run = dry_run if dry_run is not None else '0'
 
     if print_command:
         command = shell_command(sql_file=sql_file, vars=vars, dry_run=dry_run)
@@ -94,7 +95,7 @@ def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], pr
 
         sql_processor.run(dry_run=dry_run)
 
-    backend: Backend = create_sql_processor_backend(config.backend, config.sql, config.task_name)
+    backend: Backend = create_sql_processor_backend(config.backend, config.sql, config.task_name, config.tables, table_config_file)
 
     backend_is_bigquery = config.backend == "bigquery"
     pre_defined_vars = {"temp_db": backend.temp_schema if backend_is_bigquery else None}
@@ -104,20 +105,21 @@ def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], pr
         backend.clean()
 
 
-def create_sql_processor_backend(backend: str, sql: str, task_name: str) -> Backend:
-    if backend == "spark":
+def create_sql_processor_backend(backend: str, sql: str, task_name: str, tables: List[str], table_config_file: str) -> 'Backend':
+    if backend == 'spark':
         from easy_sql.spark_optimizer import get_spark
         from easy_sql.sql_processor.backend import SparkBackend
 
         backend = SparkBackend(get_spark(task_name))
-        exec_sql = lambda sql: backend.exec_native_sql(sql)  # noqa: E731
-    elif backend == "maxcompute":
-        odps_parms = {"access_id": "xx", "secret_access_key": "xx", "project": "xx", "endpoint": "xx"}
-        from easy_sql.sql_processor.backend.maxcompute import (
-            MaxComputeBackend,
-            _exec_sql,
-        )
-
+        exec_sql = lambda sql: backend.exec_native_sql(sql)
+    elif backend == 'flink':
+        from easy_sql.sql_processor.backend import FlinkBackend
+        backend = FlinkBackend()
+        backend.register_tables(table_config_file, tables)
+        exec_sql = lambda sql: backend.exec_native_sql(sql)
+    elif backend == 'maxcompute':
+        odps_parms = {'access_id': 'xx', 'secret_access_key': 'xx', 'project': 'xx', 'endpoint': 'xx'}
+        from easy_sql.sql_processor.backend.maxcompute import MaxComputeBackend, _exec_sql
         backend = MaxComputeBackend(**odps_parms)
         exec_sql = lambda sql: _exec_sql(backend.conn, sql)  # noqa: E731
     elif backend in ["postgres", "clickhouse", "bigquery"]:
@@ -153,20 +155,13 @@ def create_sql_processor_backend(backend: str, sql: str, task_name: str) -> Back
 
 
 class EasySqlConfig:
-    def __init__(
-        self,
-        sql_file: str,
-        sql: str,
-        backend: str,
-        customized_backend_conf: List[str],
-        customized_easy_sql_conf: List[str],
-        udf_file_path: str,
-        func_file_path: str,
-        scala_udf_initializer: str,
-    ):
+
+    def __init__(self, sql_file: str, sql: str, backend: str, customized_backend_conf: List[str], customized_easy_sql_conf: List[str],
+                 udf_file_path: str, func_file_path: str, tables: List[str]):
         self.sql_file = sql_file
         self.sql = sql
         self.backend = backend
+        self.tables = tables
         self.customized_backend_conf, self.customized_easy_sql_conf = customized_backend_conf, customized_easy_sql_conf
         self.udf_file_path, self.func_file_path = udf_file_path, func_file_path
         self.scala_udf_initializer = scala_udf_initializer
@@ -178,6 +173,7 @@ class EasySqlConfig:
         sql_lines = sql.split("\n")
 
         backend = _parse_backend(sql)
+        tables = _parse_tables(sql)
 
         customized_backend_conf: List[str] = []
         customized_easy_sql_conf: List[str] = []
@@ -191,22 +187,11 @@ class EasySqlConfig:
 
         udf_file_path, func_file_path, scala_udf_initializer = None, None, None
         for c in customized_easy_sql_conf:
-            if c.startswith("udf_file_path"):
-                udf_file_path = c[c.index("=") + 1 :].strip()
-            if c.startswith("func_file_path"):
-                func_file_path = c[c.index("=") + 1 :].strip()
-            if c.startswith("scala_udf_initializer"):
-                scala_udf_initializer = c[c.index("=") + 1 :].strip()
-        return EasySqlConfig(
-            sql_file,
-            sql,
-            backend,
-            customized_backend_conf,
-            customized_easy_sql_conf,
-            udf_file_path,
-            func_file_path,
-            scala_udf_initializer,
-        )
+            if c.startswith('udf_file_path'):
+                udf_file_path = c[c.index('=') + 1:].strip()
+            if c.startswith('func_file_path'):
+                func_file_path = c[c.index('=') + 1:].strip()
+        return EasySqlConfig(sql_file, sql, backend, customized_backend_conf, customized_easy_sql_conf, udf_file_path, func_file_path, tables)
 
     @property
     def spark_submit(self):
@@ -285,10 +270,19 @@ def _parse_backend(sql: str):
         if re.match(r"^-- \s*backend:.*$", line):
             backend = line[line.index("backend:") + len("backend:") :].strip().split(" ")[0]
             break
-    supported_backends = ["spark", "postgres", "clickhouse", "maxcompute", "bigquery"]
+    supported_backends = ['spark', 'postgres', 'clickhouse', 'maxcompute', 'bigquery', 'flink']
     if backend not in supported_backends:
         raise Exception(f"unsupported backend `${backend}`, all supported backends are: {supported_backends}")
     return backend
+
+def _parse_tables(sql: str):
+    sql_lines = sql.split("\n")
+    tables = ''
+    for line in sql_lines:
+        if re.match(r"^-- \s*tables:.*$", line):
+            tables = line[line.index("tables:") + len("tables:") :].strip().split(" ")[0]
+            break
+    return tables.split(',')
 
 
 if __name__ == "__main__":
