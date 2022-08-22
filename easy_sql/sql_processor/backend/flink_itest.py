@@ -10,7 +10,7 @@ from easy_sql.sql_processor.backend import TableMeta, SaveMode, Partition
 from pyflink.table.schema import Schema
 from pyflink.table import DataTypes
 from pyflink.table.table_descriptor import TableDescriptor
-from .sql_dialect.postgre import PgSqlDialect
+from .sql_dialect.postgres import PgSqlDialect
 from sqlalchemy.engine.base import Connection, Engine
 from .sql_dialect import SqlExpr
 
