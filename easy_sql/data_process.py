@@ -114,7 +114,11 @@ def create_sql_processor_backend(backend: str, sql: str, task_name: str, tables:
     elif backend == 'flink':
         from easy_sql.sql_processor.backend import FlinkBackend
         backend = FlinkBackend()
-        backend.register_tables(resolve_file(flink_source_file, abs_path=True), tables)
+        flink_source_file = resolve_file(flink_source_file, abs_path=True)
+        conn = get_conn_from_flink_source_file(flink_source_file, tables)
+        from easy_sql.sql_processor.backend.rdb import _exec_sql
+        exec_sql = lambda sql: _exec_sql(conn, sql)
+        backend.register_tables(flink_source_file, tables)
     elif backend == 'maxcompute':
         odps_parms = {'access_id': 'xx', 'secret_access_key': 'xx', 'project': 'xx', 'endpoint': 'xx'}
         from easy_sql.sql_processor.backend.maxcompute import MaxComputeBackend, _exec_sql
@@ -287,6 +291,33 @@ def _parse_tables(sql: str):
             tables += line[line.index(OUTPUTS) + len(OUTPUTS) :].split(',')
     return list(set(map(lambda t: t.strip(), tables)))
 
+def get_conn_from_flink_source_file(flink_source_file: str, tables: List[str]):
+    db_url = retrieve_test_db_url_from_flink_source_file(flink_source_file, tables)
+    from sqlalchemy import create_engine
+    from sqlalchemy.engine.base import Connection, Engine
+    engine: Engine = create_engine(db_url, isolation_level="AUTOCOMMIT", pool_size=1)
+    conn: Connection = engine.connect()
+    return conn
+
+
+def retrieve_test_db_url_from_flink_source_file(flink_source_file: str, tables: List[str]):
+    if flink_source_file and os.path.exists(flink_source_file):
+        with open(flink_source_file, "r") as f:
+            import json
+            config = json.loads(f.read())
+            database = config['databases'][0]
+            table = tables[0]
+            table_config = next(filter(lambda t: t['name'] == table.strip().split('.')[1], database['tables']), None)
+            connector = next(filter(lambda conn: conn['name'] == table_config['connector']['name'], database['connectors']), None)
+            assert connector and connector['options']['connector'] == 'jdbc'
+            base_url = connector['options']['url']
+            username = connector['options']['username']
+            password = connector['options']['password']
+            split_expr = "://"
+            split_expr_index = base_url.index(split_expr)
+            db_type = base_url[5:split_expr_index]
+            url = f"{db_type}{split_expr}{username}:{password}@{base_url[split_expr_index + len(split_expr) :]}"
+            return url
 
 if __name__ == "__main__":
     # test cases:

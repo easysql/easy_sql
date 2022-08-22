@@ -150,11 +150,12 @@ class FlinkBackend(Backend):
         temp_res.execute_insert(target_table_meta.table_name, save_mode != SaveMode.append)
 
     def refresh_table_partitions(self, table: TableMeta):
+        # flink无法从`desc table`中解析出partition字段，但是可以在flink_source_file中配置table的partition字段
         pass
 
-    def register_tables(self, output_file: str, tables: List[str]):
-        if output_file and os.path.exists(output_file):
-            with open(output_file, "r") as f:
+    def register_tables(self, source_file: str, tables: List[str]):
+        if source_file and os.path.exists(source_file):
+            with open(source_file, "r") as f:
                 config = json.loads(f.read())
                 for database in config['databases']:
                     db_name = database['name']

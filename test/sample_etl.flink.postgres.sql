@@ -3,6 +3,12 @@
 -- inputs: db_1.source_1, db_1.target_1
 -- outputs: db_1.target_1
 
+-- prepare-sql: drop schema if exists sample cascade
+-- prepare-sql: create schema sample
+-- prepare-sql: create table sample.test as select 1 as id, '1' as val
+-- prepare-sql: drop table if exists public.out_put_table
+-- prepare-sql: create table public.out_put_table (id int4 PRIMARY KEY, val text)
+
 -- target=variables
 select 
     'append'           as __save_mode__
