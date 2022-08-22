@@ -157,7 +157,7 @@ def create_sql_processor_backend(backend: str, sql: str, task_name: str, tables:
 class EasySqlConfig:
 
     def __init__(self, sql_file: str, sql: str, backend: str, customized_backend_conf: List[str], customized_easy_sql_conf: List[str],
-                 udf_file_path: str, func_file_path: str, tables: List[str]):
+                 udf_file_path: str, func_file_path: str, scala_udf_initializer: str, tables: List[str]):
         self.sql_file = sql_file
         self.sql = sql
         self.backend = backend
@@ -191,7 +191,7 @@ class EasySqlConfig:
                 udf_file_path = c[c.index('=') + 1:].strip()
             if c.startswith('func_file_path'):
                 func_file_path = c[c.index('=') + 1:].strip()
-        return EasySqlConfig(sql_file, sql, backend, customized_backend_conf, customized_easy_sql_conf, udf_file_path, func_file_path, tables)
+        return EasySqlConfig(sql_file, sql, backend, customized_backend_conf, customized_easy_sql_conf, udf_file_path, func_file_path, scala_udf_initializer, tables)
 
     @property
     def spark_submit(self):
