@@ -64,7 +64,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-ut
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-ut-1 # increase the number if you updated below install cmd
     - run: poetry install --no-interaction -E "spark linter pg"
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: poetry run make unit-test
