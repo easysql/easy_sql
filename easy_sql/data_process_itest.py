@@ -41,4 +41,4 @@ class DataProcessTest(unittest.TestCase):
         _exec_sql(conn, "create table sample.test as select 2 as id, '2' as val")
         _exec_sql(conn, "drop table if exists public.out_put_table")
         _exec_sql(conn, 'CREATE TABLE public.out_put_table (id int4 PRIMARY KEY, val text)')
-        data_process._data_process(os.path.join(proj_base_dir, 'test/sample_etl.flink.postgres.sql'), None, None, False, os.path.join(proj_base_dir, 'test/sample_etl.flink_table_config.json'))
+        data_process._data_process(os.path.join(proj_base_dir, 'test/sample_etl.flink.postgres.sql'), None, None, False)
