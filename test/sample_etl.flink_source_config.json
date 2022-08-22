@@ -7,7 +7,7 @@
                     "name": "connector_1",
                     "options": {
                         "connector": "jdbc",
-                        "url": "jdbc:postgresql://localhost:5432/postgres",
+                        "url": "jdbc:postgresql://localhost:15432/postgres",
                         "username": "postgres",
                         "password": "123456"
                     }
@@ -17,7 +17,7 @@
                     "options": {
                         "connector": "postgres-cdc",
                         "hostname": "localhost",
-                        "port": "5432",
+                        "port": "15432",
                         "database-name": "postgres",
                         "schema-name": "postgres",
                         "username": "postgres",
