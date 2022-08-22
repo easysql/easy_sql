@@ -470,8 +470,8 @@ class RdbBackend(Backend):
                 col["type"] = col_type.compile(self.inspector.dialect)
         return cols
 
-    def get_column_names(self, table_name, schema=None, raw=False, **kw) -> List[str]:
-        cols = self.get_columns(table_name, schema, raw, **kw)
+    def get_column_names(self, table_name, schema=None, **kw) -> List[str]:
+        cols = self.get_columns(table_name, schema, raw=True, **kw)
         names = [col["name"] for col in cols if "name" in col]
         return names
 
