@@ -1,6 +1,7 @@
 -- backend: flink
 -- config: easy_sql.flink_source_file=test/sample_etl.flink_source_config.json
--- tables: db_1.source_1,db_1.target_1
+-- inputs: db_1.source_1, db_1.target_1
+-- outputs: db_1.target_1
 
 -- target=variables
 select 

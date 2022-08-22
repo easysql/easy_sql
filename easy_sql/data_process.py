@@ -277,12 +277,15 @@ def _parse_backend(sql: str):
 
 def _parse_tables(sql: str):
     sql_lines = sql.split("\n")
-    tables = ''
+    INPUTS = 'inputs:'
+    OUTPUTS = 'outputs:'
+    tables = []
     for line in sql_lines:
-        if re.match(r"^-- \s*tables:.*$", line):
-            tables = line[line.index("tables:") + len("tables:") :].strip().split(" ")[0]
-            break
-    return tables.split(',')
+        if re.match(rf"^-- \s*{INPUTS}.*$", line):
+            tables += line[line.index(INPUTS) + len(INPUTS) :].split(',')
+        elif re.match(rf"^-- \s*{OUTPUTS}.*$", line):
+            tables += line[line.index(OUTPUTS) + len(OUTPUTS) :].split(',')
+    return list(set(map(lambda t: t.strip(), tables)))
 
 
 if __name__ == "__main__":
