@@ -7,34 +7,31 @@ template: |
 
 categories:
   - title: 'Breaking'
-    label: 'type: breaking'
+    label: 'pr-breaking'
   - title: 'New'
-    label: 'type: feature'
+    label: 'pr-feature'
   - title: 'Bug Fixes'
-    label: 'type: bug'
+    label: 'pr-bugfix'
   - title: 'Maintenance'
-    label: 'type: maintenance'
+    label: 'pr-refactor'
   - title: 'Documentation'
-    label: 'type: docs'
+    label: 'pr-doc'
   - title: 'Other changes'
-  - title: 'Dependency Updates'
-    label: 'type: dependencies'
-    collapse-after: 5
 
 version-resolver:
   major:
     labels:
-      - 'type: breaking'
+      - 'pr-breaking'
   minor:
     labels:
-      - 'type: feature'
+      - 'pr-feature'
   patch:
     labels:
-      - 'type: bug'
-      - 'type: maintenance'
-      - 'type: docs'
-      - 'type: dependencies'
-      - 'type: security'
+      - 'pr-bugfix'
+      - 'pr-refactor'
+      - 'pr-build'
+      - 'pr-doc'
+      - 'pr-chore'
 
 exclude-labels:
   - 'skip-changelog'
