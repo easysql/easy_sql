@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 import json
 import os
 import re
@@ -409,6 +410,11 @@ class TestCase:
                 raise AssertionError("date column must be of format `yyyy-MM-dd` or `yyyy-MM-dd HH:mm:ss`")
             format = "%Y-%m-%d" if len(value) == len("2000-01-01") else "%Y-%m-%d %H:%M:%S"
             return datetime.strptime(value, format)
+        # Excel for Windows stores dates by default as the number of days (or fraction thereof) since 1899-12-31T
+        # https://stackoverflow.com/questions/3727916/how-to-use-xlrd-xldate-as-tuple
+        elif isinstance(value, int):
+            delta = dt.timedelta(days=value)
+            return dt.datetime.strptime("1899-12-30", "%Y-%m-%d") + delta
         return value
 
     def parse_output(
