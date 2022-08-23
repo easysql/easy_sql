@@ -1,5 +1,6 @@
 import os.path
 import unittest
+from datetime import datetime
 
 from easy_sql.sql_tester import SqlReader, TableColumnTypes, TestDataFile, work_path
 
@@ -83,9 +84,20 @@ class TestCaseParserTest(unittest.TestCase):
         input = case.inputs[0]
         self.assertEqual(input.columns, ["id", "val", "val_date", "data_date"])
         self.assertEqual(input.column_types, ["int", "string", "date", "date"])
+        return case
 
     def test_parse_case(self):
-        self.excel_parse_case("test/sample_etl.syntax.xlsx")
+        case = self.excel_parse_case("test/sample_etl.syntax.xlsx")
+        input = case.inputs[0]
+        self.assertEqual(input.values, [[1, "1.0", datetime(2021, 1, 1, 0, 0), datetime(2021, 1, 1, 0, 0)]])
+        self.assertEqual(
+            case.outputs[0].values, [[1, "1.0", datetime(2021, 1, 1, 0, 0)], [1, "2.0", None], [1, "3.0", None]]
+        )
 
     def test_int_date_case_from_excel_cell(self):
-        self.excel_parse_case("test/sample_etl_wps.syntax.xlsx")
+        case = self.excel_parse_case("test/sample_etl.syntax_wps.xlsx")
+        input = case.inputs[0]
+        self.assertEqual(input.values, [[1, "1", datetime(2021, 1, 1, 0, 0), datetime(2021, 1, 1, 0, 0)]])
+        self.assertEqual(
+            case.outputs[0].values, [[1, "1", datetime(2021, 1, 1, 0, 0)], [1, "2", None], [1, "3", None]]
+        )
