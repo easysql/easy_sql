@@ -98,6 +98,4 @@ class TestCaseParserTest(unittest.TestCase):
         case = self.excel_parse_case("test/sample_etl.syntax_wps.xlsx")
         input = case.inputs[0]
         self.assertEqual(input.values, [[1, "1", datetime(2021, 1, 1, 0, 0), datetime(2021, 1, 1, 0, 0)]])
-        self.assertEqual(
-            case.outputs[0].values, [[1, "1", datetime(2021, 1, 1, 0, 0)], [1, "2", None], [1, "3", None]]
-        )
+        self.assertEqual(case.outputs[0].values, [[1, "1", datetime(2021, 1, 1, 0, 0)], [1, "2", None], [1, "3", None]])
