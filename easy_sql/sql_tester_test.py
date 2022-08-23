@@ -64,7 +64,6 @@ class TableColumnTypesTest(unittest.TestCase):
 
 
 class TestCaseParserTest(unittest.TestCase):
-
     def excel_parse_case(self):
         class _SqlReader(SqlReader):
             def find_file_path(self, file_name: str) -> str:
