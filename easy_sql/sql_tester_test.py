@@ -93,4 +93,4 @@ class TestCaseParserTest(unittest.TestCase):
         self.excel_parse_case("test/sample_etl.syntax.xlsx")
 
     def test_int_date_case_from_excel_cell(self):
-        self.excel_parse_case("test/sample_etl.syntax_wps.xlsx")
+        self.excel_parse_case("test/sample_etl_wps.syntax.xlsx")
