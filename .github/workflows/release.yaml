@@ -22,13 +22,13 @@ jobs:
     - name: Install Poetry
       uses: snok/install-poetry@v1.3.1
     - name: version
-        id: version
-        run: |
-          tag=${GITHUB_REF_NAME}
-          version=${tag#v}
-          echo "tags: ${tag} , version: ${version}"
-          echo "::set-output name=tag::${tag}"
-          echo "::set-output name=version::${version}"
+      id: version
+      run: |
+        tag=${GITHUB_REF_NAME}
+        version=${tag#v}
+        echo "tags: ${tag} , version: ${version}"
+        echo "::set-output name=tag::${tag}"
+        echo "::set-output name=version::${version}"
     - name: bump version
       run: poetry version ${{ steps.version.outputs.version }}
     - name: update release tag
