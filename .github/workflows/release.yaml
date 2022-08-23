@@ -8,9 +8,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
+    - uses: actions/checkout@v3
     - uses: actions/setup-python@v4
       with:
         python-version: 3.8
@@ -37,6 +35,6 @@ jobs:
             git config user.email 'easy_sql@thoughtworks.com'
             git commit -am "release: bump to version ${{ steps.version.outputs.version }}"
             git tag v${{ steps.version.outputs.version }} -f
-            git push origin main --follow-tags
+            git push --tags
     - name: upload pypi
       run: make upload-pip
