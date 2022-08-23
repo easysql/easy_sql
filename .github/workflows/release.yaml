@@ -11,7 +11,7 @@ jobs:
     - uses: actions/checkout@v3
       with:
         ref: main
-        # token: ${{ secrets.GH_PAT }}
+        ssh-key: ${{ secrets.k }}
     - uses: actions/setup-python@v4
       with:
         python-version: 3.8
@@ -36,9 +36,8 @@ jobs:
       run: |
             git config user.name 'auto-release'
             git config user.email 'easy_sql@thoughtworks.com'
-            git commit -am "release: bump to version ${{ steps.version.outputs.version }}"
-            git push
-            # git tag ${{ steps.version.outputs.tag }} -f
-            # git push --atomic origin main ${{ steps.version.outputs.tag }} -f
+            git commit -am "release: bump to version ${{ steps.version.outputs.version }} [skip ci]"
+            git tag ${{ steps.version.outputs.tag }} -f
+            git push --atomic origin main ${{ steps.version.outputs.tag }} -f
     - name: upload pypi
       run: make upload-pip
