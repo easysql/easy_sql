@@ -35,7 +35,7 @@ You can install it with command `python3 -m pip install dist/easy_sql*.whl[extra
 
 ## First ETL with Easy SQL
 
-(You need to install click package (by command `python3 -m pip install easy-sql-easy-sql[cli,spark]`) before run the command below.)
+Install easy_sql with spark as the backend: `python3 -m pip install easy_sql-easy_sql[spark,cli]`.
 
 ### For spark backend
 
@@ -77,7 +77,7 @@ select * from sample.result
 Run it with command:
 
 ```bash
-python3 -m easy_sql.data_process -f sample_etl.spark.sql
+bash -c "$(python3 -m easy_sql.data_process -f sample_etl.spark.sql -p)"
 ```
 
 ### For postgres backend:
