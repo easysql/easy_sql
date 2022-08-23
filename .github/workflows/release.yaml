@@ -35,7 +35,7 @@ jobs:
             git config user.name 'auto-release'
             git config user.email 'easy_sql@thoughtworks.com'
             git commit -am "release: bump to version ${{ steps.version.outputs.version }}"
-            git tag v${{ steps.version.outputs.version }} -f
-            git push --atomic origin <branch name> <tag>
+            git tag ${{ steps.version.outputs.tag }} -f
+            git push --atomic origin main ${{ steps.version.outputs.tag }}
     - name: upload pypi
       run: make upload-pip
