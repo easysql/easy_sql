@@ -23,7 +23,7 @@ Currently we are providing below extras, choose according to your need:
 - cli
 - linter
 - spark
-- pg
+- pg ()
 - clickhouse
 
 ## Building Easy SQL
