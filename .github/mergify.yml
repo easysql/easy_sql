@@ -1,0 +1,115 @@
+queue_rules:
+  - name: shared_queue
+    conditions:
+      - check-success=unit-test
+      - check-success=e2e-test-spark
+      - check-success=e2e-test-postgres
+      - check-success=e2e-test-clickhouse
+      - check-success=test-coverage-all
+
+pull_request_rules:
+  - name: delete head branch after merge
+    conditions:
+      - merged
+    actions:
+      delete_head_branch:
+
+  # Push PR into queue when it passes all checks
+  - name: put approved pr to queue
+    conditions:
+      - or:
+        - and:
+          - "#approved-reviews-by>=1"
+          - -draft
+          - check-success=unit-test
+          - check-success=e2e-test-spark
+          - check-success=e2e-test-postgres
+          - check-success=e2e-test-clickhouse
+          - check-success=test-coverage-all
+        - and:
+          - label=can-merge
+          - -draft
+          - check-success=unit-test
+          - check-success=e2e-test-spark
+          - check-success=e2e-test-postgres
+          - check-success=e2e-test-clickhouse
+          - check-success=test-coverage-all
+    actions:
+      queue:
+        name: shared_queue
+        method: squash
+
+  # Check if PR title contain valid types
+  - name: Comment PR if title not semantic
+    conditions:
+      - author!=Mergify
+      - -draft
+      - '-title~=^(feat|fix|refactor|ci|build|docs|website|chore)(\(.*\))?:'
+    actions:
+      comment:
+        message: |
+          This pull request's title is not fulfill the requirements. @{{author}} please update it 🙏.
+
+          Valid format:
+
+          ```
+          fix(query): fix group by string bug
+            ^         ^---------------------^
+            |         |
+            |         +-> Summary in present tense.
+            |
+            +-------> Type: feat, fix, refactor, ci, build, docs, website, chore
+          ```
+
+          Valid types:
+
+          - `feat`: this PR introduces a new feature to the codebase
+          - `fix`: this PR patches a bug in codebase
+          - `refactor`: this PR changes the code base without new features or bugfix
+          - `ci|build`: this PR changes build/testing/ci steps
+          - `docs|website`: this PR changes the documents or websites
+          - `chore`: this PR only has small changes that no need to record
+
+  # Assign pr label based of tags
+  - name: label on New Feature
+    conditions:
+      - 'title~=^(feat)(\(.*\))?:'
+    actions:
+      label:
+        add:
+          - pr-feature
+  - name: label on Bug Fix
+    conditions:
+      - 'title~=^(fix)(\(.*\))?:'
+    actions:
+      label:
+        add:
+          - pr-bugfix
+  - name: label on Refactor
+    conditions:
+      - 'title~=^(refactor)(\(.*\))?:'
+    actions:
+      label:
+        add:
+          - pr-refactor
+  - name: label on Build/Testing/CI
+    conditions:
+      - 'title~=^(ci|build)(\(.*\))?:'
+    actions:
+      label:
+        add:
+          - pr-build
+  - name: label on Documentation
+    conditions:
+      - 'title~=^(docs|website)(\(.*\))?:'
+    actions:
+      label:
+        add:
+          - pr-doc
+  - name: label on Not for changelog
+    conditions:
+      - 'title~=^(chore)(\(.*\))?:'
+    actions:
+      label:
+        add:
+          - pr-chore

@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from sqlalchemy.engine.base import Connection, Engine
     from sqlalchemy.engine.reflection import Inspector
     from sqlalchemy.sql.elements import TextClause
+    from sqlalchemy.types import TypeEngine
 
 
 class TimeLog:
@@ -273,9 +274,9 @@ class RdbTable(Table):
                     f" {target_table.table_name}, all fields are in source table: {field_names}"
                 )
 
-        cols = self.backend.inspector.get_columns(temp_table_name, self.backend.temp_schema)
+        cols = self.backend.get_columns(temp_table_name, self.backend.temp_schema)
         if self.backend.table_exists(target_table):
-            cols = self.backend.inspector.get_columns(target_table.pure_table_name, target_table.dbname)
+            cols = self.backend.get_columns(target_table.pure_table_name, target_table.dbname)
         else:
             db = target_table.table_name[: target_table.table_name.index(".")]
             self._exec_sql(self.db_config.create_db_sql(db))
@@ -461,6 +462,19 @@ class RdbBackend(Backend):
         inspector: Inspector = inspect(self.engine)
         return inspector
 
+    def get_columns(self, table_name, schema=None, raw=False, **kw) -> List[Dict]:
+        cols = self.inspector.get_columns(table_name, schema, **kw)
+        if not raw:
+            for col in cols:
+                col_type: TypeEngine = col["type"]
+                col["type"] = col_type.compile(self.inspector.dialect)
+        return cols
+
+    def get_column_names(self, table_name, schema=None, **kw) -> List[str]:
+        cols = self.get_columns(table_name, schema, raw=True, **kw)
+        names = [col["name"] for col in cols if "name" in col]
+        return names
+
     def reset(self):
         if self.conn:
             try:  # noqa: SIM105
@@ -594,26 +608,23 @@ class RdbBackend(Backend):
             RdbTable.from_table_meta(self, source_table).save_to_table(target_table)
             return
 
-        inspector = self.inspector
-        target_cols = inspector.get_columns(target_table.pure_table_name, target_table.dbname or self.temp_schema)
+        target_col_names = self.get_column_names(target_table.pure_table_name, target_table.dbname or self.temp_schema)
         original_source_table = source_table
         source_table = TableMeta(RdbTable.from_table_meta(self, source_table).resolve_to_temp_table())
-        source_cols = inspector.get_columns(source_table.pure_table_name, source_table.dbname or self.temp_schema)
+        source_col_names = self.get_column_names(source_table.pure_table_name, source_table.dbname or self.temp_schema)
         logger.info(
             f"ensure cols match for source_table {source_table.table_name} and target_table {target_table.table_name}"
         )
-        self._ensure_contain_target_cols(source_cols, target_cols)
+        self._ensure_contain_target_cols(source_col_names, target_col_names)
 
         if save_mode == SaveMode.overwrite:
-            self._overwrite(source_table, target_table, original_source_table, target_cols)
+            self._overwrite(source_table, target_table, original_source_table, target_col_names)
         elif save_mode == SaveMode.append:
-            self._append(source_table, target_table, original_source_table, target_cols)
+            self._append(source_table, target_table, original_source_table, target_col_names)
         else:
             raise SqlProcessorAssertionError(f"unknown save mode {save_mode}")
 
-    def _ensure_contain_target_cols(self, source_cols: List[Dict], target_cols: List[Dict]):
-        source_cols = [(col["name"],) for col in source_cols]
-        target_cols = [(col["name"],) for col in target_cols]
+    def _ensure_contain_target_cols(self, source_cols: List[str], target_cols: List[str]):
         if not set(target_cols).issubset(set(source_cols)):
             raise Exception(
                 f"source_cols does not contain target_cols: source_cols={source_cols}, target_cols={target_cols}"
@@ -670,9 +681,9 @@ class RdbBackend(Backend):
         source_table: TableMeta,
         target_table: TableMeta,
         original_source_table: TableMeta,
-        target_cols: List[Dict],
+        target_cols: List[str],
     ):
-        col_names = ", ".join([col["name"] for col in target_cols])
+        col_names = ", ".join(target_cols)
         full_target_table_name = target_table.get_full_table_name(self.temp_schema)
         # write data to temp table to support the case when read from and write to the same table
         temp_table_name = f"{full_target_table_name}__temp"
@@ -720,9 +731,9 @@ class RdbBackend(Backend):
         source_table: TableMeta,
         target_table: TableMeta,
         original_source_table: TableMeta,
-        target_cols: List[Dict],
+        target_cols: List[str],
     ) -> None:
-        col_names = ", ".join([col["name"] for col in target_cols])
+        col_names = ", ".join(target_cols)
         full_target_table_name = target_table.get_full_table_name(self.temp_schema)
         if original_source_table.has_partitions():
             save_partitions = self._get_save_partitions(original_source_table, source_table, target_table)
