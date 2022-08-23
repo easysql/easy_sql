@@ -8,9 +8,10 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
-        fetch-depth: 0
+        ref: main
+        ssh-key: ${{ secrets.DEPLOY_KEY }}
     - uses: actions/setup-python@v4
       with:
         python-version: 3.8
@@ -18,7 +19,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: /home/runner/.local/  # the path depends on the OS
-        key: poetry-1  # increment to reset cache
+        key: poetry-0  # increment to reset cache
     - name: Install Poetry
       uses: snok/install-poetry@v1.3.1
     - name: version
@@ -35,8 +36,8 @@ jobs:
       run: |
             git config user.name 'auto-release'
             git config user.email 'easy_sql@thoughtworks.com'
-            git commit -am "release: bump to version ${{ steps.version.outputs.version }}"
-            git tag v${{ steps.version.outputs.version }} -f
-            git push origin main --follow-tags
+            git commit -am "release: bump to version ${{ steps.version.outputs.version }} [skip ci]"
+            git tag ${{ steps.version.outputs.tag }} -f
+            git push --atomic origin main ${{ steps.version.outputs.tag }} -f
     - name: upload pypi
       run: make upload-pip
