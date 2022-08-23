@@ -41,7 +41,7 @@ upload-test-pip:
 
 install-test-pip:
 	pip3 uninstall easy_sql-easy_sql
-	python3 -m pip install --index-url https://test.pypi.org/simple/ easy_sql-easy_ql[cli]
+	python3 -m pip install --index-url https://test.pypi.org/simple/ easy_sql-easy_sql[cli]
 
 upload-pip:
 	rm -rf ./dist

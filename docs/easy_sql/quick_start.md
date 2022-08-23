@@ -2,7 +2,7 @@
 
 ## First ETL with Easy SQL
 
-(You need to install click package (by command `python3 -m pip install easy_sql-easy_sql[spark,cli]`) before run the commands below.)
+Install easy_sql with spark as the backend: `python3 -m pip install easy_sql-easy_sql[spark,cli]`.
 
 ### For spark backend
 
