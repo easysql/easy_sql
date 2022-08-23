@@ -33,19 +33,16 @@ test-coverage-all:
 	python3 -m coverage xml
 
 package-pip:
-	python3 -m pip install --upgrade build
-	python3 -m build
-	# It looks like the build command will remove files in easy_sql directory, restore it after a build
-	git restore easy_sql
+	poetry build
 
 upload-test-pip:
-	python3 -m pip install --upgrade twine
-	python3 -m twine upload --repository testpypi dist/*
+	rm -rf ./dist
+	poetry publish -r testpypi --build
 
 install-test-pip:
 	pip3 uninstall easy_sql-easy_sql
-	python3 -m pip install --index-url https://test.pypi.org/simple/ easy_sql-easy_ql
+	python3 -m pip install --index-url https://test.pypi.org/simple/ easy_sql-easy_sql[cli]
 
 upload-pip:
-	python3 -m pip install --upgrade twine
-	python3 -m twine upload dist/*
+	rm -rf ./dist
+	poetry publish --build
