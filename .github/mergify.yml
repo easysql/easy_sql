@@ -113,3 +113,10 @@ pull_request_rules:
       label:
         add:
           - pr-chore
+  - name: label on breaking changes
+    conditions:
+      - 'title~=^(feat!)(\(.*\))?:'
+    actions:
+      label:
+        add:
+          - pr-breaking
