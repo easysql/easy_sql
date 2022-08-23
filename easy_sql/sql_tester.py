@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 import json
 import os
 import re
@@ -9,7 +10,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
 import openpyxl
-import datetime as dt
 from bson import json_util
 
 __all__ = ["SqlTester", "TableData", "TestCase", "WorkPath", "work_path", "SqlReader", "TableColumnTypes"]
@@ -414,7 +414,7 @@ class TestCase:
         # https://stackoverflow.com/questions/3727916/how-to-use-xlrd-xldate-as-tuple
         elif isinstance(value, int):
             delta = dt.timedelta(days=value)
-            return dt.datetime.strptime('1899-12-30', '%Y-%m-%d') + delta
+            return dt.datetime.strptime("1899-12-30", "%Y-%m-%d") + delta
         return value
 
     def parse_output(
