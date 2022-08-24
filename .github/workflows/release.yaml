@@ -19,7 +19,7 @@ jobs:
     - name: Load cached Poetry installation
       uses: actions/cache@v2
       with:
-        path: /home/runner/.local/  # the path depends on the OS
+        path: ~/.local/  # the path depends on the OS
         key: poetry-0  # increment to reset cache
     - name: Install Poetry
       uses: snok/install-poetry@v1.3.1
