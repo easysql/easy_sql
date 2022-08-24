@@ -1,0 +1,37 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+template: |
+  $CHANGES
+
+  **Full Changelog**: https://github.com/$OWNER/$REPOSITORY/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
+
+categories:
+  - title: 'Breaking'
+    label: 'pr-breaking'
+  - title: 'New'
+    label: 'pr-feature'
+  - title: 'Bug Fixes'
+    label: 'pr-bugfix'
+  - title: 'Maintenance'
+    label: 'pr-refactor'
+  - title: 'Documentation'
+    label: 'pr-doc'
+  - title: 'Other changes'
+
+version-resolver:
+  major:
+    labels:
+      - 'pr-breaking'
+  minor:
+    labels:
+      - 'pr-feature'
+  patch:
+    labels:
+      - 'pr-bugfix'
+      - 'pr-refactor'
+      - 'pr-build'
+      - 'pr-doc'
+      - 'pr-chore'
+
+exclude-labels:
+  - 'skip-changelog'
