@@ -1,4 +1,4 @@
-name: draft-release
+name: Draft Release
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  update_release_draft:
+  update-release-draft:
     runs-on: ubuntu-latest
     steps:
       - uses: release-drafter/release-drafter@master
