@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "easy_sql-easy_sql"
+name = "easy_sql-easy_sql-j"
 version = "0.3.0"
 description = "A library developed to ease the data ETL development process."
 authors = ["Easy SQL from Thoughtworks <easy_sql@thoughtworks.com>"]
