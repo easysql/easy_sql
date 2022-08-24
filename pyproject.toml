@@ -9,7 +9,7 @@ repository = "https://github.com/easysql/easy_sql"
 homepage = "https://easy-sql.readthedocs.io"
 
 classifiers = [
-    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: MacOS",
     "Operating System :: POSIX :: Linux",

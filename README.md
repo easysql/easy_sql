@@ -14,6 +14,7 @@ More will be added in the near future.
 [![GitHub Action Build](https://github.com/easysql/easy_sql/actions/workflows/build.yaml/badge.svg?branch=main&event=push)](https://github.com/easysql/easy_sql/actions/workflows/build.yaml?query=branch%3Amain+event%3Apush)
 [![Docs Build](https://readthedocs.org/projects/easy-sql/badge/?version=latest)](https://easy-sql.readthedocs.io/en/latest/?badge=latest)
 [![EasySQL Coverage](https://codecov.io/gh/easysql/easy_sql/branch/main/graph/badge.svg)](https://codecov.io/gh/easysql/easy_sql)
+[![PyPI](https://img.shields.io/pypi/v/easy-sql-easy-sql)](https://pypi.org/project/easy-sql-easy-sql/)
 
 ## Install Easy SQL
 
