@@ -44,7 +44,7 @@ pull_request_rules:
     conditions:
       - author!=Mergify
       - -draft
-      - '-title~=^(feat|fix|refactor|ci|build|docs|website|chore)(\(.*\))?:'
+      - '-title~=^(feat|fix|refactor|ci|build|docs|website|chore)(\(.*\))?!?:'
     actions:
       comment:
         message: |
@@ -69,6 +69,8 @@ pull_request_rules:
           - `ci|build`: this PR changes build/testing/ci steps
           - `docs|website`: this PR changes the documents or websites
           - `chore`: this PR only has small changes that no need to record
+          - `type(scope)!`: this type of PR introduces breaking changes to the codebase
+
 
   # Assign pr label based of tags
   - name: label on New Feature
@@ -113,3 +115,10 @@ pull_request_rules:
       label:
         add:
           - pr-chore
+  - name: label on breaking changes
+    conditions:
+      - 'title~=^.*?(\(.*\))?!:'
+    actions:
+      label:
+        add:
+          - pr-breaking
