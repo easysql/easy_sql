@@ -23,22 +23,29 @@ jobs:
         key: poetry-0  # increment to reset cache
     - name: Install Poetry
       uses: snok/install-poetry@v1.3.1
-    - name: version
+    - name: version check
       id: version
       run: |
         tag=${GITHUB_REF_NAME}
         version=${tag#v}
-        echo "tags: ${tag} , version: ${version}"
+        old_version=$(poetry version -s)
+        echo "tags: $tag , version: $version"
         echo "::set-output name=tag::${tag}"
         echo "::set-output name=version::${version}"
+        echo "::set-output name=version_changed::$(( $old_version == $version ))"
     - name: bump version
+      if: ${{ steps.version.outputs.version_changed == 1 }}
       run: poetry version ${{ steps.version.outputs.version }}
-    - name: update release tag
+    - name: commit and update release tag
+      if: ${{ steps.version.outputs.version_changed == 1 }}
       run: |
-            git config user.name 'auto-release'
-            git config user.email 'easy_sql@thoughtworks.com'
-            git commit -am "release: bump to version ${{ steps.version.outputs.version }} [skip ci]"
-            git tag ${{ steps.version.outputs.tag }} -f
-            git push --atomic origin main ${{ steps.version.outputs.tag }} -f
+        git config user.name 'auto-release'
+        git config user.email 'easy_sql@thoughtworks.com'
+        git commit -am "release: bump to version ${{ steps.version.outputs.version }} [skip ci]"
+        git tag ${{ steps.version.outputs.tag }} -f
+        git push --atomic origin main ${{ steps.version.outputs.tag }} -f
     - name: upload pypi
-      run: make upload-pip
+      if: ${{ steps.version.outputs.version_changed == 1 }}
+      run: |
+        poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
+        make upload-pip
