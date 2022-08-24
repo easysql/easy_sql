@@ -29,9 +29,9 @@ colorlog = {version = "^6.6.0", optional = true}
 sqlfluff = {version = "^1.2.1", optional = true}
 pyspark = {version = "^3.3.0", optional = true}
 SQLAlchemy = {version = "^1.4.40", optional = true}
-psycopg2-binary = {version = "^2.9.3", optional = true}
 clickhouse-driver = {version = "^0.2.4", optional = true}
 clickhouse-sqlalchemy = {version = "^0.2.1", optional = true}
+psycopg2 = "^2.9.3"
 
 [tool.poetry.dev-dependencies]
 pymongo = "^4.2.0"
@@ -48,7 +48,7 @@ openpyxl = "^3.0.10"
 cli = ["click"]
 linter = ["sqlfluff","colorlog","regex"]
 spark = ["pyspark"]
-pg = ["SQLAlchemy", "psycopg2-binary"]
+pg = ["SQLAlchemy", "psycopg2"]
 clickhouse = ["SQLAlchemy","clickhouse-driver","clickhouse-sqlalchemy"]
 
 [tool.isort]
