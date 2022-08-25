@@ -197,9 +197,9 @@ class FlinkBackend(Backend):
                 """
                 self.flink.execute_sql(create_sql)
 
-    def register_tables(self, source_file: str, tables: List[str]):
-        if source_file and os.path.exists(source_file):
-            with open(source_file, "r") as f:
+    def register(self, flink_tables_file_path: str, tables: List[str]):
+        if flink_tables_file_path and os.path.exists(flink_tables_file_path):
+            with open(flink_tables_file_path, "r") as f:
                 config = json.loads(f.read())
                 self.register_catalog(config)
                 self.register_tables(config, tables)

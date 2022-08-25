@@ -1,5 +1,5 @@
 -- backend: flink
--- config: easy_sql.flink_source_file=test/sample_etl.flink_source_config.json
+-- config: easy_sql.flink_tables_file_path=test/sample_etl.flink_tables_file.json
 
 -- target=variables
 select 2 as a

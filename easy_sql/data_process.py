@@ -94,7 +94,7 @@ def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], pr
 
         sql_processor.run(dry_run=dry_run)
 
-    backend: Backend = create_sql_processor_backend(config.backend, config.sql, config.task_name, config.tables, config.flink_source_file)
+    backend: Backend = create_sql_processor_backend(config.backend, config.sql, config.task_name, config.tables, config.flink_tables_file_path)
 
     backend_is_bigquery = config.backend == "bigquery"
     pre_defined_vars = {"temp_db": backend.temp_schema if backend_is_bigquery else None}
@@ -104,7 +104,7 @@ def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], pr
         backend.clean()
 
 
-def create_sql_processor_backend(backend: str, sql: str, task_name: str, tables: List[str], flink_source_file: str) -> 'Backend':
+def create_sql_processor_backend(backend: str, sql: str, task_name: str, tables: List[str], flink_tables_file_path: str) -> 'Backend':
     if backend == 'spark':
         from easy_sql.spark_optimizer import get_spark
         from easy_sql.sql_processor.backend import SparkBackend
@@ -114,14 +114,14 @@ def create_sql_processor_backend(backend: str, sql: str, task_name: str, tables:
     elif backend == 'flink':
         from easy_sql.sql_processor.backend import FlinkBackend
         backend = FlinkBackend()
-        flink_source_file = resolve_file(flink_source_file, abs_path=True)
+        flink_tables_file_path = resolve_file(flink_tables_file_path, abs_path=True)
         if len(tables) > 0:
-            conn = get_conn_from_flink_source_file(flink_source_file, tables)
+            conn = get_conn_from_flink_tables_file_path(flink_tables_file_path, tables)
             from easy_sql.sql_processor.backend.rdb import _exec_sql
             exec_sql = lambda sql: _exec_sql(conn, sql)
         else:
             exec_sql = lambda sql: backend.exec_native_sql(sql)
-        backend.register_tables(flink_source_file, tables)
+        backend.register(flink_tables_file_path, tables)
     elif backend == 'maxcompute':
         odps_parms = {'access_id': 'xx', 'secret_access_key': 'xx', 'project': 'xx', 'endpoint': 'xx'}
         from easy_sql.sql_processor.backend.maxcompute import MaxComputeBackend, _exec_sql
@@ -162,12 +162,12 @@ def create_sql_processor_backend(backend: str, sql: str, task_name: str, tables:
 class EasySqlConfig:
 
     def __init__(self, sql_file: str, sql: str, backend: str, customized_backend_conf: List[str], customized_easy_sql_conf: List[str],
-                 udf_file_path: str, func_file_path: str, scala_udf_initializer: str, tables: List[str], flink_source_file: str):
+                 udf_file_path: str, func_file_path: str, scala_udf_initializer: str, tables: List[str], flink_tables_file_path: str):
         self.sql_file = sql_file
         self.sql = sql
         self.backend = backend
         self.customized_backend_conf, self.customized_easy_sql_conf = customized_backend_conf, customized_easy_sql_conf
-        self.udf_file_path, self.func_file_path, self.flink_source_file = udf_file_path, func_file_path, flink_source_file
+        self.udf_file_path, self.func_file_path, self.flink_tables_file_path = udf_file_path, func_file_path, flink_tables_file_path
         self.scala_udf_initializer = scala_udf_initializer
         self.tables = tables
 
@@ -190,15 +190,15 @@ class EasySqlConfig:
                 else:
                     customized_backend_conf += [config_value]
 
-        udf_file_path, func_file_path, scala_udf_initializer, flink_source_file = None, None, None, None
+        udf_file_path, func_file_path, scala_udf_initializer, flink_tables_file_path = None, None, None, None
         for c in customized_easy_sql_conf:
             if c.startswith('udf_file_path'):
                 udf_file_path = c[c.index('=') + 1:].strip()
             if c.startswith('func_file_path'):
                 func_file_path = c[c.index('=') + 1:].strip()
-            if c.startswith('flink_source_file'):
-                flink_source_file = c[c.index('=') + 1:].strip()
-        return EasySqlConfig(sql_file, sql, backend, customized_backend_conf, customized_easy_sql_conf, udf_file_path, func_file_path, scala_udf_initializer, tables, flink_source_file)
+            if c.startswith('flink_tables_file_path'):
+                flink_tables_file_path = c[c.index('=') + 1:].strip()
+        return EasySqlConfig(sql_file, sql, backend, customized_backend_conf, customized_easy_sql_conf, udf_file_path, func_file_path, scala_udf_initializer, tables, flink_tables_file_path)
 
     @property
     def spark_submit(self):
@@ -294,8 +294,8 @@ def _parse_tables(sql: str):
             tables += line[line.index(OUTPUTS) + len(OUTPUTS) :].split(',')
     return list(set(map(lambda t: t.strip(), tables)))
 
-def get_conn_from_flink_source_file(flink_source_file: str, tables: List[str]):
-    db_url = retrieve_test_db_url_from_flink_source_file(flink_source_file, tables)
+def get_conn_from_flink_tables_file_path(flink_tables_file_path: str, tables: List[str]):
+    db_url = retrieve_test_db_url_from_flink_tables_file_path(flink_tables_file_path, tables)
     from sqlalchemy import create_engine
     from sqlalchemy.engine.base import Connection, Engine
     engine: Engine = create_engine(db_url, isolation_level="AUTOCOMMIT", pool_size=1)
@@ -303,9 +303,9 @@ def get_conn_from_flink_source_file(flink_source_file: str, tables: List[str]):
     return conn
 
 
-def retrieve_test_db_url_from_flink_source_file(flink_source_file: str, tables: List[str]):
-    if flink_source_file and os.path.exists(flink_source_file):
-        with open(flink_source_file, "r") as f:
+def retrieve_test_db_url_from_flink_tables_file_path(flink_tables_file_path: str, tables: List[str]):
+    if flink_tables_file_path and os.path.exists(flink_tables_file_path):
+        with open(flink_tables_file_path, "r") as f:
             import json
             config = json.loads(f.read())
             database = config['databases'][0]
