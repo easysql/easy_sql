@@ -575,7 +575,7 @@ class TestDataFile:
     def __init__(self, test_data_file: str, sql_reader: SqlReader, backend: str = "spark"):
         self.test_data_file = test_data_file
         self.sql_reader = sql_reader
-        self.wb = openpyxl.load_workbook(self.test_data_file)
+        self.wb = openpyxl.load_workbook(self.test_data_file, data_only=True)
         self.backend = backend
 
     def parse_test_cases(self, table_column_types: TableColumnTypes) -> List[TestCase]:
