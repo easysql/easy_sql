@@ -30,3 +30,6 @@ class DataProcessTest(unittest.TestCase):
     
     def test_flink_postgres(self):
         data_process._data_process(os.path.join(proj_base_dir, 'test/sample_etl.flink.postgres.sql'), None, None, False)
+    
+    def test_flink_hive(self):
+        data_process._data_process(os.path.join(proj_base_dir, 'test/sample_etl.flink.hive.sql'), None, None, False)

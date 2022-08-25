@@ -5,8 +5,7 @@ import os
 
 from .base import *
 from ...logger import logger
-from pyflink.datastream import StreamExecutionEnvironment
-from pyflink.table import (StreamTableEnvironment, TableEnvironment)
+from pyflink.table import (EnvironmentSettings, TableEnvironment)
 from pyflink.common import Row as PyFlinkRow
 from pyflink.table.table_result import TableResult
 from pyflink.table.catalog import ObjectPath
@@ -86,9 +85,7 @@ class FlinkBackend(Backend):
 
     # todo: 考虑是否需要在外面实例化flink: TableEnvironment
     def __init__(self, flink: TableEnvironment = None, scala_udf_initializer: str = None):
-        env = StreamExecutionEnvironment.get_execution_environment()
-        env.set_parallelism(1)
-        self.flink: TableEnvironment = StreamTableEnvironment.create(stream_execution_environment=env)
+        self.flink: TableEnvironment = TableEnvironment.create(EnvironmentSettings.in_batch_mode())
 
     def init_udfs(self, scala_udf_initializer: str = None, *args, **kwargs):
         from pyflink.table import DataTypes
@@ -139,50 +136,70 @@ class FlinkBackend(Backend):
         dynamic_partitions = list(filter(lambda p: not p.value, target_table_meta.partitions))
         static_partitions = list(filter(lambda p: p.value, target_table_meta.partitions))
         columns =self.flink.sql_query(f'select * from {target_table_meta.table_name}').limit(0).get_schema().get_field_names()
-        if dynamic_partitions:
-            for p in static_partitions:
-                temp_res = temp_res.add_columns(lit(p.value).alias(p.field))
-            temp_res = temp_res.select(*list(map(lambda column: col(column), columns)))
-        else:
-            columns = [c for c in columns if c not in [p.field for p in static_partitions]]
-            temp_res = temp_res.select(*list(map(lambda column: col(column), columns)))
+        for p in static_partitions:
+            temp_res = temp_res.add_columns(lit(p.value).alias(p.field))
+        temp_res = temp_res.select(*list(map(lambda column: col(column), columns)))
 
-        temp_res.execute_insert(target_table_meta.table_name, save_mode != SaveMode.append)
+        temp_res.execute_insert(target_table_meta.table_name, save_mode == SaveMode.overwrite)
 
     def refresh_table_partitions(self, table: TableMeta):
         # flink无法从`desc table`中解析出partition字段，但是可以在flink_source_file中配置table的partition字段
         pass
 
+    def register_catalog(self, flink_config):
+        assert flink_config['excution']['catalog']
+        catalog = flink_config['excution']['catalog']
+        if catalog:
+            catalog_name = catalog['database']
+            del catalog['database']
+            catalog_expr = " , ".join(
+                [f"'{option}' = '{catalog[option]}'" for option in catalog]
+            )
+            self.flink.execute_sql(f"""
+                CREATE CATALOG {catalog_name} 
+                WITH (
+                    {catalog_expr}
+                );
+            """)
+            self.flink.execute_sql(f'USE CATALOG {catalog_name}')
+
+    def register_tables(self, flink_config, tables: List[str]):
+        if len(tables) == 0:
+            return
+        for database in flink_config['databases']:
+            db_name = database['name']
+            connectors = database['connectors']
+            self.flink.execute_sql(f'create database if not exists {db_name}')
+            for table in tables:
+                table_config = next(filter(lambda t: t['name'] == table.strip().split('.')[1], database['tables']), None)
+                if not table_config:
+                    raise Exception(f'table {table} does not exist in table config file, register table failed.')
+
+                connector = next(filter(lambda conn: conn['name'] == table_config['connector']['name'], connectors), None)
+                schema = table_config['schema']
+                schema_expr = " , ".join(schema)
+                partition_by_expr = f"PARTITIONED BY ({','.join(table_config['partition_by'])})" if "partition_by" in table_config else ''
+                options = dict()
+                options.update(connector['options'])
+                options.update(table_config['connector']['options'])
+                options_expr = " , ".join(
+                    [f"'{option}' = '{options[option]}'" for option in options]
+                )
+                print(partition_by_expr)
+                create_sql = f"""
+                    create table if not exists {table.strip()} (
+                        {schema_expr}
+                    )
+                    {partition_by_expr}
+                    WITH (
+                        {options_expr}
+                    );
+                """
+                self.flink.execute_sql(create_sql)
+
     def register_tables(self, source_file: str, tables: List[str]):
         if source_file and os.path.exists(source_file):
             with open(source_file, "r") as f:
                 config = json.loads(f.read())
-                for database in config['databases']:
-                    db_name = database['name']
-                    connectors = database['connectors']
-                    self.flink.execute_sql(f'create database if not exists {db_name}')
-                    for table in tables:
-                        table_config = next(filter(lambda t: t['name'] == table.strip().split('.')[1], database['tables']), None)
-                        if not table_config:
-                            continue
-                        connector = next(filter(lambda conn: conn['name'] == table_config['connector']['name'], connectors), None)
-                        schema = table_config['schema']
-                        schema_expr = " , ".join(schema)
-                        partition_by_expr = f"PARTITIONED BY ({','.join(table_config['partition_by'])})" if "partition_by" in table_config else ''
-                        options = dict()
-                        options.update(connector['options'])
-                        options.update(table_config['connector']['options'])
-                        options_expr = " , ".join(
-                            [f"'{option}' = '{options[option]}'" for option in options]
-                        )
-                        print(partition_by_expr)
-                        create_sql = f"""
-                            create table if not exists {table.strip()} (
-                                {schema_expr}
-                            )
-                            {partition_by_expr}
-                            WITH (
-                                {options_expr}
-                            );
-                        """
-                        self.flink.execute_sql(create_sql)
+                self.register_catalog(config)
+                self.register_tables(config, tables)

@@ -115,9 +115,12 @@ def create_sql_processor_backend(backend: str, sql: str, task_name: str, tables:
         from easy_sql.sql_processor.backend import FlinkBackend
         backend = FlinkBackend()
         flink_source_file = resolve_file(flink_source_file, abs_path=True)
-        conn = get_conn_from_flink_source_file(flink_source_file, tables)
-        from easy_sql.sql_processor.backend.rdb import _exec_sql
-        exec_sql = lambda sql: _exec_sql(conn, sql)
+        if len(tables) > 0:
+            conn = get_conn_from_flink_source_file(flink_source_file, tables)
+            from easy_sql.sql_processor.backend.rdb import _exec_sql
+            exec_sql = lambda sql: _exec_sql(conn, sql)
+        else:
+            exec_sql = lambda sql: backend.exec_native_sql(sql)
         backend.register_tables(flink_source_file, tables)
     elif backend == 'maxcompute':
         odps_parms = {'access_id': 'xx', 'secret_access_key': 'xx', 'project': 'xx', 'endpoint': 'xx'}

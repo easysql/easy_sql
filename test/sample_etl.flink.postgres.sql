@@ -14,7 +14,7 @@ select
     'append'           as __save_mode__
 
 -- target=variables
-select 1 as a
+select 2 as a
 
 -- target=log.a
 select '${a}' as a
