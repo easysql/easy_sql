@@ -259,6 +259,13 @@ class FlinkTest(unittest.TestCase):
         collected_result.sort()
         self.assertEqual(expected_result, collected_result)
 
+        schema = DataTypes.ROW([DataTypes.FIELD("id", DataTypes.INT()), DataTypes.FIELD("val", DataTypes.STRING())])
+        table = backend.flink.from_elements([],schema=schema)
+        backend.flink.register_table('empty_table', table)
+
+        backend.save_table(TableMeta('empty_table'), TableMeta('myhive.hive_out_table'), SaveMode.overwrite, True)
+        self.assertListEqual(backend.exec_sql(f'select * from myhive.hive_out_table').collect(), [])
+
         mock_dt_1, mock_dt_2 = '2021-01-01', '2021-01-02'
         # first save with partitions, should create
         backend.save_table(TableMeta('test'),
