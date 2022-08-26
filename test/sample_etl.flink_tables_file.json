@@ -1,10 +1,9 @@
 {
     "excution": {
         "catalog": {
-            "database": "myhive",
+            "name": "myhiveCatalog",
             "type": "hive",
-            "hive-conf-dir": "/opt/apache-hive/conf",
-            "default-database": "myhive"
+            "hive-conf-dir": "/opt/apache-hive/conf"
         }
     },
     "databases": [
