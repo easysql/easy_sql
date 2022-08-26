@@ -13,10 +13,10 @@ from pyflink.table.table_descriptor import TableDescriptor
 from .sql_dialect.postgres import PgSqlDialect
 from sqlalchemy.engine.base import Connection, Engine
 from .sql_dialect import SqlExpr
+from easy_sql import base_test
+from easy_sql.base_test import TEST_PG_URL
 
 from easy_sql.sql_processor.backend.rdb import _exec_sql
-
-TEST_PG_URL = os.environ.get('PG_URL', 'postgresql://postgres:123456@testpg:15432/postgres')
 
 class FlinkTest(unittest.TestCase):
     def test_flink_table(self):
@@ -60,7 +60,7 @@ class FlinkTest(unittest.TestCase):
                 'table-name' = 'out_put_table');
         """)
 
-        from pyflink.table.catalog import ObjectPath, CatalogBaseTable
+        from pyflink.table.catalog import CatalogBaseTable
         from pyflink.java_gateway import get_gateway
         gateway = get_gateway()
         catalog = backend.flink.get_current_catalog()
@@ -77,21 +77,17 @@ class FlinkTest(unittest.TestCase):
         self.run_test_backend_pg(backend)
 
     def test_flink_backend_hive(self):
+        if not base_test.should_run_integration_test("flink_hive"):
+            return
         backend = FlinkBackend()
 
         catalog_name = "hive"
-        default_database = "myhive"
-        hive_conf_dir = "/Users/yuewu/Env/apache-hive-3.1.2-bin/conf"
+        hive_conf_dir = "/ops/apache-hive/conf"
         backend.exec_native_sql(f"""
-            CREATE CATALOG {default_database} WITH (
+            CREATE CATALOG testHiveCatalog WITH (
                 'type' = '{catalog_name}',
-                'default-database' = '{default_database}',
                 'hive-conf-dir' = '{hive_conf_dir}'
             );
-        """)
-
-        backend.exec_native_sql(f"""
-            use catalog {default_database}
         """)
 
         schema = DataTypes.ROW([DataTypes.FIELD("id", DataTypes.INT()), DataTypes.FIELD("val", DataTypes.STRING())])
@@ -203,8 +199,8 @@ class FlinkTest(unittest.TestCase):
 
     def run_test_backend_hive(self, backend: FlinkBackend):
         # first save without transformation or partitions
-        backend.save_table(TableMeta('test'), TableMeta('myhive.hive_table'), SaveMode.overwrite)
-        collected_result = [str(item) for item in backend.exec_sql(f'select * from myhive.hive_table').collect()]
+        backend.save_table(TableMeta('test'), TableMeta('testHiveCatalog.myhive.hive_table'), SaveMode.overwrite)
+        collected_result = [str(item) for item in backend.exec_sql(f'select * from testHiveCatalog.myhive.hive_table').collect()]
         expected_result = [item for item in map(str, [
             FlinkRow(Row(1, '1'), ['id', 'val']),
             FlinkRow(Row(2, '2'), ['id', 'val']),
@@ -214,8 +210,8 @@ class FlinkTest(unittest.TestCase):
         collected_result.sort()
         self.assertEqual(expected_result, collected_result)
 
-        backend.save_table(TableMeta('myhive.hive_table'), TableMeta('myhive.hive_out_table'), SaveMode.overwrite)
-        collected_result = [str(item) for item in backend.exec_sql(f'select * from myhive.hive_out_table').collect()]
+        backend.save_table(TableMeta('testHiveCatalog.myhive.hive_table'), TableMeta('testHiveCatalog.myhive.hive_out_table'), SaveMode.overwrite)
+        collected_result = [str(item) for item in backend.exec_sql(f'select * from testHiveCatalog.myhive.hive_out_table').collect()]
         expected_result = [item for item in map(str, [
             FlinkRow(Row(1, '1'), ['id', 'val']),
             FlinkRow(Row(2, '2'), ['id', 'val']),
@@ -232,8 +228,8 @@ class FlinkTest(unittest.TestCase):
                 FlinkRow(Row(2, '2'), ['id', 'val'])
         ])
 
-        backend.save_table(TableMeta('test_limit'), TableMeta('myhive.hive_out_table'), SaveMode.overwrite)
-        collected_result = [str(item) for item in backend.exec_sql(f'select * from myhive.hive_out_table').collect()]
+        backend.save_table(TableMeta('test_limit'), TableMeta('testHiveCatalog.myhive.hive_out_table'), SaveMode.overwrite)
+        collected_result = [str(item) for item in backend.exec_sql(f'select * from testHiveCatalog.myhive.hive_out_table').collect()]
         expected_result = [item for item in map(str, [
             FlinkRow(Row(1, '1'), ['id', 'val']),
             FlinkRow(Row(2, '2'), ['id', 'val'])
@@ -246,8 +242,8 @@ class FlinkTest(unittest.TestCase):
         append_table = backend.flink.from_elements([(2, '2 will not be updated in hive, but insert'), (5, '5'), (6, '6')],schema=schema)
         backend.flink.register_table('append_table', append_table)
 
-        backend.save_table(TableMeta('append_table'), TableMeta('myhive.hive_out_table'), SaveMode.append)
-        collected_result = [str(item) for item in backend.exec_sql(f'select * from myhive.hive_out_table').collect()]
+        backend.save_table(TableMeta('append_table'), TableMeta('testHiveCatalog.myhive.hive_out_table'), SaveMode.append)
+        collected_result = [str(item) for item in backend.exec_sql(f'select * from testHiveCatalog.myhive.hive_out_table').collect()]
         expected_result = [item for item in map(str, [
             FlinkRow(Row(1, '1'), ['id', 'val']),
             FlinkRow(Row(2, '2'), ['id', 'val']),
@@ -263,15 +259,15 @@ class FlinkTest(unittest.TestCase):
         table = backend.flink.from_elements([],schema=schema)
         backend.flink.register_table('empty_table', table)
 
-        backend.save_table(TableMeta('empty_table'), TableMeta('myhive.hive_out_table'), SaveMode.overwrite, True)
-        self.assertListEqual(backend.exec_sql(f'select * from myhive.hive_out_table').collect(), [])
+        backend.save_table(TableMeta('empty_table'), TableMeta('testHiveCatalog.myhive.hive_out_table'), SaveMode.overwrite, True)
+        self.assertListEqual(backend.exec_sql(f'select * from testHiveCatalog.myhive.hive_out_table').collect(), [])
 
         mock_dt_1, mock_dt_2 = '2021-01-01', '2021-01-02'
         # first save with partitions, should create
         backend.save_table(TableMeta('test'),
-                           TableMeta('myhive.hive_out_table_pt', partitions=[Partition('dt', mock_dt_1)]), SaveMode.overwrite,
+                           TableMeta('testHiveCatalog.myhive.hive_out_table_pt', partitions=[Partition('dt', mock_dt_1)]), SaveMode.overwrite,
                            True)
-        self.assertListEqual(backend.exec_sql(f"select * from myhive.hive_out_table_pt where dt = '{mock_dt_1}' order by id").collect(), [
+        self.assertListEqual(backend.exec_sql(f"select * from testHiveCatalog.myhive.hive_out_table_pt where dt = '{mock_dt_1}' order by id").collect(), [
             FlinkRow(Row(1, '1', mock_dt_1), ['id', 'val', 'dt']),
             FlinkRow(Row(2, '2', mock_dt_1), ['id', 'val', 'dt']),
             FlinkRow(Row(3, '3', mock_dt_1), ['id', 'val', 'dt'])
@@ -279,9 +275,9 @@ class FlinkTest(unittest.TestCase):
 
         # second save with partitions, should overwrite
         backend.save_table(TableMeta('test_limit'),
-                           TableMeta('myhive.hive_out_table_pt', partitions=[Partition('dt', mock_dt_2)]), SaveMode.overwrite,
+                           TableMeta('testHiveCatalog.myhive.hive_out_table_pt', partitions=[Partition('dt', mock_dt_2)]), SaveMode.overwrite,
                            True)
-        self.assertListEqual(backend.exec_sql(f'select * from myhive.hive_out_table_pt order by id, dt').collect(), [
+        self.assertListEqual(backend.exec_sql(f'select * from testHiveCatalog.myhive.hive_out_table_pt order by id, dt').collect(), [
             FlinkRow(Row(1, '1', mock_dt_1), ['id', 'val', 'dt']),
             FlinkRow(Row(1, '1', mock_dt_2), ['id', 'val', 'dt']),
             FlinkRow(Row(2, '2', mock_dt_1), ['id', 'val', 'dt']),
@@ -291,9 +287,9 @@ class FlinkTest(unittest.TestCase):
 
         # third save with partitions, should overwrite
         backend.save_table(TableMeta('test_limit'),
-                           TableMeta('myhive.hive_out_table_pt', partitions=[Partition('dt', mock_dt_2)]), SaveMode.overwrite,
+                           TableMeta('testHiveCatalog.myhive.hive_out_table_pt', partitions=[Partition('dt', mock_dt_2)]), SaveMode.overwrite,
                            True)
-        self.assertListEqual(backend.exec_sql(f'select * from myhive.hive_out_table_pt order by id, dt').collect(), [
+        self.assertListEqual(backend.exec_sql(f'select * from testHiveCatalog.myhive.hive_out_table_pt order by id, dt').collect(), [
             FlinkRow(Row(1, '1', mock_dt_1), ['id', 'val', 'dt']),
             FlinkRow(Row(1, '1', mock_dt_2), ['id', 'val', 'dt']),
             FlinkRow(Row(2, '2', mock_dt_1), ['id', 'val', 'dt']),
@@ -302,9 +298,9 @@ class FlinkTest(unittest.TestCase):
         ])
 
         backend.save_table(TableMeta('append_table'),
-                           TableMeta('myhive.hive_out_table_pt', partitions=[Partition('dt', mock_dt_2)]), SaveMode.append,
+                           TableMeta('testHiveCatalog.myhive.hive_out_table_pt', partitions=[Partition('dt', mock_dt_2)]), SaveMode.append,
                            True)
-        self.assertListEqual(backend.exec_sql(f'select * from myhive.hive_out_table_pt order by id, dt, val').collect(), [
+        self.assertListEqual(backend.exec_sql(f'select * from testHiveCatalog.myhive.hive_out_table_pt order by id, dt, val').collect(), [
             FlinkRow(Row(1, '1', mock_dt_1), ['id', 'val', 'dt']),
             FlinkRow(Row(1, '1', mock_dt_2), ['id', 'val', 'dt']),
             FlinkRow(Row(2, '2', mock_dt_1), ['id', 'val', 'dt']),

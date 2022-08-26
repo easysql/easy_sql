@@ -1,7 +1,7 @@
 import os.path
 import unittest
 
-from easy_sql import data_process
+from easy_sql import base_test, data_process
 
 proj_base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -32,7 +32,11 @@ class DataProcessTest(unittest.TestCase):
         data_process._data_process(os.path.join(proj_base_dir, 'test/sample_etl.flink.postgres.sql'), None, None, False)
     
     def test_flink_hive(self):
+        if not base_test.should_run_integration_test("flink_hive"):
+            return
         data_process._data_process(os.path.join(proj_base_dir, 'test/sample_etl.flink.hive.sql'), None, None, False)
     
     def test_flink_hive_postgres(self):
+        if not base_test.should_run_integration_test("flink_hive"):
+            return
         data_process._data_process(os.path.join(proj_base_dir, 'test/sample_etl.flink.hive.postgres.sql'), None, None, False)
