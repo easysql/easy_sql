@@ -155,13 +155,13 @@ class FlinkBackend(Backend):
             catalog_expr = " , ".join(
                 [f"'{option}' = '{catalog[option]}'" for option in catalog]
             )
-            self.flink.execute_sql(f"""
+            self.exec_native_sql(f"""
                 CREATE CATALOG {catalog_name} 
                 WITH (
                     {catalog_expr}
                 );
             """)
-            self.flink.execute_sql(f'USE CATALOG {catalog_name}')
+            self.exec_native_sql(f'USE CATALOG {catalog_name}')
 
     def _register_tables(self, flink_config, tables: List[str]):
         if len(tables) == 0:
@@ -169,7 +169,7 @@ class FlinkBackend(Backend):
         for database in flink_config['databases']:
             db_name = database['name']
             connectors = database['connectors']
-            self.flink.execute_sql(f'create database if not exists {db_name}')
+            self.exec_native_sql(f'create database if not exists {db_name}')
             for table in tables:
                 table_config = next(filter(lambda t: t['name'] == table.strip().split('.')[1], database['tables']), None)
                 if not table_config:
@@ -195,7 +195,7 @@ class FlinkBackend(Backend):
                         {options_expr}
                     );
                 """
-                self.flink.execute_sql(create_sql)
+                self.exec_native_sql(create_sql)
 
     def register_tables(self, flink_tables_file_path: str, tables: List[str]):
         if flink_tables_file_path and os.path.exists(flink_tables_file_path):

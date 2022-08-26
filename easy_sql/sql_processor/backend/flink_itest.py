@@ -46,7 +46,7 @@ class FlinkTest(unittest.TestCase):
                 val text
             )
         """)
-        backend.flink.execute_sql(f"""
+        backend.exec_native_sql(f"""
             CREATE TABLE out_put_table ( 
                 id INT,
                 val VARCHAR, 
@@ -82,7 +82,7 @@ class FlinkTest(unittest.TestCase):
         catalog_name = "hive"
         default_database = "myhive"
         hive_conf_dir = "/Users/yuewu/Env/apache-hive-3.1.2-bin/conf"
-        backend.flink.execute_sql(f"""
+        backend.exec_native_sql(f"""
             CREATE CATALOG {default_database} WITH (
                 'type' = '{catalog_name}',
                 'default-database' = '{default_database}',
@@ -90,7 +90,7 @@ class FlinkTest(unittest.TestCase):
             );
         """)
 
-        backend.flink.execute_sql(f"""
+        backend.exec_native_sql(f"""
             use catalog {default_database}
         """)
 
