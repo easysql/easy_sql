@@ -94,7 +94,7 @@ def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], pr
 
         sql_processor.run(dry_run=dry_run)
 
-    backend: Backend = create_sql_processor_backend(config.backend, config.sql, config.task_name, config.tables, config.flink_tables_file_path)
+    backend: Backend = create_sql_processor_backend(config.backend, config.sql, config.task_name, config.tables, config.flink_tables_file_path, config.customized_backend_conf)
 
     backend_is_bigquery = config.backend == "bigquery"
     pre_defined_vars = {"temp_db": backend.temp_schema if backend_is_bigquery else None}
@@ -104,7 +104,7 @@ def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], pr
         backend.clean()
 
 
-def create_sql_processor_backend(backend: str, sql: str, task_name: str, tables: List[str], flink_tables_file_path: str) -> 'Backend':
+def create_sql_processor_backend(backend: str, sql: str, task_name: str, tables: List[str], flink_tables_file_path: str, customized_backend_con: List[str]) -> 'Backend':
     if backend == 'spark':
         from easy_sql.spark_optimizer import get_spark
         from easy_sql.sql_processor.backend import SparkBackend
@@ -113,7 +113,10 @@ def create_sql_processor_backend(backend: str, sql: str, task_name: str, tables:
         exec_sql = lambda sql: backend.exec_native_sql(sql)
     elif backend == 'flink':
         from easy_sql.sql_processor.backend import FlinkBackend
-        backend = FlinkBackend()
+        etl_type = 'batch'
+        if customized_backend_con:
+            etl_type = next(filter(lambda c: c[: c.index("=")] == 'etl_type', customized_backend_con), None)
+        backend = FlinkBackend(etl_type[etl_type.index("=") + 1:].strip() == 'batch')
         flink_tables_file_path = resolve_file(flink_tables_file_path, abs_path=True)
         if len(tables) > 0:
             conn = get_conn_from_flink_tables_file_path(flink_tables_file_path, tables)

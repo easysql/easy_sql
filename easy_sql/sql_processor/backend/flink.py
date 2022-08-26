@@ -84,8 +84,8 @@ class FlinkTable(Table):
 class FlinkBackend(Backend):
 
     # todo: 考虑是否需要在外面实例化flink: TableEnvironment
-    def __init__(self, flink: TableEnvironment = None, scala_udf_initializer: str = None):
-        self.flink: TableEnvironment = TableEnvironment.create(EnvironmentSettings.in_batch_mode())
+    def __init__(self, is_batch: bool = True):
+        self.flink: TableEnvironment = TableEnvironment.create(EnvironmentSettings.in_batch_mode() if is_batch else EnvironmentSettings.in_streaming_mode())
 
     def init_udfs(self, scala_udf_initializer: str = None, *args, **kwargs):
         from pyflink.table import DataTypes
