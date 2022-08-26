@@ -113,18 +113,21 @@ def create_sql_processor_backend(backend: str, sql: str, task_name: str, tables:
         exec_sql = lambda sql: backend.exec_native_sql(sql)
     elif backend == 'flink':
         from easy_sql.sql_processor.backend import FlinkBackend
-        etl_type = 'batch'
+        etl_type = 'etl_type = batch'
         if customized_backend_con:
             etl_type = next(filter(lambda c: c[: c.index("=")] == 'etl_type', customized_backend_con), None)
         backend = FlinkBackend(etl_type[etl_type.index("=") + 1:].strip() == 'batch')
-        flink_tables_file_path = resolve_file(flink_tables_file_path, abs_path=True)
-        if len(tables) > 0:
-            conn = get_conn_from_flink_tables_file_path(flink_tables_file_path, tables)
-            from easy_sql.sql_processor.backend.rdb import _exec_sql
-            exec_sql = lambda sql: _exec_sql(conn, sql)
+        if flink_tables_file_path:
+            flink_tables_file_path = resolve_file(flink_tables_file_path, abs_path=True)
+            if len(tables) > 0:
+                conn = get_conn_from_flink_tables_file_path(flink_tables_file_path, tables)
+                from easy_sql.sql_processor.backend.rdb import _exec_sql
+                exec_sql = lambda sql: _exec_sql(conn, sql)
+            else:
+                exec_sql = lambda sql: backend.exec_native_sql(sql, use_hive_dialect = True)
+            backend.register_tables(flink_tables_file_path, tables)
         else:
             exec_sql = lambda sql: backend.exec_native_sql(sql)
-        backend.register_tables(flink_tables_file_path, tables)
     elif backend == 'maxcompute':
         odps_parms = {'access_id': 'xx', 'secret_access_key': 'xx', 'project': 'xx', 'endpoint': 'xx'}
         from easy_sql.sql_processor.backend.maxcompute import MaxComputeBackend, _exec_sql
