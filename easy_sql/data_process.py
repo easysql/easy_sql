@@ -121,7 +121,7 @@ def create_sql_processor_backend(backend: str, sql: str, task_name: str, tables:
             exec_sql = lambda sql: _exec_sql(conn, sql)
         else:
             exec_sql = lambda sql: backend.exec_native_sql(sql)
-        backend.register(flink_tables_file_path, tables)
+        backend.register_tables(flink_tables_file_path, tables)
     elif backend == 'maxcompute':
         odps_parms = {'access_id': 'xx', 'secret_access_key': 'xx', 'project': 'xx', 'endpoint': 'xx'}
         from easy_sql.sql_processor.backend.maxcompute import MaxComputeBackend, _exec_sql

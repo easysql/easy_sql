@@ -107,7 +107,7 @@ class Backend:
     ):
         raise NotImplementedError()
     
-    def register(self, *tables):
+    def register_tables(self, *tables):
         raise NotImplementedError()
 
 class Partition:

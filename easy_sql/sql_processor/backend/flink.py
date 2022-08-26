@@ -146,7 +146,7 @@ class FlinkBackend(Backend):
         # flink无法从`desc table`中解析出partition字段，但是可以在flink_source_file中配置table的partition字段
         pass
 
-    def register_catalog(self, flink_config):
+    def _register_catalog(self, flink_config):
         assert flink_config['excution']['catalog']
         catalog = flink_config['excution']['catalog']
         if catalog:
@@ -163,7 +163,7 @@ class FlinkBackend(Backend):
             """)
             self.flink.execute_sql(f'USE CATALOG {catalog_name}')
 
-    def register_tables(self, flink_config, tables: List[str]):
+    def _register_tables(self, flink_config, tables: List[str]):
         if len(tables) == 0:
             return
         for database in flink_config['databases']:
@@ -197,9 +197,9 @@ class FlinkBackend(Backend):
                 """
                 self.flink.execute_sql(create_sql)
 
-    def register(self, flink_tables_file_path: str, tables: List[str]):
+    def register_tables(self, flink_tables_file_path: str, tables: List[str]):
         if flink_tables_file_path and os.path.exists(flink_tables_file_path):
             with open(flink_tables_file_path, "r") as f:
                 config = json.loads(f.read())
-                self.register_catalog(config)
-                self.register_tables(config, tables)
+                self._register_catalog(config)
+                self._register_tables(config, tables)
