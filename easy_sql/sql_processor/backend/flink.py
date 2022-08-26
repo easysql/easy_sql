@@ -198,7 +198,6 @@ class FlinkBackend(Backend):
         options_expr = " , ".join(
             [f"'{option}' = '{options[option]}'" for option in options]
         )
-        print(partition_by_expr)
         create_sql = f"""
             create table if not exists {table.strip()} (
                 {schema_expr}
