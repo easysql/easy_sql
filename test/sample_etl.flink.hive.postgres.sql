@@ -1,5 +1,6 @@
 -- backend: flink
 -- config: easy_sql.flink_tables_file_path=test/sample_etl.flink_tables_file.json
+-- inputs: db_1.source_1
 
 -- target=variables
 select 2 as a
@@ -19,6 +20,8 @@ select
     cast(test_func(cast(${a} as BIGINT), 1) as string) as val
 union all
 select id, val from myhiveCatalog.myhive.hive_table
+union all
+select id, val from db_1.source_1
 
 -- target=output.myhiveCatalog.myhive.hive_out_table
 select id, val from result_view

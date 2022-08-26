@@ -119,9 +119,9 @@ class FlinkBackend(Backend):
         self.flink.create_temporary_view(name, table.table)
 
     def table_exists(self, table: 'TableMeta'):
-        catalog = self.flink.get_current_catalog()
-        database = self.flink.get_current_database()
-        return self.flink.get_catalog(catalog).table_exists(ObjectPath(table.dbname if table.dbname else database, table.pure_table_name))
+        catalog = table.catalog_name if table.catalog_name else self.flink.get_current_catalog()
+        database = table.dbname if table.dbname else self.flink.get_current_database()
+        return self.flink.get_catalog(catalog).table_exists(ObjectPath(database, table.pure_table_name))
 
     def save_table(self, source_table_meta: 'TableMeta', target_table_meta: 'TableMeta', save_mode: 'SaveMode', create_target_table: bool = False):
 
@@ -150,8 +150,8 @@ class FlinkBackend(Backend):
         assert flink_config['excution']['catalog']
         catalog = flink_config['excution']['catalog']
         if catalog:
-            catalog_name = catalog['database']
-            del catalog['database']
+            catalog_name = catalog['name']
+            del catalog['name']
             catalog_expr = " , ".join(
                 [f"'{option}' = '{catalog[option]}'" for option in catalog]
             )
@@ -161,41 +161,54 @@ class FlinkBackend(Backend):
                     {catalog_expr}
                 );
             """)
-            self.exec_native_sql(f'USE CATALOG {catalog_name}')
 
     def _register_tables(self, flink_config, tables: List[str]):
         if len(tables) == 0:
             return
-        for database in flink_config['databases']:
-            db_name = database['name']
-            connectors = database['connectors']
-            self.exec_native_sql(f'create database if not exists {db_name}')
-            for table in tables:
-                table_config = next(filter(lambda t: t['name'] == table.strip().split('.')[1], database['tables']), None)
-                if not table_config:
-                    raise Exception(f'table {table} does not exist in table config file, register table failed.')
+        for table in tables:
+            db_name = table.strip().split('.')[0]
+            database = next(filter(lambda t: t['name'] == db_name, flink_config['databases']), None)
+            if not database:
+                logger.warn(f"database {db_name} does not exist in flink tables config file, register table {table} failed.")
+                continue
+            
+            table_config = next(filter(lambda t: t['name'] == table.strip().split('.')[1], database['tables']), None)
+            if not table_config:
+                logger.warn(f"table {table} does not exist in flink tables config file, register table {table} failed.")
+                continue
 
-                connector = next(filter(lambda conn: conn['name'] == table_config['connector']['name'], connectors), None)
-                schema = table_config['schema']
-                schema_expr = " , ".join(schema)
-                partition_by_expr = f"PARTITIONED BY ({','.join(table_config['partition_by'])})" if "partition_by" in table_config else ''
-                options = dict()
-                options.update(connector['options'])
-                options.update(table_config['connector']['options'])
-                options_expr = " , ".join(
-                    [f"'{option}' = '{options[option]}'" for option in options]
-                )
-                print(partition_by_expr)
-                create_sql = f"""
-                    create table if not exists {table.strip()} (
-                        {schema_expr}
-                    )
-                    {partition_by_expr}
-                    WITH (
-                        {options_expr}
-                    );
-                """
-                self.exec_native_sql(create_sql)
+            connectors = database['connectors']
+            connector_name = table_config['connector']['name']
+            connector = next(filter(lambda conn: conn['name'] == connector_name, connectors), None)
+            if not connector:
+                logger.warn(f"connector {connector_name} does not exist in flink tables config file, register table {table} failed.")
+                continue
+
+            self.exec_native_sql(f'create database if not exists {db_name}')
+            
+            self._create_table(table, table_config, connector)
+
+    def _create_table(self, table:str, table_config, connector):
+        schema = table_config['schema']
+        schema_expr = " , ".join(schema)
+        partition_by_expr = f"PARTITIONED BY ({','.join(table_config['partition_by'])})" if "partition_by" in table_config else ''
+        options = dict()
+        options.update(connector['options'])
+        options.update(table_config['connector']['options'])
+        options_expr = " , ".join(
+            [f"'{option}' = '{options[option]}'" for option in options]
+        )
+        print(partition_by_expr)
+        create_sql = f"""
+            create table if not exists {table.strip()} (
+                {schema_expr}
+            )
+            {partition_by_expr}
+            WITH (
+                {options_expr}
+            );
+        """
+        self.exec_native_sql(create_sql)
 
     def register_tables(self, flink_tables_file_path: str, tables: List[str]):
         if flink_tables_file_path and os.path.exists(flink_tables_file_path):

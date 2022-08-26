@@ -139,12 +139,13 @@ class TableMeta:
     def __init__(self, table_name: str, partitions: List[Partition] = None):
         self.table_name = table_name
         self.partitions = partitions or []
-        self.dbname, self.pure_table_name = self.__parse_table_name()
+        self.catalog_name, self.dbname, self.pure_table_name = self.__parse_table_name()
 
     def __repr__(self):
         return (
             f"TableMeta(table_name={self.table_name}"
             f", partitions={self.partitions}"
+            f", catalog_name={self.catalog_name}"
             f", dbname={self.dbname}"
             f", pure_table_name={self.pure_table_name})"
         )
@@ -161,13 +162,16 @@ class TableMeta:
 
     def __parse_table_name(self) -> Tuple[str, str]:
         if self.table_name.find(".") != -1:
-            if len(self.table_name.split(".")) != 2:
-                raise Exception(f"table_name must be like DB_NAME.TABLE_NAME, found: {self.table_name}")
-            dbname = self.table_name[: self.table_name.find(".")]
-            pure_table_name = self.table_name[self.table_name.find(".") + 1 :]
+            resolve_names = self.table_name.split(".")
+            if len(resolve_names) == 2:
+                catalog_name, dbname, pure_table_name = None, resolve_names[0], resolve_names[1]
+            elif len(resolve_names) == 3:
+                catalog_name, dbname, pure_table_name = resolve_names[0], resolve_names[1], resolve_names[2]
+            else:
+                raise Exception(f"table_name must be like [CATALOG_NAME].DB_NAME.TABLE_NAME, found: {self.table_name}")
         else:
-            dbname, pure_table_name = None, self.table_name
-        return dbname, pure_table_name
+            catalog_name, dbname, pure_table_name = None, None, self.table_name
+        return catalog_name, dbname, pure_table_name
 
     def has_partitions(self):
         return len(self.partitions) > 0
@@ -176,7 +180,7 @@ class TableMeta:
         return any([pt.value is None for pt in self.partitions])
 
     def get_full_table_name(self, temp_db: str = None):
-        return f"{self.dbname or temp_db}.{self.pure_table_name}"
+        return f"{self.catalog_name}.{self.dbname or temp_db}.{self.pure_table_name}" if self.catalog_name else f"{self.dbname or temp_db}.{self.pure_table_name}"
 
 
 class Table:
