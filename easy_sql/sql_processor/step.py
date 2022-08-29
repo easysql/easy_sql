@@ -166,7 +166,6 @@ class Step:
 
     def read(self, backend: Backend, context: ProcessorContext) -> Optional[BackendTable]:
         assert self.target_config is not None
-        assert self.select_sql is not None
         if self.target_config.step_type in [StepType.TEMPLATE] or (
             self.target_config.step_type == StepType.CHECK and self._should_skip_check(context.vars_context.vars)
         ):
@@ -177,9 +176,11 @@ class Step:
             return backend.create_empty_table()
         self.preprocess_select_sql(context)
         if self.target_config.step_type == StepType.ACTION:
+            assert self.select_sql is not None
             backend.exec_native_sql(self.select_sql)
             return None
         else:
+            assert self.select_sql is not None
             return backend.exec_sql(self.select_sql)
 
     def preprocess_select_sql(self, context):

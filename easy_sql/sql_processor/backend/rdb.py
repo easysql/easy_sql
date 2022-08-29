@@ -391,19 +391,22 @@ class RdbBackend(Backend):
         credentials: Optional[str] = None,
         sql_expr: Optional[SqlExpr] = None,
         partitions_table_name="dataplat.__table_partitions__",
+        engine: Optional[Engine] = None,
     ):
         self.partitions_table_name = partitions_table_name
         self.url, self.credentials = url, credentials
         self.sql_expr = sql_expr or SqlExpr()
-        self.__init_inner(self.url, self.credentials)
+        self.__init_inner(self.url, self.credentials, engine)
 
-    def __init_inner(self, url: str, credentials: Optional[str] = None):
+    def __init_inner(self, url: str, credentials: Optional[str] = None, engine: Optional[Engine] = None):
         from sqlalchemy import create_engine
 
         self.temp_schema = f"sp_temp_{int(time.mktime(time.gmtime()))}_{int(random() * 10000):04d}"
 
         self.is_pg, self.is_ch, self.is_bq = False, False, False
-        if url.startswith("postgresql://"):
+        if engine:
+            self.engine = engine
+        elif url.startswith("postgresql://"):
             self.backend_type, self.is_pg = "pg", True
             self.sql_dialect = PgSqlDialect(self.sql_expr)
             self.engine: Engine = create_engine(url, isolation_level="AUTOCOMMIT", pool_size=1)
@@ -414,8 +417,8 @@ class RdbBackend(Backend):
             self.backend_type, self.is_ch = "ch", True
             self.sql_dialect = ChSqlDialect(self.sql_expr, self.partitions_table_name)
 
-            engine: Engine = create_engine(url, pool_size=1)
-            conn: Connection = engine.connect()
+            _engine: Engine = create_engine(url, pool_size=1)
+            conn: Connection = _engine.connect()
             _exec_sql(conn, self.sql_dialect.create_db_sql(self.temp_schema))
 
             self._create_partitions_table(conn)

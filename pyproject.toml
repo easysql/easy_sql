@@ -50,6 +50,7 @@ linter = ["sqlfluff","colorlog","regex"]
 spark = ["pyspark"]
 pg = ["SQLAlchemy", "psycopg2"]
 clickhouse = ["SQLAlchemy","clickhouse-driver","clickhouse-sqlalchemy"]
+maxcompute = ["pyodps"]
 
 [tool.isort]
 profile = "black"
