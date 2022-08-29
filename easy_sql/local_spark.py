@@ -1,12 +1,12 @@
 import os
 import shutil
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from pyspark.sql import SparkSession
 
 
 class LocalSpark:
-    spark: SparkSession = None
+    spark: Optional[SparkSession] = None
     __conf: Dict = {}
 
     @staticmethod
@@ -16,7 +16,7 @@ class LocalSpark:
             LocalSpark.spark = None
 
     @staticmethod
-    def get(conf: Dict[str, Any] = None, clean_existing_data: bool = True) -> SparkSession:
+    def get(conf: Optional[Dict[str, Any]] = None, clean_existing_data: bool = True) -> SparkSession:
         conf = conf or {}
         if LocalSpark.spark is None:
             default_conf = {

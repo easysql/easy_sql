@@ -9,6 +9,7 @@ proj_base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 class DataProcessTest(unittest.TestCase):
     def test_spark(self):
         command = data_process._data_process(os.path.join(proj_base_dir, "test/sample_etl.spark.sql"), None, None, True)
+        assert command is not None
         self.assertRegex(
             command,
             r"spark-submit --conf spark.master=local\[2\] --conf spark.submit.deployMode=client "

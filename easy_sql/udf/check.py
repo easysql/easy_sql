@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 if TYPE_CHECKING:
-    from collections import Callable
-
     from pyspark.sql.types import DataType
 
 

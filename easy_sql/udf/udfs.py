@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 
 def _all_udfs(cls: Any):
@@ -26,11 +26,11 @@ class SparkUdfs:
         return _all_udfs(SparkUdfs)
 
     @staticmethod
-    def remove_all_whitespaces(value: str) -> str:
+    def remove_all_whitespaces(value: Optional[str]) -> Optional[str]:
         return "".join(value.split()) if value is not None else None
 
     @staticmethod
-    def trim_all(value: str) -> str:
+    def trim_all(value: Optional[str]) -> Optional[str]:
         return value.strip() if value is not None else None
 
 

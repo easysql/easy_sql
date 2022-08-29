@@ -20,7 +20,7 @@ class MaxComputeTest(unittest.TestCase):
             "project": "xx",
             "endpoint": "http://service.cn-hangzhou.maxcompute.aliyun.com/api",
         }
-        backend = MaxComputeBackend(**odps_parms)
+        backend = MaxComputeBackend(**odps_parms)  # type: ignore
 
         temp_table_name = "test_mc_unit_test"
         backend.conn.execute_sql(f"drop table if exists {temp_table_name}")
@@ -82,7 +82,7 @@ class MaxComputeTest(unittest.TestCase):
             "project": "xx",
             "endpoint": "http://service.cn-hangzhou.maxcompute.aliyun.com/api",
         }
-        backend = MaxComputeBackend(**odps_parms)
+        backend = MaxComputeBackend(**odps_parms)  # type: ignore
 
         temp_table_name = "test_mc_unit_test"
         backend.conn.execute_sql(f"drop table if exists {temp_table_name}")

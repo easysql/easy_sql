@@ -53,7 +53,7 @@ def data_process(sql_file: str, vars: str, dry_run: str, print_command: bool):
     _data_process(sql_file, vars, dry_run, print_command)
 
 
-def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], print_command: bool):
+def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], print_command: bool) -> Optional[str]:
     if not sql_file.endswith(".sql"):
         raise Exception(f"sql_file must ends with .sql, found `{sql_file}`")
     dry_run = dry_run if dry_run is not None else "0"
@@ -63,13 +63,13 @@ def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], pr
         print(command)
         return command
 
-    dry_run = dry_run in ["true", "1"]
+    is_dry_run = dry_run in ["true", "1"]
     config = EasySqlConfig.from_sql(sql_file)
 
     from easy_sql.sql_processor import SqlProcessor
 
     def run_with_vars(backend: Backend, variables: Dict[str, Any]):
-        vars_dict = dict(
+        vars_dict: Dict[str, Any] = dict(
             [
                 (v.strip()[: v.strip().index("=")], urllib.parse.unquote_plus(v.strip()[v.strip().index("=") + 1 :]))
                 for v in vars.split(",")
@@ -92,55 +92,55 @@ def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], pr
                 resolve_file(config.func_file_path) if "/" in config.func_file_path else config.func_file_path
             )
 
-        sql_processor.run(dry_run=dry_run)
+        sql_processor.run(dry_run=is_dry_run)
 
     backend: Backend = create_sql_processor_backend(config.backend, config.sql, config.task_name)
 
     backend_is_bigquery = config.backend == "bigquery"
-    pre_defined_vars = {"temp_db": backend.temp_schema if backend_is_bigquery else None}
+    pre_defined_vars = {"temp_db": backend.temp_schema if backend_is_bigquery else None}  # type: ignore
     try:
         run_with_vars(backend, pre_defined_vars)
     finally:
         backend.clean()
 
 
-def create_sql_processor_backend(backend: str, sql: str, task_name: str) -> Backend:
-    if backend == "spark":
+def create_sql_processor_backend(backend_type: str, sql: str, task_name: str) -> Backend:
+    if backend_type == "spark":
         from easy_sql.spark_optimizer import get_spark
         from easy_sql.sql_processor.backend import SparkBackend
 
         backend = SparkBackend(get_spark(task_name))
         exec_sql = lambda sql: backend.exec_native_sql(sql)  # noqa: E731
-    elif backend == "maxcompute":
-        odps_parms = {"access_id": "xx", "secret_access_key": "xx", "project": "xx", "endpoint": "xx"}
+    elif backend_type == "maxcompute":
+        odps_params = {"access_id": "xx", "secret_access_key": "xx", "project": "xx", "endpoint": "xx"}
         from easy_sql.sql_processor.backend.maxcompute import (
             MaxComputeBackend,
             _exec_sql,
         )
 
-        backend = MaxComputeBackend(**odps_parms)
+        backend = MaxComputeBackend(**odps_params)  # type: ignore
         exec_sql = lambda sql: _exec_sql(backend.conn, sql)  # noqa: E731
-    elif backend in ["postgres", "clickhouse", "bigquery"]:
+    elif backend_type in ["postgres", "clickhouse", "bigquery"]:
         from easy_sql.sql_processor.backend.rdb import RdbBackend, _exec_sql
 
-        if backend == "postgres":
+        if backend_type == "postgres":
             assert "PG_URL" in os.environ, "Must set PG_URL env var to run an ETL with postgres backend."
             backend = RdbBackend(os.environ["PG_URL"])
-        elif backend == "clickhouse":
+        elif backend_type == "clickhouse":
             assert (
                 "CLICKHOUSE_URL" in os.environ
             ), "Must set CLICKHOUSE_URL env var to run an ETL with Clickhouse backend."
             backend = RdbBackend(os.environ["CLICKHOUSE_URL"])
-        elif backend == "bigquery":
+        elif backend_type == "bigquery":
             assert (
                 "BIGQUERY_CREDENTIAL_FILE" in os.environ
             ), "Must set BIGQUERY_CREDENTIAL_FILE env var to run an ETL with BigQuery backend."
             backend = RdbBackend("bigquery://", credentials=os.environ["BIGQUERY_CREDENTIAL_FILE"])
         else:
-            raise Exception(f"unsupported backend: {backend}")
+            raise Exception(f"unsupported backend: {backend_type}")
         exec_sql = lambda sql: _exec_sql(backend.conn, sql)  # noqa: E731
     else:
-        raise Exception("Unsupported backend found: " + backend)
+        raise Exception("Unsupported backend found: " + backend_type)
 
     prepare_sql_list = []
     for line in sql.split("\n"):
@@ -155,14 +155,14 @@ def create_sql_processor_backend(backend: str, sql: str, task_name: str) -> Back
 class EasySqlConfig:
     def __init__(
         self,
-        sql_file: str,
+        sql_file: Optional[str],
         sql: str,
         backend: str,
         customized_backend_conf: List[str],
         customized_easy_sql_conf: List[str],
-        udf_file_path: str,
-        func_file_path: str,
-        scala_udf_initializer: str,
+        udf_file_path: Optional[str],
+        func_file_path: Optional[str],
+        scala_udf_initializer: Optional[str],
     ):
         self.sql_file = sql_file
         self.sql = sql
@@ -172,12 +172,12 @@ class EasySqlConfig:
         self.scala_udf_initializer = scala_udf_initializer
 
     @staticmethod
-    def from_sql(sql_file: str = None, sql: str = None) -> EasySqlConfig:
+    def from_sql(sql_file: Optional[str] = None, sql: Optional[str] = None) -> EasySqlConfig:  # type: ignore
         assert sql_file is not None or sql is not None, "sql_file or sql must be set"
-        sql = read_sql(sql_file) if sql_file else sql
-        sql_lines = sql.split("\n")
+        sql: str = read_sql(sql_file) if sql_file else sql  # type: ignore
+        sql_lines = sql.split("\n")  # type: ignore
 
-        backend = _parse_backend(sql)
+        backend = _parse_backend(sql)  # type: ignore
 
         customized_backend_conf: List[str] = []
         customized_easy_sql_conf: List[str] = []
@@ -220,12 +220,14 @@ class EasySqlConfig:
 
     @property
     def task_name(self):
+        assert self.sql_file is not None
         sql_name = path.basename(self.sql_file)[:-4]
         return f'{sql_name}_{datetime.now().strftime("%Y%m%d%H%M%S")}'
 
     def spark_conf_command_args(self) -> List[str]:
         # config 的优先级：1. sql 代码里的 config 优先级高于这里的 default 配置
         # 对于数组类的 config，sql 代码里的 config 会添加进来，而不是覆盖默认配置
+        assert self.sql_file is not None
         default_conf = [
             "spark.master=local[2]",
             "spark.submit.deployMode=client",
@@ -264,7 +266,7 @@ class EasySqlConfig:
         return args
 
 
-def shell_command(sql_file: str, vars: str, dry_run: str):
+def shell_command(sql_file: str, vars: Optional[str], dry_run: str):
     config = EasySqlConfig.from_sql(sql_file)
 
     if config.backend == "spark":

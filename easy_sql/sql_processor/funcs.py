@@ -1,4 +1,4 @@
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 from .backend import Backend, SparkBackend
 from .backend.rdb import RdbBackend
@@ -10,7 +10,7 @@ __all__ = ["FuncRunner"]
 class FuncRunner:
     _instance = None
 
-    def __init__(self, funcs: Dict[str, Callable] = None):
+    def __init__(self, funcs: Optional[Dict[str, Callable]] = None):
         self.funcs: Dict[str, Callable] = funcs or {}
 
     def register_funcs(self, funcs: Dict[str, Callable]):

@@ -51,12 +51,12 @@ class TableFuncs:
     def __init__(self, backend: Backend):
         self.backend = backend
 
-    def ensure_no_null_data_in_table(self, step: Step, table_name: str, query: str = None) -> bool:
+    def ensure_no_null_data_in_table(self, step: Step, table_name: str, query: Optional[str] = None) -> bool:
         fields = self.backend.exec_sql(f"select * from {table_name} limit 0").field_names()
         return self._check_not_null_columns_in_table(step, table_name, fields, query, "ensure_no_null_data_in_table")
 
     def check_not_null_column_in_table(
-        self, step: Step, table_name: str, not_null_column: str, query: str = None
+        self, step: Step, table_name: str, not_null_column: str, query: Optional[str] = None
     ) -> bool:
         return self._check_not_null_columns_in_table(
             step, table_name, [not_null_column], query, "check_not_null_column_in_table"
@@ -67,7 +67,7 @@ class TableFuncs:
         step: Step,
         table_name: str,
         not_null_columns: List[str],
-        query: str = None,
+        query: Optional[str] = None,
         context: str = "check_not_null_column_in_table",
     ) -> bool:
         null_counts = {}
@@ -108,8 +108,7 @@ class PartitionFuncs:
     def partition_exists(self, table_name: str, partition_value: str) -> bool:
         return partition_value in self._get_partition_values_as_str(table_name)
 
-    def ensure_partition_exists(self, step, *args) -> bool:
-        step: Step = step
+    def ensure_partition_exists(self, step: Step, *args) -> bool:
         if len(args) < 2:
             raise Exception(
                 "must contains at least one table and exactly one partition_value when calling"
@@ -131,8 +130,7 @@ class PartitionFuncs:
             return False
         return True
 
-    def ensure_dwd_partition_exists(self, step, *args) -> bool:
-        step: Step = step
+    def ensure_dwd_partition_exists(self, step: Step, *args) -> bool:
         if len(args) < 2:
             raise Exception(
                 "must contains one table and exactly one partition_value and one or more foreign key columns"
@@ -187,8 +185,7 @@ class PartitionFuncs:
 
         return check_ok
 
-    def ensure_partition_or_first_partition_exists(self, step, *args) -> bool:
-        step: Step = step
+    def ensure_partition_or_first_partition_exists(self, step: Step, *args) -> bool:
         if len(args) < 2:
             raise Exception(
                 "must contains at least one table and exactly one partition_value when calling"
@@ -219,12 +216,12 @@ class PartitionFuncs:
         partition_values = self._get_partition_values_as_str(table_name)
         partition_date_format = "%Y-%m-%d" if "-" in curr_partition_value_as_dt else "%Y%m%d"
         try:
-            curr_partition_value_as_dt = datetime.strptime(curr_partition_value_as_dt, partition_date_format)
+            curr_partition_value_dt = datetime.strptime(curr_partition_value_as_dt, partition_date_format)
         except ValueError:
             raise SqlProcessorException(
                 f"partition value must be date of format `%Y-%m-%d` or `%Y%m%d`, found {curr_partition_value_as_dt}"
             )
-        previous_partition_value = (curr_partition_value_as_dt - timedelta(days=1)).strftime(partition_date_format)
+        previous_partition_value = (curr_partition_value_dt - timedelta(days=1)).strftime(partition_date_format)
         return previous_partition_value in partition_values
 
     def get_partition_or_first_partition(self, table_name: str, partition_value: str):
@@ -276,10 +273,16 @@ class AlertFunc:
         self.alerter = alerter
 
     def alert(
-        self, step: Step, context, rule_name: str, pass_condition: str, alert_template: str, mentioned_users: str
+        self,
+        step: Step,
+        context: ProcessorContext,
+        rule_name: str,
+        pass_condition: str,
+        alert_template: str,
+        mentioned_users: str,
     ):
-        context: ProcessorContext = context
         # Fetch 10 rows at most
+        assert step.select_sql is not None
         alert_data = self.backend.exec_sql(step.select_sql).limit(10).collect()
         # alert_data = self.spark.sql(step.select_sql).limit(10).collect()
 

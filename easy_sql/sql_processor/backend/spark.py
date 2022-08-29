@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
 from ...logger import logger
 from ...udf import udfs
@@ -16,15 +16,15 @@ if TYPE_CHECKING:
 
 class SparkRow(Row):
     def __init__(self, row):
-        from pyspark.sql.types import Row
+        from pyspark.sql.types import Row as SparkRow
 
-        self.row: Row = row
+        self.row: SparkRow = row
 
     def as_dict(self):
-        return self.row.asDict()
+        return self.row.asDict()  # type: ignore
 
     def as_tuple(self) -> Tuple:
-        return self.row
+        return self.row  # type: ignore
 
     def __eq__(self, other):
         return self.row.__eq__(other)
@@ -57,7 +57,7 @@ class SparkTable(Table):
     def limit(self, count: int) -> SparkTable:
         return SparkTable(self.df.limit(count))
 
-    def with_column(self, name: str, value: any) -> SparkTable:
+    def with_column(self, name: str, value: Any) -> SparkTable:
         from pyspark.sql import Column
         from pyspark.sql.functions import expr
 
@@ -74,7 +74,7 @@ class SparkTable(Table):
 
 
 class SparkBackend(Backend):
-    def __init__(self, spark, scala_udf_initializer: str = None):
+    def __init__(self, spark, scala_udf_initializer: Optional[str] = None):
         from pyspark.sql import SparkSession
 
         self.spark: SparkSession = spark
@@ -83,15 +83,15 @@ class SparkBackend(Backend):
     def reset(self):
         pass
 
-    def init_udfs(self, scala_udf_initializer: str = None, *args, **kwargs):
+    def init_udfs(self, scala_udf_initializer: Optional[str] = None, *args, **kwargs):
         scala_udf_initializer = scala_udf_initializer or self.scala_udf_initializer
         if scala_udf_initializer:
             from py4j.java_gateway import java_import
 
-            gw = self.spark.sparkContext._gateway
+            gw = self.spark.sparkContext._gateway  # type: ignore
             java_import(gw.jvm, scala_udf_initializer)
             initUdfs = eval(f"gw.jvm.{scala_udf_initializer}.initUdfs", {"gw": gw})
-            initUdfs(self.spark._jsparkSession)
+            initUdfs(self.spark._jsparkSession)  # type: ignore
 
         self.register_udfs(udfs.get_udfs("spark"))
 
@@ -110,7 +110,7 @@ class SparkBackend(Backend):
     def clear_cache(self):
         self.spark.catalog.clearCache()
 
-    def clear_temp_tables(self, exclude: List[str] = None):
+    def clear_temp_tables(self, exclude: Optional[List[str]] = None):
         exclude = exclude or []
         for table in self.spark.catalog.listTables("default"):
             if table.isTemporary and table.name not in exclude:
@@ -147,7 +147,7 @@ class SparkBackend(Backend):
         from pyspark.sql.utils import AnalysisException
 
         try:
-            return self.spark._jsparkSession.catalog().tableExists(table.dbname, table.pure_table_name)
+            return self.spark._jsparkSession.catalog().tableExists(table.dbname, table.pure_table_name)  # type: ignore
         except AnalysisException:
             return False
 
@@ -190,6 +190,7 @@ class SparkBackend(Backend):
 
         if not self.table_exists(target_table_meta) and create_target_table:
             schema = self.spark.sql(f"select * from {source_table_meta.table_name}").limit(0).schema
+            assert target_table_meta.dbname is not None
             self._create_table(
                 target_table_meta.dbname, target_table_meta.pure_table_name, schema, target_table_meta.partitions
             )

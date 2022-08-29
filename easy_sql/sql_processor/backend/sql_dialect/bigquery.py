@@ -111,7 +111,7 @@ class BqSqlDialect(SqlDialect):
         self, table_name: str, cols: List[Dict[str, TypeEngine]], partitions: List[Partition]
     ):
         cols_expr = ",\n".join(
-            f"{col['name']} {self.sql_expr.for_bigquery_type(col['name'], col['type'])}" for col in cols
+            f"{col['name']} {self.sql_expr.for_bigquery_type(col['name'], col['type'])}" for col in cols  # type: ignore
         )
         if len(partitions) == 0:
             partition_expr = ""

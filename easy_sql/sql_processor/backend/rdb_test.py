@@ -2,7 +2,8 @@ import unittest
 from unittest.mock import patch
 
 from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION
-from sqlalchemy.engine import Inspector, create_mock_engine
+from sqlalchemy.engine.mock import create_mock_engine
+from sqlalchemy.engine.reflection import Inspector
 
 from easy_sql.sql_processor.backend.rdb import RdbBackend
 
@@ -17,12 +18,12 @@ class RdbTest(unittest.TestCase):
 
     def test_get_columns_should_compile_type_by_dialect_when_now_raw(self):
         mock_engine = create_mock_engine("postgresql://", None)
-        mock_engine.close = lambda: None
+        mock_engine.close = lambda: None  # type: ignore
         col = {"name": "id", "type": DOUBLE_PRECISION(10)}
         raw_cols = [col]
         with patch.object(Inspector, "get_columns", return_value=[col.copy() for col in raw_cols]):
             rdb = RdbBackend("")
-            rdb.engine = mock_engine
+            rdb.engine = mock_engine  # type: ignore
 
             cols = rdb.get_columns("test")
 
@@ -31,12 +32,12 @@ class RdbTest(unittest.TestCase):
 
     def test_get_columns_should_compile_type_by_dialect_when_in_raw(self):
         mock_engine = create_mock_engine("postgresql://", None)
-        mock_engine.close = lambda: None
+        mock_engine.close = lambda: None  # type: ignore
         col = {"name": "id", "type": DOUBLE_PRECISION(10)}
         raw_cols = [col]
         with patch.object(Inspector, "get_columns", return_value=[col.copy() for col in raw_cols]):
             rdb = RdbBackend("")
-            rdb.engine = mock_engine
+            rdb.engine = mock_engine  # type: ignore
 
             cols = rdb.get_columns("test", raw=True)
 

@@ -35,20 +35,20 @@ class ParallelismFuncs:
 
     def repartition(self, table: str, partitions: str):
         try:
-            partitions = int(partitions)
+            _partitions = int(partitions)
         except ValueError:
             raise Exception(f"partitions must be an int when repartition a table, got `{partitions}`")
-        _exec_sql(self.spark, f"select * from {table}").repartition(partitions).createOrReplaceTempView(table)
+        _exec_sql(self.spark, f"select * from {table}").repartition(_partitions).createOrReplaceTempView(table)
 
     def repartition_by_column(self, table: str, partitions: str):
         _exec_sql(self.spark, f"select * from {table}").repartition(partitions).createOrReplaceTempView(table)
 
     def coalesce(self, table: str, partitions: str):
         try:
-            partitions = int(partitions)
+            _partitions = int(partitions)
         except ValueError:
             raise Exception(f"partitions must be an int when coalesce a table, got `{partitions}`")
-        _exec_sql(self.spark, f"select * from {table}").coalesce(partitions).createOrReplaceTempView(table)
+        _exec_sql(self.spark, f"select * from {table}").coalesce(_partitions).createOrReplaceTempView(table)
 
     def set_shuffle_partitions(self, partitions: str):
         self.spark.conf.set("spark.sql.adaptive.enabled", "false")
@@ -101,15 +101,14 @@ class IOFuncs:
         )
 
     def write_json_local(self, table: str, output_file: str):
-        data: DataFrame = _exec_sql(self.spark, f"select * from {table}")
-        data: List[Row] = data.collect()
-        data: List[Dict] = [row.asDict() for row in data]
+        _data: DataFrame = _exec_sql(self.spark, f"select * from {table}")  # type: ignore
+        data: List[Row] = _data.collect()  # type: ignore
+        data: List[Dict] = [row.asDict() for row in data]  # type: ignore
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
         with open(output_file, "w") as f:
             f.write(json.dumps(data, ensure_ascii=False, indent=4, sort_keys=False))
 
-    def update_json_local(self, context, vars: str, list_vars: str, json_attr: str, output_file: str):
-        context: ProcessorContext = context
+    def update_json_local(self, context: ProcessorContext, vars: str, list_vars: str, json_attr: str, output_file: str):
         vars_value = {
             var.strip(): context.vars_context.vars.get(var.strip(), None) for var in vars.split(",") if var.strip()
         }
@@ -144,7 +143,7 @@ class ModelFuncs:
         from pyspark.ml import PipelineModel
         from pyspark.sql.functions import expr
 
-        output_ref_cols = [col.strip() for col in output_ref_cols.split(",") if col.strip()]
+        _output_ref_cols = [col.strip() for col in output_ref_cols.split(",") if col.strip()]
         model = PipelineModel.load(model_save_path)
         data = _exec_sql(self.spark, f"select {feature_cols} from {table_name}")
 
@@ -153,7 +152,7 @@ class ModelFuncs:
             data = data.withColumn(col, expr(f"cast({col} as double)"))
 
         predictions = model.transform(data)
-        output = predictions.select(output_ref_cols + [id_col, "prediction"])
+        output = predictions.select(_output_ref_cols + [id_col, "prediction"])
         output.createOrReplaceTempView(table_name)
 
 
@@ -171,13 +170,13 @@ class PartitionFuncs(PartitionFuncsBase):
         super().__init__(backend)
 
     def _get_partition_values(self, table_name):
-        backend: SparkBackend = self.backend
+        backend: SparkBackend = self.backend  # type: ignore
         partitions = _exec_sql(backend.spark, f"show partitions {table_name}").collect()
         partition_values = [p[0][p[0].index("=") + 1 :] for p in partitions]
         return partition_values
 
     def get_partition_cols(self, table_name: str) -> List[str]:
-        backend: SparkBackend = self.backend
+        backend: SparkBackend = self.backend  # type: ignore
         all_cols = _exec_sql(backend.spark, f"desc table {table_name}").collect()
         pt_cols = []
         pt_col_start = False

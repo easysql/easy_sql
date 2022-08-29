@@ -17,13 +17,13 @@ class SqlProcessorDebugger:
         self,
         sql_file_path: str,
         backend: Union[SparkSession, Backend],
-        vars: Dict[str, Any] = None,
-        funcs: Dict[str, Any] = None,
-        funcs_py_file: str = None,
-        extra_cols: List[Column] = None,
-        udf_py_file: str = None,
-        scala_udf_initializer: str = None,
-        templates: Dict[str, Any] = None,
+        vars: Optional[Dict[str, Any]] = None,
+        funcs: Optional[Dict[str, Any]] = None,
+        funcs_py_file: Optional[str] = None,
+        extra_cols: Optional[List[Column]] = None,
+        udf_py_file: Optional[str] = None,
+        scala_udf_initializer: Optional[str] = None,
+        templates: Optional[Dict[str, Any]] = None,
     ):
         backend = backend if isinstance(backend, (Backend,)) else SparkBackend(spark=backend)
         self.udf_py_file = udf_py_file
@@ -127,7 +127,7 @@ class SqlProcessorDebugger:
     def vars(self) -> Dict[str, Any]:
         return self.sql_processor.variables
 
-    def add_vars(self, vars: Dict[str, Any]):
+    def add_vars(self, vars: Optional[Dict[str, Any]]):
         if vars is None or not isinstance(vars, dict):
             print("Vars must be a non-empty dict. Will do nothing!")
             return

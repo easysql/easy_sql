@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import copy
 import re
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from ..logger import logger
 
@@ -96,6 +96,8 @@ class CommentSubstitutor:
             return True
         elif single_quote_index == -1 and double_quote_index != -1:
             return _is_quote_closed(double_quote_index, '"')
+        else:
+            raise Exception("should not happen")
 
     def recover(self, substituted_sql_expr: str) -> str:
         lines = []
@@ -118,7 +120,12 @@ class CommentSubstitutor:
 
 
 class VarsContext(VarsReplacer):
-    def __init__(self, vars: Dict[str, Any] = None, list_vars: Dict[str, List] = None, debug_log: bool = False):
+    def __init__(
+        self,
+        vars: Optional[Dict[str, Any]] = None,
+        list_vars: Optional[Dict[str, List]] = None,
+        debug_log: bool = False,
+    ):
         vars = vars or {}
         self.vars = copy.deepcopy(vars)
         self.list_vars = list_vars or {}
@@ -156,10 +163,11 @@ class VarsContext(VarsReplacer):
                 break
 
             text_parts.append(text[start : match.start()])
-            var_name = var_rex.match(match.group()).groups()[0]
+            var_name = var_rex.match(match.group()).groups()[0]  # type: ignore
             var_name_is_func = "(" in var_name
             self._log_replace_process(f"variable matched: var_name={var_name}, is_func={var_name_is_func}")
             if var_name_is_func:
+                assert self.func_runner is not None
                 var_value = self.func_runner.run_func(var_name, self)
             elif var_name in variables:
                 var_value = variables[var_name]
@@ -196,7 +204,7 @@ class VarsContext(VarsReplacer):
 
 
 class TemplatesContext:
-    def __init__(self, debug_log: bool = False, templates: dict = None):
+    def __init__(self, debug_log: bool = False, templates: Optional[Dict] = None):
         self.templates: Dict[str, str] = templates or {}
         self.debug_log = debug_log
 
@@ -207,10 +215,10 @@ class TemplatesContext:
         # pattern = re.compile(r'(%s)|(%s)' % (tmpl_with_arg_rex, tmpl_no_arg_rex), flags=re.IGNORECASE)
         while tmpl_with_arg_pattern.search(text) or tmpl_no_arg_pattern.search(text):
             match_result = tmpl_with_arg_pattern.search(text) or tmpl_no_arg_pattern.search(text)
-            template_define = match_result.group(0)
+            template_define = match_result.group(0)  # type: ignore
             self._log_replace_process(f"found template: {template_define}")
             template_define_normalized = template_define.replace("\n", "")
-            template_name = match_result.groups()[0]
+            template_name = match_result.groups()[0]  # type: ignore
             if template_name not in templates:
                 raise SqlProcessorException(f"no template for found `{template_name}`, existing are {templates}")
 
@@ -248,7 +256,9 @@ class TemplatesContext:
 
 
 class ProcessorContext:
-    def __init__(self, vars_context: VarsContext, templates_context: TemplatesContext, extra_cols: List[Column] = None):
+    def __init__(
+        self, vars_context: VarsContext, templates_context: TemplatesContext, extra_cols: Optional[List[Column]] = None
+    ):
         self.vars_context = vars_context
         self.templates_context = templates_context
         self.extra_cols = extra_cols or []

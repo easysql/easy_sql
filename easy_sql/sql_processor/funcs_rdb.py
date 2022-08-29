@@ -54,9 +54,9 @@ class ModelFuncs:
         bucket = "dataplat-gcp-demo"
         spark.conf.set("temporaryGcsBucket", bucket)
 
-        spark._jsc.hadoopConfiguration().set("fs.gs.impl", "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem")
-        spark._jsc.hadoopConfiguration().set("fs.gs.auth.service.account.enable", "true")
-        spark._jsc.hadoopConfiguration().set(
+        spark._jsc.hadoopConfiguration().set("fs.gs.impl", "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem")  # type: ignore
+        spark._jsc.hadoopConfiguration().set("fs.gs.auth.service.account.enable", "true")  # type: ignore
+        spark._jsc.hadoopConfiguration().set(  # type: ignore
             "google.cloud.auth.service.account.json.keyfile",
             f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-prod.json",
         )
@@ -67,7 +67,7 @@ class ModelFuncs:
 
         data = spark.sql(f"select {feature_cols} from origin_input")
 
-        output_ref_cols = [col.strip() for col in output_ref_cols.split(",") if col.strip()]
+        _output_ref_cols = [col.strip() for col in output_ref_cols.split(",") if col.strip()]
         model = PipelineModel.load(model_save_path)
 
         int_cols = [f.name for f in data.schema.fields if is_int_type(f.dataType.typeName())]
@@ -75,7 +75,7 @@ class ModelFuncs:
             data = data.withColumn(col, expr(f"cast({col} as double)"))
 
         predictions = model.transform(data)
-        output = predictions.select(output_ref_cols + [id_col, "prediction"])
+        output = predictions.select(_output_ref_cols + [id_col, "prediction"])
 
         output.write.format("bigquery").option("parentProject", "data-dev-workbench-prod-3fd9").option(
             "table", output_table_name
@@ -95,7 +95,7 @@ class ModelFuncs:
 
         from ..spark_optimizer import get_spark
 
-        workdir = os.path.dirname(os.environ.get("PWD"))
+        workdir = os.path.dirname(os.environ.get("PWD"))  # type: ignore
         local_settings_dir = f"{workdir}/settings.local.json"
         settings_dir = f"{workdir}/settings.json"
 
@@ -128,7 +128,7 @@ class ModelFuncs:
         from py4j.java_gateway import java_import
 
         spark = get_spark("ml_local", spark_config_settings_dict)
-        gw = spark.sparkContext._gateway
+        gw = spark.sparkContext._gateway  # type: ignore
         java_import(gw.jvm, "common.dataplat.sparkutils")
 
         data = (
@@ -141,7 +141,7 @@ class ModelFuncs:
             .load()
         )
 
-        output_ref_cols = [col.strip() for col in output_ref_cols.split(",") if col.strip()]
+        _output_ref_cols = [col.strip() for col in output_ref_cols.split(",") if col.strip()]
         model = PipelineModel.load(model_save_path)
 
         int_cols = [f.name for f in data.schema.fields if is_int_type(f.dataType.typeName())]
@@ -149,7 +149,7 @@ class ModelFuncs:
             data = data.withColumn(col, expr(f"cast({col} as double)"))
 
         predictions = model.transform(data)
-        output = predictions.select(output_ref_cols + [id_col, "prediction"])
+        output = predictions.select(_output_ref_cols + [id_col, "prediction"])
 
         ddl = self.__get_ddl_by_backend(data_type_map, output_table_name, id_col, output.dtypes)
 
@@ -212,7 +212,7 @@ class PartitionFuncs(PartitionFuncsBase):
     def _get_clickhouse_partition_values(self, table_name):
         db, table = self.__parse_table_name(table_name)
         sql = (
-            f"SELECT distinct partition_value FROM {self.backend.partitions_table_name} where db_name = '{db}' and"
+            f"SELECT distinct partition_value FROM {self.backend.partitions_table_name} where db_name = '{db}' and"  # type: ignore
             f" table_name = '{table}';"
         )
         partition_values = [str(v[0]) for v in self.backend.exec_sql(sql).collect()]
@@ -244,34 +244,31 @@ class PartitionFuncs(PartitionFuncsBase):
 
     def _get_partition_values(self, table_name):
         self.__check_backend()
-        if self.backend.is_pg:
+        backend: RdbBackend = self.backend  # type: ignore
+        if backend.is_pg:
             return self._get_postgresql_partition_values(table_name)
-        elif self.backend.is_ch:
+        elif backend.is_ch:
             return self._get_clickhouse_partition_values(table_name)
-        elif self.backend.is_bq:
+        elif backend.is_bq:
             return self._get_bigquery_partition_values(table_name)
         else:
             msg = (
                 "Backend of type"
-                f' {type(self.backend)}-{self.backend.backend_type if isinstance(self.backend, RdbBackend) else ""} is'
+                f' {type(backend)}-{backend.backend_type if isinstance(backend, RdbBackend) else ""} is'
                 " not supported yet"
             )
             raise Exception(msg)
 
     def get_partition_cols(self, table_name: str) -> List[str]:
         self.__check_backend()
+        backend: RdbBackend = self.backend  # type: ignore
         db, table = self.__parse_table_name(table_name)
-        if isinstance(self.backend, RdbBackend):
-            native_partitions_sql, extract_partition_cols = self.backend.sql_dialect.native_partitions_sql(
-                f"{db}.{table}"
-            )
-            pt_cols = extract_partition_cols(self.backend.exec_native_sql(native_partitions_sql))
-            return pt_cols
-        else:
-            raise AssertionError("should not happen!")
+        native_partitions_sql, extract_partition_cols = backend.sql_dialect.native_partitions_sql(f"{db}.{table}")
+        pt_cols = extract_partition_cols(self.backend.exec_native_sql(native_partitions_sql))
+        return pt_cols
 
     def __parse_table_name(self, table_name):
-        backend: RdbBackend = self.backend
+        backend: RdbBackend = self.backend  # type: ignore
         full_table_name = table_name if "." in table_name else f"{backend.temp_schema}.{table_name}"
         db, table = full_table_name[: full_table_name.index(".")], full_table_name[full_table_name.index(".") + 1 :]
         return db, table

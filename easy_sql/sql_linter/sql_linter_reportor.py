@@ -27,9 +27,9 @@ class LintReporter:
         )
         python_version = sys.version_info
         if python_version.major == 3 and python_version.minor == 6:
-            sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+            sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())  # type: ignore
         elif hasattr(sys.stdout, "reconfigure"):
-            sys.stdout.reconfigure(encoding="utf-8")
+            sys.stdout.reconfigure(encoding="utf-8")  # type: ignore
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(info_formater)
         for existing_handler in logger.handlers:

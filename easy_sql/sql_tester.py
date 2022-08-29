@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from fileinput import filename
 import json
 import os
 import re
@@ -88,7 +89,7 @@ class lazy_property:
 
 
 class WorkPath:
-    def __init__(self, work_path: str = None):
+    def __init__(self, work_path: Optional[str] = None):
         self._work_path: Optional[str] = work_path
 
     def set_work_path(self, work_path: str):
@@ -178,15 +179,15 @@ class TableColumnTypes:
             "boolean": lambda name: StructField(name, BooleanType()),
             "date": lambda name: StructField(name, DateType()),
             "timestamp": lambda name: StructField(name, TimestampType()),
-            "array<string>": lambda name: StructField(name, ArrayType(StringType())),
-            "array<int>": lambda name: StructField(name, ArrayType(IntegerType())),
-            "array<tinyint>": lambda name: StructField(name, ArrayType(ShortType())),
-            "array<bigint>": lambda name: StructField(name, ArrayType(LongType())),
-            "array<double>": lambda name: StructField(name, ArrayType(DoubleType())),
-            "array<float>": lambda name: StructField(name, ArrayType(FloatType())),
-            "array<boolean>": lambda name: StructField(name, ArrayType(BooleanType())),
-            "array<date>": lambda name: StructField(name, ArrayType(DateType())),
-            "array<timestamp>": lambda name: StructField(name, ArrayType(TimestampType())),
+            "array<string>": lambda name: StructField(name, ArrayType(StringType())),  # type: ignore
+            "array<int>": lambda name: StructField(name, ArrayType(IntegerType())),  # type: ignore
+            "array<tinyint>": lambda name: StructField(name, ArrayType(ShortType())),  # type: ignore
+            "array<bigint>": lambda name: StructField(name, ArrayType(LongType())),  # type: ignore
+            "array<double>": lambda name: StructField(name, ArrayType(DoubleType())),  # type: ignore
+            "array<float>": lambda name: StructField(name, ArrayType(FloatType())),  # type: ignore
+            "array<boolean>": lambda name: StructField(name, ArrayType(BooleanType())),  # type: ignore
+            "array<date>": lambda name: StructField(name, ArrayType(DateType())),  # type: ignore
+            "array<timestamp>": lambda name: StructField(name, ArrayType(TimestampType())),  # type: ignore
         }
 
         fields = []
@@ -206,7 +207,12 @@ class TableColumnTypes:
         return StructType(fields)
 
     def cast_as_type(
-        self, table_name: str, col_name: str, col_value: Any, date_converter: Callable = None, col_type: str = None
+        self,
+        table_name: str,
+        col_name: str,
+        col_value: Any,
+        date_converter: Optional[Callable] = None,
+        col_type: Optional[str] = None,
     ) -> Tuple[str, Any]:
         col_type = self.get_col_type(table_name, col_name) if col_type is None else col_type
         if self.backend == "clickhouse":
@@ -220,7 +226,7 @@ class TableColumnTypes:
         if col_value is None or (isinstance(col_value, str) and col_value.strip() == "null"):
             return col_type, None
 
-        def process_pt_val(date_converter: Callable, col_value: str):
+        def process_pt_val(date_converter: Optional[Callable], col_value: str):
             if not date_converter:
                 return str(col_value).strip()
             return date_converter(col_value).strftime("%Y-%m-%d") if date_converter(col_value) else None
@@ -288,7 +294,9 @@ class TableColumnTypes:
 
 
 class TestCase:
-    def __init__(self, sql_file_path: str = None, sql_file_content: str = None, default_col_type="string"):
+    def __init__(
+        self, sql_file_path: Optional[str] = None, sql_file_content: Optional[str] = None, default_col_type="string"
+    ):
         self.name, self.vars = None, {}
         self.includes = {}
         self.inputs: List[TableData] = []
@@ -353,7 +361,7 @@ class TestCase:
 
     def parse_includes(self, wb: Workbook, row_start_idx: int, rows: List[List[Cell]]):
         for i, row in enumerate(rows):
-            include_name, include_value = row[1].value and row[1].value.strip(), row[2].value and row[2].value.strip()
+            include_name, include_value = row[1].value and row[1].value.strip(), row[2].value and row[2].value.strip()  # type: ignore
             if include_name:
                 if not include_value:
                     raise AssertionError(
@@ -368,14 +376,14 @@ class TestCase:
 
     def parse_udfs(self, row_start_idx: int, rows: List[List[Cell]]):
         for udf_path in rows[0][1:]:
-            if udf_path.value and udf_path.value.strip():
-                self.udf_file_paths.append(udf_path.value)
+            if udf_path.value and udf_path.value.strip():  # type: ignore
+                self.udf_file_paths.append(udf_path.value)  # type: ignore
                 log_debug(f"find udf_path at row {row_start_idx + 1}: udf_relative_path={udf_path.value}")
 
     def parse_funcs(self, row_start_idx: int, rows: List[List[Cell]]):
         for func_path in rows[0][1:]:
-            if func_path.value and func_path.value.strip():
-                self.func_file_paths.append(func_path.value)
+            if func_path.value and func_path.value.strip():  # type: ignore
+                self.func_file_paths.append(func_path.value)  # type: ignore
                 log_debug(f"find func_path at row {row_start_idx + 1}: func_relative_path={func_path.value}")
 
     def parse_vars(self, wb: Workbook, row_start_idx: int, rows: List[List[Cell]]):
@@ -385,7 +393,7 @@ class TestCase:
             )
         else:
             for var_name, var_value in zip(rows[0][1:], rows[1][1:]):
-                if var_name.value and var_name.value.strip():
+                if var_name.value and var_name.value.strip():  # type: ignore
                     var_name, var_value = self.parse_var_from_cell(wb, var_name, var_value)
                     self.vars[var_name] = var_value
                     log_debug(
@@ -394,14 +402,15 @@ class TestCase:
                     )
 
     def parse_var_from_cell(self, wb: Workbook, var_name: Cell, var_value: Cell) -> Tuple[str, Any]:
-        name = var_name.value.strip()
+        name = var_name.value.strip()  # type: ignore
         if name.lower() == "data_date":
-            value = self.parse_cell_value_as_date(wb, var_value.value).strftime("%Y-%m-%d")
+            value = self.parse_cell_value_as_date(wb, var_value.value)
+            value = value.strftime("%Y-%m-%d") if value else None
         else:
             value = var_value.value
         return name, value
 
-    def parse_cell_value_as_date(self, wb: Workbook, value: Any) -> datetime:
+    def parse_cell_value_as_date(self, wb: Workbook, value: Any) -> Optional[datetime]:
         if value is None or (isinstance(value, str) and value.strip() == ""):
             return None
         elif isinstance(value, str) and value.strip() != "":
@@ -415,7 +424,10 @@ class TestCase:
         elif isinstance(value, int):
             delta = dt.timedelta(days=value)
             return dt.datetime.strptime("1899-12-30", "%Y-%m-%d") + delta
-        return value
+        elif isinstance(value, datetime):
+            return value
+        else:
+            raise Exception(f"unknown date cell value: {value}")
 
     def parse_output(
         self, wb: Workbook, row_start_idx: int, rows: List[List[Cell]], table_column_types: TableColumnTypes
@@ -584,7 +596,7 @@ class TestDataFile:
         for sheet_name in wb.sheetnames:
             if not sheet_name.lower().startswith("suit"):
                 continue
-            for case in self.parse_test_cases_from_sheet(wb[sheet_name], table_column_types):
+            for case in self.parse_test_cases_from_sheet(wb[sheet_name], table_column_types):  # type: ignore
                 test_cases.append(case)
         return test_cases
 
@@ -625,7 +637,7 @@ class TestDataFile:
         last_label, last_label_idx = None, -1
         for i, row in enumerate(case_rows):
             cells = row
-            label = cells[0].value and cells[0].value.strip()
+            label: str = cells[0].value and cells[0].value.strip()  # type: ignore
             if label in ["CASE", "VARS", "INCLUDES", "INPUT", "OUTPUT", "UDFS", "FUNCS"]:
                 if last_label is not None:
                     case.parse_test_case_of_label(
@@ -703,7 +715,7 @@ class TestCaseRunner:
         dry_run: bool,
         backend_creator: Callable,
         table_column_types: TableColumnTypes,
-        unit_test_case: unittest.TestCase,
+        unit_test_case: Optional[unittest.TestCase],
         sql_processor_creator: Callable,
     ):
         self.unit_test_case = unit_test_case or unittest.TestCase()
@@ -741,9 +753,9 @@ class TestCaseRunner:
                 return result
 
             print("will verify equality for output: ", output.name)
-            print("expected output: ", list_item_to_set(expected_output))
-            print("actual output: ", list_item_to_set(actual_output))
-            self.unit_test_case.assertListEqual(list_item_to_set(expected_output), list_item_to_set(actual_output))
+            print("expected output: ", list_item_to_set(expected_output))  # type: ignore
+            print("actual output: ", list_item_to_set(actual_output))  # type: ignore
+            self.unit_test_case.assertListEqual(list_item_to_set(expected_output), list_item_to_set(actual_output))  # type: ignore
 
     def create_sql_processor(self, backend: Backend, case: TestCase, sql: str) -> SqlProcessor:
         sql_processor = self.sql_processor_creator(backend, sql, case)
@@ -756,7 +768,7 @@ class TestCaseRunner:
         return sql_processor
 
     def get_data(self, backend: Backend, output: TableData, tempview_name: str) -> Tuple[List[Row], List[Row]]:
-        full_tempview_name = f"{backend.temp_schema}.{tempview_name}" if backend.is_bigquery_backend else tempview_name
+        full_tempview_name = f"{backend.temp_schema}.{tempview_name}" if backend.is_bigquery_backend else tempview_name  # type: ignore
         select_output_sql = (
             f'select {", ".join(output.columns)} from {full_tempview_name} order by {", ".join(output.columns)}'
         )
@@ -833,16 +845,16 @@ class TestCaseRunner:
 class SqlTester:
     def __init__(
         self,
-        backend_creator: Callable[[TestCase], Backend] = None,
-        table_column_types: TableColumnTypes = None,
-        sql_reader_creator: Callable[[], SqlReader] = None,
-        sql_processor_creator: Callable[[Backend, str, TestCase], SqlProcessor] = None,
-        unit_test_case: unittest.TestCase = None,
+        backend_creator: Callable[[TestCase], Backend],
+        table_column_types: Optional[TableColumnTypes] = None,
+        sql_reader_creator: Optional[Callable[[], SqlReader]] = None,
+        sql_processor_creator: Optional[Callable[[Backend, str, TestCase], SqlProcessor]] = None,
+        unit_test_case: Optional[unittest.TestCase] = None,
         dry_run: bool = True,
         env: str = "test",
-        work_dir: str = None,
-        backend: str = None,
-        scala_udf_initializer: str = None,
+        work_dir: Optional[str] = None,
+        backend: str = "spark",
+        scala_udf_initializer: Optional[str] = None,
     ):
         if work_dir is not None:
             work_path.set_work_path(os.path.abspath(work_dir))
@@ -897,10 +909,10 @@ class SqlTester:
         tr = TestResult(test_data_file)
         for case in cases:
             passed = self.run_case(case)
-            tr.collect_case_result(case.name, TestResult.PASSED if passed else TestResult.FAILED)
+            tr.collect_case_result(case.name, TestResult.PASSED if passed else TestResult.FAILED)  # type: ignore
         return tr
 
-    def parse_test_cases(self, test_data_file, table_column_types: TableColumnTypes):
+    def parse_test_cases(self, test_data_file, table_column_types: TableColumnTypes) -> List[TestCase]:
         if test_data_file.endswith(".xlsx"):
             cases = TestDataFile(test_data_file, sql_reader=self.sql_reader, backend=self.backend).parse_test_cases(
                 table_column_types
@@ -987,6 +999,7 @@ class SqlReader:
             for file in files:
                 if file == file_name:
                     return work_path.relative_path(os.path.join(root, file_name))
+        raise Exception("file not found: " + file_name)
 
     def read_as_content(self, test_data_file: str):
         return False

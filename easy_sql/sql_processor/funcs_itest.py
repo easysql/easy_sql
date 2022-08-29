@@ -1,7 +1,7 @@
 import json
 import unittest
 from pathlib import Path
-from typing import Tuple
+from typing import Optional, Tuple
 
 from easy_sql.base_test import TEST_CH_URL, TEST_PG_URL
 from easy_sql.local_spark import LocalSpark
@@ -110,10 +110,10 @@ class FuncsRdbTest(unittest.TestCase):
             [Partition(field="pt")],
         )
 
-        pf = PartitionFuncs(backend) if isinstance(backend, RdbBackend) else SparkPartitionFuncs(backend)
+        pf = PartitionFuncs(backend) if isinstance(backend, RdbBackend) else SparkPartitionFuncs(backend)  # type: ignore
 
         class _ReportCollector(ReportCollector):
-            def collect_report(self, step: Step, status: str = None, message: str = None):
+            def collect_report(self, step: Step, status: Optional[str] = None, message: Optional[str] = None):
                 pass
 
         step = Step("1", _ReportCollector(), FuncRunner({"bool": lambda x: x == "1"}), select_sql="select 0 as a")

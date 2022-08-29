@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
 if TYPE_CHECKING:
     from pyspark.sql.types import StructType
@@ -25,15 +25,15 @@ class Backend:
 
     @property
     def is_postgres_backend(self):
-        return str(self.__class__) == "<class 'easy_sql.sql_processor.backend.rdb.RdbBackend'>" and self.is_pg
+        return str(self.__class__) == "<class 'easy_sql.sql_processor.backend.rdb.RdbBackend'>" and self.is_pg  # type: ignore
 
     @property
     def is_clickhouse_backend(self):
-        return str(self.__class__) == "<class 'easy_sql.sql_processor.backend.rdb.RdbBackend'>" and self.is_ch
+        return str(self.__class__) == "<class 'easy_sql.sql_processor.backend.rdb.RdbBackend'>" and self.is_ch  # type: ignore
 
     @property
     def is_bigquery_backend(self):
-        return str(self.__class__) == "<class 'easy_sql.sql_processor.backend.rdb.RdbBackend'>" and self.is_bq
+        return str(self.__class__) == "<class 'easy_sql.sql_processor.backend.rdb.RdbBackend'>" and self.is_bq  # type: ignore
 
     @property
     def is_rdb_backend(self):
@@ -63,7 +63,7 @@ class Backend:
     def clear_cache(self):
         raise NotImplementedError()
 
-    def clear_temp_tables(self, exclude: List[str] = None):
+    def clear_temp_tables(self, exclude: Optional[List[str]] = None):
         raise NotImplementedError()
 
     def create_temp_table(self, table: Table, name: str):
@@ -130,7 +130,7 @@ class SaveMode(Enum):
 
 
 class TableMeta:
-    def __init__(self, table_name: str, partitions: List[Partition] = None):
+    def __init__(self, table_name: str, partitions: Optional[List[Partition]] = None):
         self.table_name = table_name
         self.partitions = partitions or []
         self.dbname, self.pure_table_name = self.__parse_table_name()
@@ -153,7 +153,7 @@ class TableMeta:
     def clone_with_partitions(self, partitions: List[Partition]) -> TableMeta:
         return TableMeta(self.table_name, partitions)
 
-    def __parse_table_name(self) -> Tuple[str, str]:
+    def __parse_table_name(self) -> Tuple[Optional[str], str]:
         if self.table_name.find(".") != -1:
             if len(self.table_name.split(".")) != 2:
                 raise Exception(f"table_name must be like DB_NAME.TABLE_NAME, found: {self.table_name}")
@@ -169,7 +169,7 @@ class TableMeta:
     def has_dynamic_partition(self):
         return any([pt.value is None for pt in self.partitions])
 
-    def get_full_table_name(self, temp_db: str = None):
+    def get_full_table_name(self, temp_db: Optional[str] = None):
         return f"{self.dbname or temp_db}.{self.pure_table_name}"
 
 
@@ -186,7 +186,7 @@ class Table:
     def limit(self, count: int) -> Table:
         raise NotImplementedError()
 
-    def with_column(self, name: str, value: any) -> Table:
+    def with_column(self, name: str, value: Any) -> Table:
         raise NotImplementedError()
 
     def collect(self) -> List[Row]:

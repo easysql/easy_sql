@@ -297,6 +297,7 @@ select ${not_existed3}
 
         self.assertRaisesRegex(Exception, ".*not_existed3.*", processor.run)
 
+        assert processor.reporter.step_reports is not None
         reports: Dict[str, StepReport] = processor.reporter.step_reports
         self.assertIn("error: current_a, b, ", reports["step-4"].report_as_text(1))
         self.assertEqual(StepStatus.FAILED, reports["step-4"].status)
@@ -387,19 +388,21 @@ class FuncRunnerTest(unittest.TestCase):
             "pt"
         ).saveAsTable("data_table1")
         # failure case1: 被检测表是空的
+        processor = SqlProcessor(
+            spark, "-- target=check.ensure_dwd_partition_exists(${__step__}, empty_table, 20210101)", [], {}
+        )
         with self.assertRaises(Exception):  # noqa: B017
-            processor = SqlProcessor(
-                spark, "-- target=check.ensure_dwd_partition_exists(${__step__}, empty_table, 20210101)", [], {}
-            )
             processor.run(dry_run=True)
+        assert processor.reporter.step_reports is not None
         self.assertIn("partition 20210101 not exists: empty_table", processor.reporter.step_reports["step-1"].messages)
 
         # failure case2: 检测分区在被检测表中确实不存在
+        processor = SqlProcessor(
+            spark, "-- target=check.ensure_dwd_partition_exists(${__step__}, data_table, 20210103)", [], {}
+        )
         with self.assertRaises(Exception):  # noqa: B017
-            processor = SqlProcessor(
-                spark, "-- target=check.ensure_dwd_partition_exists(${__step__}, data_table, 20210103)", [], {}
-            )
             processor.run(dry_run=True)
+        assert processor.reporter.step_reports is not None
         self.assertIn("partition 20210103 not exists: data_table", processor.reporter.step_reports["step-1"].messages)
 
         # happy case1: 检测分区存在
@@ -415,28 +418,30 @@ class FuncRunnerTest(unittest.TestCase):
         processor.run(dry_run=True)
 
         # failure case: 检测分区存在，但全部外键均为空
+        processor = SqlProcessor(
+            spark,
+            "-- target=check.ensure_dwd_partition_exists(${__step__}, data_table, 20210101, fk1, fk2)",
+            [],
+            {},
+        )
         with self.assertRaises(Exception):  # noqa: B017
-            processor = SqlProcessor(
-                spark,
-                "-- target=check.ensure_dwd_partition_exists(${__step__}, data_table, 20210101, fk1, fk2)",
-                [],
-                {},
-            )
             processor.run(dry_run=True)
+        assert processor.reporter.step_reports is not None
         self.assertIn(
             "all fk cols are null in partition: table_name=data_table, partition=20210101",
             processor.reporter.step_reports["step-1"].messages,
         )
 
         # failure case: 检测分区 < first_partition，全部外键均为空
+        processor = SqlProcessor(
+            spark,
+            "-- target=check.ensure_dwd_partition_exists(${__step__}, data_table, 20201101, fk1, fk2)",
+            [],
+            {},
+        )
         with self.assertRaises(Exception):  # noqa: B017
-            processor = SqlProcessor(
-                spark,
-                "-- target=check.ensure_dwd_partition_exists(${__step__}, data_table, 20201101, fk1, fk2)",
-                [],
-                {},
-            )
             processor.run(dry_run=True)
+        assert processor.reporter.step_reports is not None
         self.assertIn(
             "all fk cols are null in partition: table_name=data_table, partition=20210101",
             processor.reporter.step_reports["step-1"].messages,
@@ -463,41 +468,45 @@ class FuncRunnerTest(unittest.TestCase):
             "pt"
         ).saveAsTable("data_table")
         # failure case1: 被检测表是空的
+        processor = SqlProcessor(
+            spark,
+            "-- target=check.ensure_partition_or_first_partition_exists(${__step__}, empty_table, 20210101)",
+            [],
+            {},
+        )
         with self.assertRaises(Exception):  # noqa: B017
-            processor = SqlProcessor(
-                spark,
-                "-- target=check.ensure_partition_or_first_partition_exists(${__step__}, empty_table, 20210101)",
-                [],
-                {},
-            )
             processor.run(dry_run=True)
+
+        assert processor.reporter.step_reports is not None
         self.assertIn(
             "partition 20210101 not exists: ['empty_table']", processor.reporter.step_reports["step-1"].messages
         )
 
         # failure case2: 检测分区在被检测表中确实不存在
+        processor = SqlProcessor(
+            spark,
+            "-- target=check.ensure_partition_or_first_partition_exists(${__step__}, data_table, 20210102)",
+            [],
+            {},
+        )
         with self.assertRaises(Exception):  # noqa: B017
-            processor = SqlProcessor(
-                spark,
-                "-- target=check.ensure_partition_or_first_partition_exists(${__step__}, data_table, 20210102)",
-                [],
-                {},
-            )
             processor.run(dry_run=True)
+        assert processor.reporter.step_reports is not None
         self.assertIn(
             "partition 20210102 not exists: ['data_table']", processor.reporter.step_reports["step-1"].messages
         )
 
         # failure case3: 检测多张表，message 中应该只有检查失败的表
+        processor = SqlProcessor(
+            spark,
+            "-- target=check.ensure_partition_or_first_partition_exists(${__step__}, empty_table, data_table,"
+            " 20210101)",
+            [],
+            {},
+        )
         with self.assertRaises(Exception):  # noqa: B017
-            processor = SqlProcessor(
-                spark,
-                "-- target=check.ensure_partition_or_first_partition_exists(${__step__}, empty_table, data_table,"
-                " 20210101)",
-                [],
-                {},
-            )
             processor.run(dry_run=True)
+        assert processor.reporter.step_reports is not None
         self.assertIn(
             "partition 20210101 not exists: ['empty_table']", processor.reporter.step_reports["step-1"].messages
         )
@@ -546,7 +555,7 @@ select ${a} as res_a
 select ${b} as res_b
         """
 
-        steps = StepFactory(None, None).create_from_sql(sql)
+        steps = StepFactory(None, None).create_from_sql(sql)  # type: ignore
 
         self.assertEqual(4, len(steps))
         self.assertEqual(run_sql(sql, "result1", spark=spark), [(1,)])
@@ -570,7 +579,7 @@ select ${b} as res_b
             f.write(test_snippet2)
 
         spark = LocalSpark.get()
-        steps = StepFactory(None, None).create_from_sql(sql)
+        steps = StepFactory(None, None).create_from_sql(sql)  # type: ignore
 
         self.assertEqual(4, len(steps))
         self.assertEqual(run_sql(sql, "result1", spark=spark), [(1,)])

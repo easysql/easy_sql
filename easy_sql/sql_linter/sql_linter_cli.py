@@ -1,5 +1,6 @@
 import re
 import sys
+from typing import List, Optional
 import warnings
 
 import click
@@ -7,7 +8,7 @@ import click
 from easy_sql.sql_linter.sql_linter import SqlLinter
 
 
-def split_rules_to_list(rule_description: str):
+def split_rules_to_list(rule_description: str) -> Optional[List[str]]:
     if rule_description != "":
         return rule_description.split(",")
     else:
@@ -28,7 +29,12 @@ def parse_backend(sql: str):
 
 
 def lint_process(
-    check_sql_file_path: str, exclude: str, include: str, backend: str, easy_sql: bool, config_path: str = None
+    check_sql_file_path: str,
+    exclude: str,
+    include: str,
+    backend: str,
+    easy_sql: bool,
+    config_path: Optional[str] = None,
 ):
     if not check_sql_file_path.endswith(".sql"):
         warnings.warn("file name:" + check_sql_file_path + " must end with .sql")
@@ -60,7 +66,13 @@ def cli():
 
 
 def fix_process(
-    path: str, exclude: str, include: str, backend: str, inplace: bool, easy_sql: bool, config_path: str = None
+    path: str,
+    exclude: str,
+    include: str,
+    backend: str,
+    inplace: bool,
+    easy_sql: bool,
+    config_path: Optional[str] = None,
 ):
     result, fixed = lint_process(path, exclude, include, backend, easy_sql, config_path=config_path)
     write_out_fixed(path, fixed, inplace)

@@ -20,7 +20,7 @@ class StepConfigTest(unittest.TestCase):
         self.assertEqual(StepConfig.from_config_line("-- target=variables", 0), StepConfig("variables", None, None, 0))
         self.assertEqual(
             StepConfig.from_config_line("-- target=variables, if=f2(c, ${d})", 0),
-            StepConfig("variables", None, "f2(c, ${d})", 0),
+            StepConfig("variables", "some_var_step", "f2(c, ${d})", 0),
         )
         with self.assertRaises(expected_exception=SqlProcessorException):
             StepConfig.from_config_line("-- target=check.f1(a, ${b}),if=f2-(c, ${d})", 0)
