@@ -106,9 +106,6 @@ class Backend:
         self, table_name: str, values: List[List[Any]], schema: Union[StructType, List[Col]]
     ):
         raise NotImplementedError()
-    
-    def register_tables(self, *tables):
-        raise NotImplementedError()
 
 class Partition:
     def __init__(self, field: str, value=None):
