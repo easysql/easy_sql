@@ -7,4 +7,3 @@ per-file-ignores =
     __init__.py:F403, F401,
     easy_sql/sql_tester.py: B950
     easy_sql/sql_processor/report.py: B950
-    easy_sql/sql_processor/backend/maxcompute.py

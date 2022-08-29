@@ -844,7 +844,7 @@ class TestCaseRunner:
 class SqlTester:
     def __init__(
         self,
-        backend_creator: Callable[[TestCase], Backend],
+        backend_creator: Optional[Callable[[TestCase], Backend]] = None,
         table_column_types: Optional[TableColumnTypes] = None,
         sql_reader_creator: Optional[Callable[[], SqlReader]] = None,
         sql_processor_creator: Optional[Callable[[Backend, str, TestCase], SqlProcessor]] = None,
@@ -874,14 +874,15 @@ class SqlTester:
         self.dry_run = dry_run
         self.env = env
         self.sql_reader = sql_reader_creator() if sql_reader_creator else SqlReader()
-        self.test_case_runner = TestCaseRunner(
-            self.env,
-            self.dry_run,
-            backend_creator,
-            self.table_column_types,
-            sql_processor_creator=self.sql_processor_creator,
-            unit_test_case=self.unit_test_case,
-        )
+        if backend_creator:
+            self.test_case_runner = TestCaseRunner(
+                self.env,
+                self.dry_run,
+                backend_creator,
+                self.table_column_types,
+                sql_processor_creator=self.sql_processor_creator,
+                unit_test_case=self.unit_test_case,
+            )
 
     def run_tests(self, test_data_files: List[str]):
         test_results = []

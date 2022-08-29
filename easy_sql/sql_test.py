@@ -1,10 +1,14 @@
+from __future__ import annotations
+
 import os
 import re
 import sys
+from typing import TYPE_CHECKING
 
 import click
 
-from easy_sql.sql_processor.backend.base import Backend
+if TYPE_CHECKING:
+    from easy_sql.sql_processor.backend.base import Backend
 
 from .sql_tester import SqlTester, TestCase, WorkPath
 
@@ -124,7 +128,7 @@ def convert_json(files):
 
 def _convert_json(files):
     test_data_files = [os.path.abspath(f.strip()) for f in files.split(",") if f.strip()]
-    sql_tester = SqlTester(work_dir=os.path.abspath(os.curdir))  # type: ignore
+    sql_tester = SqlTester(None, work_dir=os.path.abspath(os.curdir))  # type: ignore
     for f in test_data_files:
         sql_tester.convert_cases_to_json(f)
 
