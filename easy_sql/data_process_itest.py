@@ -40,3 +40,6 @@ class DataProcessTest(unittest.TestCase):
         if not base_test.should_run_integration_test("flink_hive"):
             return
         data_process._data_process(os.path.join(proj_base_dir, 'test/sample_etl.flink.hive.postgres.sql'), None, None, False)
+   
+    def test_flink_python_udf(self):
+        data_process._data_process(os.path.join(proj_base_dir, 'test/udf/flink-python/etl_with_udf.sql'), None, None, False)

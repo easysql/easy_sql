@@ -88,14 +88,14 @@ class FlinkBackend(Backend):
         self.flink: TableEnvironment = TableEnvironment.create(EnvironmentSettings.in_batch_mode() if is_batch else EnvironmentSettings.in_streaming_mode())
 
     def init_udfs(self, scala_udf_initializer: str = None, *args, **kwargs):
-        from pyflink.table import DataTypes
-        from pyflink.table.udf import udf
-        self.register_udfs({"test_func": udf(lambda i, j: i + j, result_type=DataTypes.BIGINT())})
+        pass
 
     def register_udfs(self, funcs: Dict[str, Callable]):
+        from pyflink.table.udf import UserDefinedScalarFunctionWrapper
         for key in funcs:
             func = funcs[key]
-            self.flink.create_temporary_system_function(key, func)
+            if isinstance(funcs[key], UserDefinedScalarFunctionWrapper):
+                self.flink.create_temporary_system_function(key, func)
 
     def clean(self):
         for temp_view in self.flink.list_temporary_views():
@@ -191,7 +191,9 @@ class FlinkBackend(Backend):
     def _create_table(self, table:str, table_config, connector):
         schema = table_config['schema']
         schema_expr = " , ".join(schema)
-        partition_by_expr = f"PARTITIONED BY ({','.join(table_config['partition_by'])})" if "partition_by" in table_config else ''
+        partition_by_expr = f"""
+                PARTITIONED BY ({','.join(table_config['partition_by'])})""" \
+            if "partition_by" in table_config else ''
         options = dict()
         options.update(connector['options'])
         options.update(table_config['connector']['options'])

@@ -17,7 +17,7 @@ select 1 as actual, 1 as expected
 -- target=temp.result_view
 select
     ${a} as id,
-    cast(test_func(cast(${a} as BIGINT), 1) as string) as val
+    '2' as val
 union all
 select id, val from myhiveCatalog.myhive.hive_table
 union all
