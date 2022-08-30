@@ -113,9 +113,8 @@ def create_sql_processor_backend(backend: str, sql: str, task_name: str, tables:
         exec_sql = lambda sql: backend.exec_native_sql(sql)
     elif backend == 'flink':
         from easy_sql.sql_processor.backend import FlinkBackend
-        etl_type = 'etl_type = batch'
         if customized_easy_sql_conf:
-            etl_type = next(filter(lambda c: c[: c.index("=")] == 'etl_type', customized_easy_sql_conf), None)
+            etl_type = next(filter(lambda c: c[: c.index("=")] == 'etl_type', customized_easy_sql_conf), 'etl_type = batch')
         backend = FlinkBackend(etl_type[etl_type.index("=") + 1:].strip() == 'batch')
         if flink_tables_file_path:
             flink_tables_file_path = resolve_file(flink_tables_file_path, abs_path=True)
