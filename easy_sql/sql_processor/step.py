@@ -322,7 +322,9 @@ class Step:
                     table = table.with_column(static_partition_name, lit(static_partition_value))
                 else:
                     assert isinstance(backend, RdbBackend)
-                    table = table.with_column(static_partition_name, backend.sql_expr.for_value(static_partition_value))  # type: ignore
+                    table = table.with_column(
+                        static_partition_name, backend.sql_expr.for_value(static_partition_value)  # type: ignore
+                    )
             backend.create_temp_table(table, temp_table_name + "_output")  # type: ignore
             self.collect_report(message="will not save data to data warehouse, since we are in dry run mode")
             return

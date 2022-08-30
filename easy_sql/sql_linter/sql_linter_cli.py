@@ -1,7 +1,7 @@
 import re
 import sys
-from typing import List, Optional
 import warnings
+from typing import List, Optional
 
 import click
 

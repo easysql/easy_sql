@@ -4,16 +4,18 @@ import json
 import os
 from typing import TYPE_CHECKING, Dict, List, Union
 
-if TYPE_CHECKING:
-    from pyspark.sql import DataFrame, SparkSession
-    from pyspark.sql.types import Row
-    from easy_sql.sql_processor.context import ProcessorContext
-
 from .backend import SparkBackend
 from .common import SqlProcessorAssertionError, _exec_sql, is_int_type
 from .funcs_common import AlertFunc, ColumnFuncs
 from .funcs_common import PartitionFuncs as PartitionFuncsBase
 from .funcs_common import TableFuncs
+
+if TYPE_CHECKING:
+    from pyspark.sql import DataFrame, SparkSession
+    from pyspark.sql.types import Row
+
+    from easy_sql.sql_processor.context import ProcessorContext
+
 
 __all__ = [
     "PartitionFuncs",

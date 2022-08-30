@@ -1,6 +1,6 @@
 from __future__ import annotations
-import random
 
+import random
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Union
 
 from ..logger import logger

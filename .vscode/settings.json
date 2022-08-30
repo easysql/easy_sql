@@ -7,5 +7,7 @@
   "python.testing.unittestEnabled": true,
   "python.analysis.typeCheckingMode": "basic",
   "cSpell.ignoreWords": ["pyspark", "postgres", "jdbc"],
-  "cSpell.diagnosticLevel": "Hint"
+  "cSpell.diagnosticLevel": "Hint",
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "ms-python.black-formatter"
 }

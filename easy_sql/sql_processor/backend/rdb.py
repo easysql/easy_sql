@@ -458,7 +458,10 @@ class RdbBackend(Backend):
         db_name = self.partitions_table_name.split(".")[0]
         assert self.sql_dialect is not None
         _exec_sql(conn, self.sql_dialect.create_db_sql(db_name))
-        _exec_sql(conn, self.sql_dialect.create_table_with_partitions_sql(self.partitions_table_name, cols, partitions))  # type: ignore
+        _exec_sql(
+            conn,
+            self.sql_dialect.create_table_with_partitions_sql(self.partitions_table_name, cols, partitions),  # type: ignore
+        )
 
     @property
     def inspector(self) -> Inspector:

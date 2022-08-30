@@ -119,7 +119,7 @@ def create_sql_processor_backend(backend_type: str, sql: str, task_name: str) ->
         )
 
         backend = MaxComputeBackend(**odps_params)  # type: ignore
-        exec_sql = lambda sql: _exec_sql(backend.conn, sql)  # noqa: E731
+        exec_sql = lambda sql: _exec_sql(backend.conn, sql)  # type: ignore # noqa: E731
     elif backend_type in ["postgres", "clickhouse", "bigquery"]:
         from easy_sql.sql_processor.backend.rdb import RdbBackend, _exec_sql
 
