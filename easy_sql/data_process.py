@@ -123,7 +123,7 @@ def create_sql_processor_backend(backend: str, sql: str, task_name: str, tables:
                 from easy_sql.sql_processor.backend.rdb import _exec_sql
                 exec_sql = lambda sql: _exec_sql(conn, sql)
             else:
-                exec_sql = lambda sql: backend.exec_native_sql(sql, use_hive_dialect = True)
+                exec_sql = lambda sql: backend.exec_native_sql(sql)
             backend.register_tables(flink_tables_file_path, tables)
         else:
             exec_sql = lambda sql: backend.exec_native_sql(sql)
