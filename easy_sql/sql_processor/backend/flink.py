@@ -88,7 +88,14 @@ class FlinkBackend(Backend):
         self.flink: TableEnvironment = TableEnvironment.create(EnvironmentSettings.in_batch_mode() if is_batch else EnvironmentSettings.in_streaming_mode())
 
     def init_udfs(self, scala_udf_initializer: str = None, *args, **kwargs):
-        pass
+        if scala_udf_initializer:
+            from py4j.java_gateway import java_import
+
+            from pyflink.java_gateway import get_gateway
+            gw = get_gateway()
+            java_import(gw.jvm, scala_udf_initializer)
+            initUdfs = eval(f"gw.jvm.{scala_udf_initializer}.initUdfs", {"gw": gw})
+            initUdfs(self.flink._j_tenv)
 
     def register_udfs(self, funcs: Dict[str, Callable]):
         from pyflink.table.udf import UserDefinedScalarFunctionWrapper

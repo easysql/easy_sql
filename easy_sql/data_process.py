@@ -113,9 +113,10 @@ def create_sql_processor_backend(backend: str, sql: str, task_name: str, tables:
         exec_sql = lambda sql: backend.exec_native_sql(sql)
     elif backend == 'flink':
         from easy_sql.sql_processor.backend import FlinkBackend
+        etl_type_batch = 'etl_type = batch'
         if customized_easy_sql_conf:
-            etl_type = next(filter(lambda c: c[: c.index("=")] == 'etl_type', customized_easy_sql_conf), 'etl_type = batch')
-        backend = FlinkBackend(etl_type[etl_type.index("=") + 1:].strip() == 'batch')
+            etl_type = next(filter(lambda c: c[: c.index("=")] == 'etl_type', customized_easy_sql_conf), etl_type_batch)
+        backend = FlinkBackend(etl_type[etl_type.index("=") + 1:].strip() if etl_type else etl_type_batch[etl_type_batch.index("=") + 1:].strip() == 'batch')
         if flink_tables_file_path:
             flink_tables_file_path = resolve_file(flink_tables_file_path, abs_path=True)
             if len(tables) > 0:
@@ -203,6 +204,8 @@ class EasySqlConfig:
                 func_file_path = c[c.index('=') + 1:].strip()
             if c.startswith('flink_tables_file_path'):
                 flink_tables_file_path = c[c.index('=') + 1:].strip()
+            if c.startswith("scala_udf_initializer"):
+                scala_udf_initializer = c[c.index("=") + 1 :].strip()
         return EasySqlConfig(sql_file, sql, backend, customized_backend_conf, customized_easy_sql_conf, udf_file_path, func_file_path, scala_udf_initializer, tables, flink_tables_file_path)
 
     @property
@@ -214,6 +217,16 @@ class EasySqlConfig:
             if c.startswith("spark_submit"):
                 spark_submit = c[c.index("=") + 1 :].strip()
         return spark_submit
+
+    @property
+    def flink(self):
+        # 默认情况下使用系统中默认flink版本下的flink
+        # sql代码中指定了easy_sql.flink时，优先级高于default配置
+        flink = "flink"
+        for c in self.customized_easy_sql_conf:
+            if c.startswith("flink_run"):
+                flink = c[c.index("=") + 1 :].strip()
+        return flink
 
     @property
     def task_name(self):
@@ -260,6 +273,40 @@ class EasySqlConfig:
         args += [f"--conf {c}" for c in customized_backend_conf]
         return args
 
+    def flink_conf_command_args(self) -> List[str]:
+        # config 的优先级：1. sql 代码里的 config 优先级高于这里的 default 配置
+        # 对于数组类的 config，sql 代码里的 config 会添加进来，而不是覆盖默认配置
+        default_conf = [
+            'parallelism=1',
+            f'pyFiles={resolve_file(self.sql_file, abs_path=True)}'
+            f'{"," + resolve_file(self.udf_file_path, abs_path=True) if self.udf_file_path else ""}'
+            f'{"," + resolve_file(self.func_file_path, abs_path=True) if self.func_file_path else ""}',
+        ]
+        customized_conf_keys = [c[: c.index("=")] for c in self.customized_backend_conf]
+        customized_backend_conf = self.customized_backend_conf.copy()
+
+        args = []
+        for conf in default_conf:
+            conf_key = conf[: conf.index("=")].strip()
+            if conf_key not in customized_conf_keys:
+                args.append(f'--{conf_key} {conf[conf.index("=") + 1 :].strip()}')
+            else:
+                customized_conf = [conf for conf in customized_backend_conf if conf.startswith(conf_key)][0]
+                if conf_key in ["jarfile", "pyFiles"]:
+                    customized_values = [
+                        resolve_file(val.strip(), abs_path=True)
+                        for val in customized_conf[customized_conf.index("=") + 1 :].strip('"').split(",")
+                        if val.strip()
+                    ]
+                    default_values = [v for v in conf[conf.index("=") + 1 :].strip('"').split(",") if v]
+                    args.append(f'--{conf_key} {",".join(set(default_values + customized_values))}')
+                else:
+                    args.append(f'--{conf_key} {customized_conf[customized_conf.index("=") + 1 :].strip()}')
+                customized_backend_conf.remove(customized_conf)
+
+        args += [f'--{conf[: conf.index("=")].strip()} {conf[conf.index("=") + 1 :].strip()}' for conf in customized_backend_conf]
+        return args
+
 
 def shell_command(sql_file: str, vars: str, dry_run: str):
     config = EasySqlConfig.from_sql(sql_file)
@@ -267,6 +314,13 @@ def shell_command(sql_file: str, vars: str, dry_run: str):
     if config.backend == "spark":
         return (
             f'{config.spark_submit} {" ".join(config.spark_conf_command_args())} "{path.abspath(__file__)}" '
+            f"-f {sql_file} --dry-run {dry_run} "
+            f'{"-v " + vars if vars else ""} '
+        )
+    elif config.backend == "flink":
+        return (
+            f'{config.flink} run {" ".join(config.flink_conf_command_args())} '
+            f'--python "{path.abspath(__file__)}" '
             f"-f {sql_file} --dry-run {dry_run} "
             f'{"-v " + vars if vars else ""} '
         )

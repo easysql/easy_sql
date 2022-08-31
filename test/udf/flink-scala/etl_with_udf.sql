@@ -1,0 +1,6 @@
+-- backend: flink
+-- config: jarfile=test/udf/flink-scala/udf.jar
+-- config: easy_sql.scala_udf_initializer=your.company.udfs
+
+-- target=log.test_udf
+select test_func(1, 2) as stringset

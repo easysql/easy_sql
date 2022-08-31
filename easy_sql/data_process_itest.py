@@ -32,14 +32,42 @@ class DataProcessTest(unittest.TestCase):
         data_process._data_process(os.path.join(proj_base_dir, 'test/sample_etl.flink.postgres.sql'), None, None, False)
     
     def test_flink_hive(self):
-        if not base_test.should_run_integration_test("flink_hive"):
-            return
-        data_process._data_process(os.path.join(proj_base_dir, 'test/sample_etl.flink.hive.sql'), None, None, False)
+        command = data_process._data_process(os.path.join(proj_base_dir, 'test/sample_etl.flink.hive.sql'), None, None, True)
+        self.assertRegex(
+            command,
+            r"flink run --parallelism 1 "
+            '--pyFiles [^"]+test/sample_etl.flink.hive.sql '
+            '--python "[^"]+/easy_sql/data_process.py" '
+            "-f .+/test/sample_etl.flink.hive.sql --dry-run 0",
+        )   
     
     def test_flink_hive_postgres(self):
-        if not base_test.should_run_integration_test("flink_hive"):
-            return
-        data_process._data_process(os.path.join(proj_base_dir, 'test/sample_etl.flink.hive.postgres.sql'), None, None, False)
-   
+        command = data_process._data_process(os.path.join(proj_base_dir, 'test/sample_etl.flink.hive.postgres.sql'), None, None, True)
+        self.assertRegex(
+            command,
+            r"flink run --parallelism 1 "
+            '--pyFiles [^"]+test/sample_etl.flink.hive.postgres.sql '
+            '--python "[^"]+/easy_sql/data_process.py" '
+            "-f .+/test/sample_etl.flink.hive.postgres.sql --dry-run 0",
+        ) 
+    
     def test_flink_python_udf(self):
-        data_process._data_process(os.path.join(proj_base_dir, 'test/udf/flink-python/etl_with_udf.sql'), None, None, False)
+        command = data_process._data_process(os.path.join(proj_base_dir, 'test/udf/flink-python/etl_with_udf.sql'), None, None, True)
+        self.assertRegex(
+            command,
+            r"flink run --parallelism 1 "
+            '--pyFiles [^"]+test/udf/flink-python/etl_with_udf.sql,[^"]+test/udf/flink-python/udf.py '
+            '--python "[^"]+/easy_sql/data_process.py" '
+            "-f .+/test/udf/flink-python/etl_with_udf.sql --dry-run 0",
+        )
+
+    def test_flink_scala_udf(self):
+        command = data_process._data_process(os.path.join(proj_base_dir, "test/udf/flink-scala/etl_with_udf.sql"), None, None, True)
+        self.assertRegex(
+            command,
+            r"flink run --parallelism 1 "
+            '--pyFiles [^"]+test/udf/flink-scala/etl_with_udf.sql '
+            '--jarfile test/udf/flink-scala/udf.jar '
+            '--python "[^"]+/easy_sql/data_process.py" '
+            "-f .+/test/udf/flink-scala/etl_with_udf.sql --dry-run 0",
+        )

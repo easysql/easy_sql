@@ -1,13 +1,6 @@
 -- backend: flink
 -- config: easy_sql.flink_tables_file_path=test/sample_etl.flink_tables_file.json
 
--- prepare-sql: USE CATALOG myhiveCatalog
--- prepare-sql: DROP DATABASE IF EXISTS myhive CASCADE
--- prepare-sql: CREATE DATABASE myhive
--- prepare-sql: create table myhive.hive_table as select 1 as id, '1' as val
--- prepare-sql: drop table if exists public.out_put_table
--- prepare-sql: create table public.out_put_table (id int4 PRIMARY KEY, val text)
-
 -- target=variables
 select 2 as a
 
