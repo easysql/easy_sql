@@ -64,13 +64,13 @@ class TableColumnTypesTest(unittest.TestCase):
 
 
 class TestCaseParserTest(unittest.TestCase):
-    def test_parse_case(self):
+    def excel_parse_case(self, file):
         class _SqlReader(SqlReader):
             def find_file_path(self, file_name: str) -> str:
                 return file_name
 
         work_path.set_work_path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        tdf = TestDataFile("test/sample_etl.syntax.xlsx", _SqlReader())
+        tdf = TestDataFile(file, _SqlReader())
         cases = tdf.parse_test_cases(TableColumnTypes({}, {}, "spark"))
         self.assertEqual(len(cases), 1)
         case = cases[0]
@@ -84,7 +84,18 @@ class TestCaseParserTest(unittest.TestCase):
         input = case.inputs[0]
         self.assertEqual(input.columns, ["id", "val", "val_date", "data_date"])
         self.assertEqual(input.column_types, ["int", "string", "date", "date"])
+        return case
+
+    def test_parse_case(self):
+        case = self.excel_parse_case("test/sample_etl.syntax.xlsx")
+        input = case.inputs[0]
         self.assertEqual(input.values, [[1, "1.0", datetime(2021, 1, 1, 0, 0), datetime(2021, 1, 1, 0, 0)]])
         self.assertEqual(
             case.outputs[0].values, [[1, "1.0", datetime(2021, 1, 1, 0, 0)], [1, "2.0", None], [1, "3.0", None]]
         )
+
+    def test_int_date_case_from_excel_cell(self):
+        case = self.excel_parse_case("test/sample_etl_wps.syntax.xlsx")
+        input = case.inputs[0]
+        self.assertEqual(input.values, [[1, "1", datetime(2021, 1, 1, 0, 0), datetime(2021, 1, 1, 0, 0)]])
+        self.assertEqual(case.outputs[0].values, [[1, "1", datetime(2021, 1, 1, 0, 0)], [1, "2", None], [1, "3", None]])

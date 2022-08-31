@@ -189,7 +189,7 @@ class MaxComputeTable(Table):
 
 
 class MaxComputeBackend(Backend):
-    def __init__(self, sql_expr: SqlExpr, **kwargs):
+    def __init__(self, sql_expr: Optional[SqlExpr], **kwargs):
         from odps import ODPS
 
         self.conn = ODPS(**kwargs)

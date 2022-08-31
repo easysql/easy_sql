@@ -40,26 +40,26 @@ class TimeLog:
         self.start_dt = datetime.now()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        assert self.start_dt is not None
         time_took = (datetime.now() - self.start_dt).total_seconds()
         logger.info(self.end_log_tpl.format(time_took=time_took))
 
 
-def _exec_sql(conn, sql: Union[str, TextClause, List[str]], *args, **kwargs) -> ResultProxy:
+def _exec_sql(conn: Connection, sql: Union[str, TextClause, List[str]], *args, **kwargs) -> ResultProxy:
     from sqlalchemy.sql.elements import TextClause
 
-    conn: Connection = conn
     with TimeLog(
         f"start to execute sql: {sql}, kwargs={kwargs}", f"end to execute sql({TimeLog.time_took_tpl}): {sql}"
     ):
         if isinstance(sql, (str, TextClause)):
-            return conn.execute(sql, *args, **kwargs)
+            return conn.execute(sql, *args, **kwargs)  # type: ignore
         else:
             execute_result = None
             for each_sql in sql:
                 each_sql = each_sql.strip()
                 if each_sql:
                     execute_result = conn.execute(each_sql, *args, **kwargs)
-            return execute_result
+            return execute_result  # type: ignore
 
 
 def _quote_str(x):
@@ -67,7 +67,7 @@ def _quote_str(x):
 
 
 class RdbTable(Table):
-    def __init__(self, backend, sql: str, actions: List[Tuple] = None):
+    def __init__(self, backend, sql: str, actions: Optional[List[Tuple]] = None):
         self.backend: RdbBackend = backend
         self.db_config: SqlDialect = backend.sql_dialect
         self.sql = sql
@@ -76,7 +76,7 @@ class RdbTable(Table):
 
         self._temp_table_time_prefix = lambda: f"t_{round(time.time() * 1000)}_{int(random() * 100000):04d}"
         self._is_simple_query = lambda sql: re.match(r"^select \* from [\w.]+$", sql)
-        self._table_name_of_simple_query = lambda sql: re.match(r"select \* from ([\w.]+)", sql).group(1)
+        self._table_name_of_simple_query = lambda sql: re.match(r"select \* from ([\w.]+)", sql).group(1)  # type: ignore
 
     @staticmethod
     def from_table_meta(backend, table_meta: TableMeta):
@@ -94,6 +94,7 @@ class RdbTable(Table):
         return table
 
     def _execute_actions(self):
+        assert self.backend.sql_dialect is not None
         for action in self._actions:
             if action[0] == "limit":
                 count = action[1]
@@ -157,6 +158,7 @@ class RdbTable(Table):
             return self._field_names(temp_table_name)
         prefix = f"{self._temp_table_time_prefix()}"
         field_names_result_table_name = f"{prefix}_field_names"
+        assert self.backend.sql_dialect is not None
         self._exec_sql(self.backend.sql_dialect.create_view_sql(field_names_result_table_name, self.sql))
         return self._field_names(f"{self.backend.temp_schema}.{field_names_result_table_name}")
 
@@ -172,32 +174,31 @@ class RdbTable(Table):
 
             result: ResultProxy = self._exec_sql(self.sql)
             if min_limit <= 0:
-                return RdbRow(list(result.keys()), None)
+                return RdbRow(list(result.keys()), ())
             with TimeLog(
                 f"start to fetch first row: {self.sql}", f"end to fetch first row({TimeLog.time_took_tpl}): {self.sql}"
             ):
                 row = result.first()
-            return RdbRow(list(result.keys()), row)
+            return RdbRow(list(result.keys()), row)  # type: ignore
 
         self._execute_actions()
-
         result: ResultProxy = self._exec_sql(self.sql)
         with TimeLog(
             f"start to fetch first row: {self.sql}", f"end to fetch first row({TimeLog.time_took_tpl}): {self.sql}"
         ):
             row = result.first()
-        return RdbRow(list(result.keys()), row)
+        return RdbRow(list(result.keys()), row)  # type: ignore
 
     def limit(self, count: int) -> RdbTable:
         return RdbTable(self.backend, self.sql, self._actions + [("limit", count)])
 
-    def with_column(self, name: str, value: any) -> RdbTable:
+    def with_column(self, name: str, value: Any) -> RdbTable:
         return RdbTable(self.backend, self.sql, self._actions + [("newcol", name, value)])
 
     def collect(self) -> List[RdbRow]:
         return self._collect()
 
-    def _collect(self, row_count: int = None) -> List[RdbRow]:
+    def _collect(self, row_count: Optional[int] = None) -> List[RdbRow]:
         self._execute_actions()
 
         result: ResultProxy = self._exec_sql(self.sql)
@@ -219,7 +220,7 @@ class RdbTable(Table):
                 f"found {max_rows} items, but there may be more, will only fetch {max_rows} items at most for sql:"
                 f" {self.sql}"
             )
-        rows = [RdbRow(list(result.keys()), row) for row in rows]
+        rows = [RdbRow(list(result.keys()), row) for row in rows]  # type: ignore
         result.close()
         return rows
 
@@ -232,7 +233,7 @@ class RdbTable(Table):
 
     def count(self) -> int:
         temp_table_name = self.resolve_to_temp_table()
-        return self._exec_sql(f"select count(1) from {self.backend.temp_schema}.{temp_table_name}").first()[0]
+        return self._exec_sql(f"select count(1) from {self.backend.temp_schema}.{temp_table_name}").first()[0]  # type: ignore
 
     def resolve_to_temp_table(self) -> str:
         self._execute_actions()
@@ -312,7 +313,7 @@ class RdbTable(Table):
                 )
             for partitions in partitions_to_save:
                 filter_expr = " and ".join(
-                    [f"{pt.field} = {self.backend.sql_expr.for_value(pt.value)}" for pt in partitions]
+                    [f"{pt.field} = {self.backend.sql_expr.for_value(pt.value)}" for pt in partitions]  # type: ignore
                 )
                 self._exec_sql(
                     self.db_config.insert_data_sql(
@@ -338,7 +339,7 @@ class RdbTable(Table):
 
 
 class RdbRow(Row):
-    def __init__(self, cols: List[str], values: Optional[Tuple]):
+    def __init__(self, cols: List[str], values: Tuple):
         self._cols = cols
         from decimal import Decimal
 
@@ -387,23 +388,25 @@ class RdbBackend(Backend):
     def __init__(
         self,
         url: str,
-        credentials: str = None,
-        sql_expr: SqlExpr = None,
+        credentials: Optional[str] = None,
+        sql_expr: Optional[SqlExpr] = None,
         partitions_table_name="dataplat.__table_partitions__",
+        engine: Optional[Engine] = None,
     ):
         self.partitions_table_name = partitions_table_name
         self.url, self.credentials = url, credentials
         self.sql_expr = sql_expr or SqlExpr()
-        self.__init_inner(self.url, self.credentials)
+        self.__init_inner(self.url, self.credentials, engine)
 
-    def __init_inner(self, url: str, credentials: str = None):
+    def __init_inner(self, url: str, credentials: Optional[str] = None, engine: Optional[Engine] = None):
         from sqlalchemy import create_engine
 
         self.temp_schema = f"sp_temp_{int(time.mktime(time.gmtime()))}_{int(random() * 10000):04d}"
 
-        self.backend_type, self.is_pg, self.is_ch, self.is_bq = None, False, False, False
-        self.sql_dialect: SqlDialect = None
-        if url.startswith("postgresql://"):
+        self.is_pg, self.is_ch, self.is_bq = False, False, False
+        if engine:
+            self.engine = engine
+        elif url.startswith("postgresql://"):
             self.backend_type, self.is_pg = "pg", True
             self.sql_dialect = PgSqlDialect(self.sql_expr)
             self.engine: Engine = create_engine(url, isolation_level="AUTOCOMMIT", pool_size=1)
@@ -414,8 +417,8 @@ class RdbBackend(Backend):
             self.backend_type, self.is_ch = "ch", True
             self.sql_dialect = ChSqlDialect(self.sql_expr, self.partitions_table_name)
 
-            engine: Engine = create_engine(url, pool_size=1)
-            conn: Connection = engine.connect()
+            _engine: Engine = create_engine(url, pool_size=1)
+            conn: Connection = _engine.connect()
             _exec_sql(conn, self.sql_dialect.create_db_sql(self.temp_schema))
 
             self._create_partitions_table(conn)
@@ -441,6 +444,8 @@ class RdbBackend(Backend):
             self.engine: Engine = create_engine(url, credentials_path=credentials)
             self.conn: Connection = self.engine.connect()
             _exec_sql(self.conn, self.sql_dialect.create_db_sql(self.temp_schema))
+        else:
+            raise Exception(f"unsupported url: {url}")
 
     def _create_partitions_table(self, conn):
         cols = [
@@ -451,11 +456,15 @@ class RdbBackend(Backend):
         ]
         partitions = [Partition(field="db_name")]
         db_name = self.partitions_table_name.split(".")[0]
+        assert self.sql_dialect is not None
         _exec_sql(conn, self.sql_dialect.create_db_sql(db_name))
-        _exec_sql(conn, self.sql_dialect.create_table_with_partitions_sql(self.partitions_table_name, cols, partitions))
+        _exec_sql(
+            conn,
+            self.sql_dialect.create_table_with_partitions_sql(self.partitions_table_name, cols, partitions),  # type: ignore
+        )
 
     @property
-    def inspector(self):
+    def inspector(self) -> Inspector:
         from sqlalchemy import inspect
 
         # inspector object has cache built-in, so we should recreate the object if required
@@ -467,7 +476,7 @@ class RdbBackend(Backend):
         if not raw:
             for col in cols:
                 col_type: TypeEngine = col["type"]
-                col["type"] = col_type.compile(self.inspector.dialect)
+                col["type"] = col_type.compile(self.inspector.dialect)  # type: ignore
         return cols
 
     def get_column_names(self, table_name, schema=None, **kw) -> List[str]:
@@ -501,7 +510,7 @@ class RdbBackend(Backend):
     def create_empty_table(self):
         return RdbTable(self, "")
 
-    def exec_native_sql(self, sql: str) -> Any:
+    def exec_native_sql(self, sql: Union[str, List[str]]) -> Any:
         return _exec_sql(self.conn, sql)
 
     def exec_sql(self, sql: str) -> RdbTable:
@@ -525,9 +534,10 @@ class RdbBackend(Backend):
         logger.info(f"clean temp db: {self.temp_schema}")
         _exec_sql(self.conn, self.sql_dialect.drop_db_sql(self.temp_schema))
 
-    def clear_temp_tables(self, exclude: List[str] = None):
+    def clear_temp_tables(self, exclude: Optional[List[str]] = None):
         from sqlalchemy.exc import ProgrammingError
 
+        exclude = exclude or []
         for table in self.temp_tables():
             if table not in exclude:
                 print(f"dropping temp table {table}")
@@ -593,6 +603,7 @@ class RdbBackend(Backend):
         )
 
         if not self.sql_dialect.support_static_partition():
+            assert target_table.dbname is not None
             if not self.db_exists(target_table.dbname) and create_target_table:
                 _exec_sql(self.conn, self.sql_dialect.create_db_sql(target_table.dbname))
             _exec_sql(self.conn, self.sql_dialect.create_pt_meta_table_sql(target_table.dbname))
@@ -638,17 +649,17 @@ class RdbBackend(Backend):
         _exec_sql(
             self.conn,
             self.sql_dialect.create_table_with_partitions_sql(
-                full_table_name, [col.as_dict() for col in schema], partitions
+                full_table_name, [col.as_dict() for col in schema], partitions  # type: ignore
             ),
         )
         cols = [col.name for col in schema]
         pt_cols = [p.field for p in partitions]
         pt_values_list = [[row[cols.index(p)] for p in pt_cols] for row in values]
-        partitions = {
+        partitions_with_values = {
             tuple([Partition(field, value) for field, value in zip(pt_cols, pt_values)]) for pt_values in pt_values_list
         }
-        if partitions and not self.sql_dialect.create_partition_automatically():
-            for partition in partitions:
+        if partitions_with_values and not self.sql_dialect.create_partition_automatically():
+            for partition in partitions_with_values:
                 if partition:
                     _exec_sql(self.conn, self.sql_dialect.create_partition_sql(full_table_name, list(partition)))
         from sqlalchemy.sql import text
@@ -658,16 +669,16 @@ class RdbBackend(Backend):
         for v in values:
             _exec_sql(self.conn, stmt, **{col: _v for _v, col in zip(v, cols)})
 
-        if partitions and not self.sql_dialect.support_static_partition():
+        if partitions_with_values and not self.sql_dialect.support_static_partition():
             _exec_sql(self.conn, self.sql_dialect.create_pt_meta_table_sql(db))
-            for partition in partitions:
+            for partition in partitions_with_values:
                 if partition:
                     _exec_sql(self.conn, self.sql_dialect.insert_pt_metadata_sql(full_table_name, list(partition)))
 
     def create_temp_table_with_data(self, table_name: str, values: List[List[Any]], schema: List[Col]):
         _exec_sql(
             self.conn,
-            self.sql_dialect.create_table_with_partitions_sql(table_name, [col.as_dict() for col in schema], []),
+            self.sql_dialect.create_table_with_partitions_sql(table_name, [col.as_dict() for col in schema], []),  # type: ignore
         )
         cols = [col.name for col in schema]
         from sqlalchemy.sql import text

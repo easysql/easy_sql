@@ -46,6 +46,9 @@ class BqSqlDialect(SqlDialect):
     def get_tables_sql(self, db) -> str:
         return f"select table_name from {db}.INFORMATION_SCHEMA.TABLES"
 
+    def get_dbs_sql(self) -> str:
+        return "select schema_name from INFORMATION_SCHEMA.SCHEMATA"
+
     def create_table_sql(self, table_name: str, select_sql: str) -> str:
         full_table_name = table_name if self.contains_db(table_name) else f"{self.db}.{table_name}"
         return f"create table if not exists {full_table_name} as {select_sql}"
@@ -108,7 +111,7 @@ class BqSqlDialect(SqlDialect):
         self, table_name: str, cols: List[Dict[str, TypeEngine]], partitions: List[Partition]
     ):
         cols_expr = ",\n".join(
-            f"{col['name']} {self.sql_expr.for_bigquery_type(col['name'], col['type'])}" for col in cols
+            f"{col['name']} {self.sql_expr.for_bigquery_type(col['name'], col['type'])}" for col in cols  # type: ignore
         )
         if len(partitions) == 0:
             partition_expr = ""
@@ -145,6 +148,9 @@ class BqSqlDialect(SqlDialect):
         return f"{drop_table_sql}\n{drop_pt_metadata}"
 
     def support_static_partition(self):
+        return False
+
+    def support_move_individual_partition(self):
         return False
 
     def create_pt_meta_table_sql(self, db: str) -> str:

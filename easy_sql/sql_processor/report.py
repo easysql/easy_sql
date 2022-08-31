@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from .step import ReportCollector, Step
 
@@ -21,7 +21,7 @@ class StepReport:
         self.execution_time = 0
         self.messages = []
 
-    def update(self, status: str = None, message: str = None) -> "StepReport":
+    def update(self, status: Optional[str] = None, message: Optional[str] = None) -> "StepReport":
         if status is not None:
             if status == StepStatus.RUNNING:
                 self.start_time = datetime.now()
@@ -53,23 +53,24 @@ class SqlProcessorReporter(ReportCollector):
     def __init__(
         self,
         report_task_id: str,
-        report_hdfs_path: str = None,
-        report_es_url: str = None,
-        report_es_index_prefix: str = None,
+        report_hdfs_path: Optional[str] = None,
+        report_es_url: Optional[str] = None,
+        report_es_index_prefix: Optional[str] = None,
     ):
         self.report_task_id = report_task_id
         self.report_hdfs_path = report_hdfs_path
         self.report_es_url = report_es_url
         self.report_es_index_prefix = report_es_index_prefix
         self._steps = None
-        self.step_reports = None
+        self.step_reports: Optional[Dict[str, StepReport]] = None
         self.start_time = datetime.now()
 
     def init(self, steps: List[Step]):
         self._steps = steps
-        self.step_reports: dict[str, StepReport] = {step.id: StepReport(step) for step in steps}
+        self.step_reports = {step.id: StepReport(step) for step in steps}
 
-    def collect_report(self, step: Step, status: str = None, message: str = None):
+    def collect_report(self, step: Step, status: Optional[str] = None, message: Optional[str] = None):
+        assert self.step_reports is not None
         report = self.step_reports[step.id]
         if status is not None:
             report.update(status=status)
@@ -87,6 +88,8 @@ class SqlProcessorReporter(ReportCollector):
     def _report_to_es(self, report):
         from easy_sql.report import EsService, Reporter
 
+        assert self.report_es_url is not None
+        assert self.report_es_index_prefix is not None
         Reporter(EsService(self.report_es_url), index_prefix=self.report_es_index_prefix).report_task_result(
             task_id=self.report_task_id, report=report
         )
@@ -98,6 +101,7 @@ class SqlProcessorReporter(ReportCollector):
         import hashlib
         import os
 
+        assert self.report_hdfs_path is not None
         file_name = os.path.basename(self.report_hdfs_path)
         md5 = hashlib.md5()
         md5.update(file_name.encode("utf8"))
@@ -132,6 +136,8 @@ class SqlProcessorReporter(ReportCollector):
     def get_report(self, verbose: bool = False) -> str:
         report = []
         total_execution_seconds = (datetime.now() - self.start_time).total_seconds()
+        assert self._steps is not None
+        assert self.step_reports is not None
         for step in self._steps:
             report.append(self.step_reports[step.id].report_as_text(total_execution_seconds, verbose))
         report.append(f"\ntotal execution time: {total_execution_seconds}s")

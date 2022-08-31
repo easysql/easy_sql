@@ -1,8 +1,14 @@
+from __future__ import annotations
+
 import os
 import re
 import sys
+from typing import TYPE_CHECKING
 
 import click
+
+if TYPE_CHECKING:
+    from easy_sql.sql_processor.backend.base import Backend
 
 from .sql_tester import SqlTester, TestCase, WorkPath
 
@@ -12,8 +18,8 @@ def main():
     pass
 
 
-def create_backend(backend: str, env: str, case: TestCase, work_path: WorkPath):
-    if backend == "spark":
+def create_backend(backend_type: str, env: str, case: TestCase, work_path: WorkPath) -> Backend:
+    if backend_type == "spark":
         from easy_sql.local_spark import LocalSpark
         from easy_sql.sql_processor.backend import SparkBackend
 
@@ -39,7 +45,7 @@ def create_backend(backend: str, env: str, case: TestCase, work_path: WorkPath):
         backend = SparkBackend(spark)
         backend.clean()
         return backend
-    elif backend == "postgres":
+    elif backend_type == "postgres":
         from easy_sql.sql_processor.backend.rdb import RdbBackend
 
         assert "PG_URL" in os.environ, "Must set PG_URL env var to run an ETL with postgres backend."
@@ -61,14 +67,14 @@ def create_backend(backend: str, env: str, case: TestCase, work_path: WorkPath):
         backend.exec_native_sql(f"create database unittest{i}")
         backend = RdbBackend(pg_url[: pg_url.rindex("/")] + f"/unittest{i}")
         return backend
-    elif backend == "clickhouse":
+    elif backend_type == "clickhouse":
         from easy_sql.sql_processor.backend.rdb import RdbBackend
 
         assert "CLICKHOUSE_URL" in os.environ, "Must set CLICKHOUSE_URL env var to run an ETL with clickhouse backend."
         ch_url = os.environ["CLICKHOUSE_URL"]
         backend = RdbBackend(ch_url)
         return backend
-    elif backend == "bigquery":
+    elif backend_type == "bigquery":
         from easy_sql.sql_processor.backend.rdb import RdbBackend
 
         backend = RdbBackend(
@@ -76,7 +82,7 @@ def create_backend(backend: str, env: str, case: TestCase, work_path: WorkPath):
         )
         return backend
     else:
-        raise Exception("unsupported backend: " + backend)
+        raise Exception("unsupported backend: " + backend_type)
 
 
 _FILES_ARG_HELP = "Test files (multiple files split by comma): file1,file2,..."
@@ -122,7 +128,7 @@ def convert_json(files):
 
 def _convert_json(files):
     test_data_files = [os.path.abspath(f.strip()) for f in files.split(",") if f.strip()]
-    sql_tester = SqlTester(work_dir=os.path.abspath(os.curdir))
+    sql_tester = SqlTester(None, work_dir=os.path.abspath(os.curdir))  # type: ignore
     for f in test_data_files:
         sql_tester.convert_cases_to_json(f)
 

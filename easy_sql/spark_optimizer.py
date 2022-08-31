@@ -1,10 +1,10 @@
-from typing import Dict
+from typing import Dict, Optional
 
 from pyspark.sql import SparkSession
 
 
 class SparkDynamicConfig:
-    def __init__(self, max_shuffle_partitions: int = None, min_shuffle_partitions: int = None):
+    def __init__(self, max_shuffle_partitions: Optional[int] = None, min_shuffle_partitions: Optional[int] = None):
         self.max_shuffle_partitions = max_shuffle_partitions
         self.min_shuffle_partitions = min_shuffle_partitions
 
@@ -27,7 +27,7 @@ class SparkDynamicConfig:
         return self
 
 
-def get_spark(app_name: str, conf: Dict = None):
+def get_spark(app_name: str, conf: Optional[Dict] = None):
     builder = SparkSession.builder.appName(app_name).enableHiveSupport()
     conf = conf or {}
     for k, v in conf.items():
@@ -43,7 +43,7 @@ def get_spark(app_name: str, conf: Dict = None):
     # spark 3.0+ 不允许动态设置以下两个参数
     import pyspark
 
-    if str(pyspark.__version__).startswith("2."):
+    if str(pyspark.__version__).startswith("2."):  # type: ignore
         spark.conf.set("spark.dynamicAllocation.enabled", "true")
         spark.conf.set("spark.shuffle.service.enabled", "true")
 

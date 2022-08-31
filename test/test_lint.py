@@ -32,7 +32,6 @@ backend = RdbBackend(
     "bigquery://",
     credentials=f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-prod.json",
     sql_expr=sql_expr,
-    check_only=True,
 )
 sql = """-- backend: bigquery
 

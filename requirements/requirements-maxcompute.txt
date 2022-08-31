@@ -1,5 +1,0 @@
-numpy==1.21.6
-pyodps==0.10.7.1
-sqlfluff==1.2.1
-colorlog==4.0.2
-regex==2022.6.2

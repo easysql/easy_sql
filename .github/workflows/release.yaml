@@ -1,0 +1,51 @@
+name: Release
+on:
+  push:
+    tags:
+      - v*.*.*
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: main
+        # ssh-key: ${{ secrets.DEPLOY_KEY }}
+        token: ${{ secrets.PAT }}
+    - uses: actions/setup-python@v4
+      with:
+        python-version: 3.8
+    - name: Load cached Poetry installation
+      uses: actions/cache@v2
+      with:
+        path: ~/.local/  # the path depends on the OS
+        key: poetry-0  # increment to reset cache
+    - name: Install Poetry
+      uses: snok/install-poetry@v1.3.1
+    - name: version check
+      id: version
+      run: |
+        tag=${GITHUB_REF_NAME}
+        version=${tag#v}
+        old_version=$(poetry version -s)
+        echo "tags: $tag , version: $version , old_version: $old_version"
+        echo "::set-output name=tag::${tag}"
+        echo "::set-output name=version::${version}"
+        echo "::set-output name=version_changed::$( [ $version != $old_version ] && echo 'true' )"
+    - name: bump version
+      if: ${{ steps.version.outputs.version_changed == 'true' }}
+      run: poetry version ${{ steps.version.outputs.version }}
+    - name: commit and update release tag
+      if: ${{ steps.version.outputs.version_changed == 'true' }}
+      run: |
+        git config user.name 'auto-release'
+        git config user.email 'easy_sql@thoughtworks.com'
+        git commit -am "release: bump to version ${{ steps.version.outputs.version }} [skip ci]"
+        git tag ${{ steps.version.outputs.tag }} -f
+        git push --atomic origin main ${{ steps.version.outputs.tag }} -f
+    - name: upload pypi
+      if: ${{ steps.version.outputs.version_changed == 'true' }}
+      run: |
+        poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
+        make upload-pip

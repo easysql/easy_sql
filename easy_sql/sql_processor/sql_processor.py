@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Union
+import random
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Union
 
 from ..logger import logger
 from .backend import Backend, SparkBackend
@@ -31,22 +32,22 @@ class SqlProcessor:
         self,
         backend: Union[SparkSession, Backend],
         sql: str,
-        extra_cols: List[Column] = None,
-        variables: dict = None,
-        report_hdfs_path: str = None,
-        report_task_id: str = None,
-        report_es_url: str = None,
-        report_es_index_prefix: str = None,
-        scala_udf_initializer: str = None,
-        templates: dict = None,
-        includes: Dict[str, str] = None,
+        extra_cols: Optional[List[Column]] = None,
+        variables: Optional[dict] = None,
+        report_hdfs_path: Optional[str] = None,
+        report_task_id: Optional[str] = None,
+        report_es_url: Optional[str] = None,
+        report_es_index_prefix: Optional[str] = None,
+        scala_udf_initializer: Optional[str] = None,
+        templates: Optional[dict] = None,
+        includes: Optional[Dict[str, str]] = None,
     ):
         backend = backend if isinstance(backend, (Backend,)) else SparkBackend(spark=backend)
         self.backend = backend
         self.sql = sql
 
         self.reporter = SqlProcessorReporter(
-            report_task_id=report_task_id,
+            report_task_id=report_task_id or f"easy_sql_task_{random.randint(0, int(1e10))}",
             report_hdfs_path=report_hdfs_path,
             report_es_url=report_es_url,
             report_es_index_prefix=report_es_index_prefix,
@@ -65,7 +66,7 @@ class SqlProcessor:
         self.backend.init_udfs(scala_udf_initializer=scala_udf_initializer)
 
     @property
-    def variables(self) -> Union[str, Any]:
+    def variables(self) -> Dict[str, Any]:
         return self.context.vars_context.vars
 
     @property
@@ -78,7 +79,7 @@ class SqlProcessor:
 
     def set_spark_configs(self, configs: Dict[str, str]):
         if self.backend.is_spark_backend:
-            self.backend.set_spark_configs(configs)
+            self.backend.set_spark_configs(configs)  # type: ignore
         else:
             logger.warn(f"ignored set spark configs when backend is of type {type(self.backend)}")
 
@@ -126,7 +127,7 @@ class SqlProcessor:
             ):
                 func_name: str = self.variables["__exception_handler__"]
                 func_name = func_name.replace("{", "${")
-                self.func_runner.run_func(func_name, self.context.vars_context)(e)
+                self.func_runner.run_func(func_name, self.context.vars_context)(e)  # type: ignore
             else:
                 raise e
 

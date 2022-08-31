@@ -5,6 +5,8 @@ import uuid
 from os import path
 from typing import TYPE_CHECKING, Dict, List, Optional
 
+from easy_sql.sql_processor.backend.rdb import RdbBackend
+
 from ..logger import logger
 from .backend import Backend, Partition, SaveMode
 from .backend import Table as BackendTable
@@ -19,14 +21,21 @@ __all__ = ["StepConfig", "Step", "StepType", "ReportCollector", "StepFactory"]
 
 
 class ReportCollector:
-    def collect_report(self, step: Step, status: str = None, message: str = None):
+    def collect_report(self, step: Step, status: Optional[str] = None, message: Optional[str] = None):
         raise NotImplementedError()
 
 
 class StepConfig:
     STEP_CONFIG_PATTERN = r"^-- target\s*=\s*(\w+)(.*)$"
 
-    def __init__(self, step_type: str, step_name: str, condition: str, line_no: int, step_config_str: str = ""):
+    def __init__(
+        self,
+        step_type: str,
+        step_name: Optional[str],
+        condition: Optional[str],
+        line_no: int,
+        step_config_str: str = "",
+    ):
         self.step_type = step_type
         self.name = step_name
         self.condition = condition
@@ -128,8 +137,8 @@ class Step:
         id: str,
         reporter_collector: ReportCollector,
         func_runner: FuncRunner,
-        target_config: StepConfig = None,
-        select_sql: str = None,
+        target_config: Optional[StepConfig] = None,
+        select_sql: Optional[str] = None,
         debug_var_tmpl_replace: bool = False,
     ):
         self.id = id
@@ -146,14 +155,17 @@ class Step:
         return f"[\n    config: {self.target_config},\n    sql: {self.select_sql}\n]"
 
     def should_run(self, context: ProcessorContext):
+        assert self.target_config is not None
         variables: dict = context.vars_context.vars
         if "__skip_all__" in variables and variables["__skip_all__"] in ["TRUE", True, 1, "True", "true", "1"]:
             return False
         if not self.target_config.has_condition():
             return True
+        assert self.target_config.condition is not None
         return self.func_runner.run_func(self.target_config.condition, context.vars_context)
 
     def read(self, backend: Backend, context: ProcessorContext) -> Optional[BackendTable]:
+        assert self.target_config is not None
         if self.target_config.step_type in [StepType.TEMPLATE] or (
             self.target_config.step_type == StepType.CHECK and self._should_skip_check(context.vars_context.vars)
         ):
@@ -164,9 +176,11 @@ class Step:
             return backend.create_empty_table()
         self.preprocess_select_sql(context)
         if self.target_config.step_type == StepType.ACTION:
+            assert self.select_sql is not None
             backend.exec_native_sql(self.select_sql)
             return None
         else:
+            assert self.select_sql is not None
             return backend.exec_sql(self.select_sql)
 
     def preprocess_select_sql(self, context):
@@ -174,6 +188,7 @@ class Step:
         self.select_sql = context.replace_variables(self.select_sql)
 
     def write(self, backend: Backend, table: Optional[BackendTable], context: ProcessorContext, dry_run: bool = False):
+        assert self.target_config is not None
         variables: dict = context.vars_context.vars
 
         if not table:
@@ -199,18 +214,23 @@ class Step:
             context.add_list_vars(list_vars)
 
         if StepType.TEMPLATE == self.target_config.step_type:
+            assert self.select_sql is not None
+            assert self.target_config.name is not None
             context.add_templates({self.target_config.name: self.select_sql})
 
         elif StepType.TEMP == self.target_config.step_type:
+            assert self.target_config.name is not None
             backend.create_temp_table(table, self.target_config.name)
 
         elif StepType.CACHE == self.target_config.step_type:
+            assert self.target_config.name is not None
             if "__no_cache__" in variables and variables["__no_cache__"] in ["TRUE", True, 1, "True", "true"]:
                 backend.create_temp_table(table, self.target_config.name)
             else:
                 backend.create_cache_table(table, self.target_config.name)
 
         elif StepType.BROADCAST == self.target_config.step_type:
+            assert self.target_config.name is not None
             backend.broadcast_table(table, self.target_config.name)
 
         elif StepType.LOG == self.target_config.step_type:
@@ -219,6 +239,7 @@ class Step:
             self._write_for_log_step(table)
 
         elif StepType.FUNC == self.target_config.step_type:
+            assert self.target_config.name is not None
             self.func_runner.run_func(self.target_config.name, context.vars_context)
 
         elif StepType.CHECK == self.target_config.step_type:
@@ -233,9 +254,12 @@ class Step:
         return "__no_check__" in variables and variables["__no_check__"] in ["TRUE", True, 1, "True", "true"]
 
     def is_template_statement(self):
+        assert self.target_config is not None
         return StepType.TEMPLATE == self.target_config.step_type
 
     def _write_for_output_step(self, backend: Backend, table: BackendTable, context: ProcessorContext, dry_run: bool):
+        assert self.target_config is not None
+        assert self.target_config.name is not None
         extra_cols, variables = context.extra_cols, context.vars
         if "." not in self.target_config.name:
             message = (
@@ -265,6 +289,7 @@ class Step:
                 if backend.is_spark_backend:
                     static_partition_value = value
                 else:
+                    assert isinstance(backend, RdbBackend)
                     static_partition_value = backend.sql_expr.convert_partition_value(static_partition_name, value)
             if name.lower() == "save_mode" or name.lower() == "__save_mode__":
                 save_mode = SaveMode[value.lower()]
@@ -296,8 +321,11 @@ class Step:
 
                     table = table.with_column(static_partition_name, lit(static_partition_value))
                 else:
-                    table = table.with_column(static_partition_name, backend.sql_expr.for_value(static_partition_value))
-            backend.create_temp_table(table, temp_table_name + "_output")
+                    assert isinstance(backend, RdbBackend)
+                    table = table.with_column(
+                        static_partition_name, backend.sql_expr.for_value(static_partition_value)  # type: ignore
+                    )
+            backend.create_temp_table(table, temp_table_name + "_output")  # type: ignore
             self.collect_report(message="will not save data to data warehouse, since we are in dry run mode")
             return
 
@@ -310,6 +338,8 @@ class Step:
         backend.save_table(source_table, target_table, save_mode, create_target_table=create_output_table)
 
     def _write_for_log_step(self, df: BackendTable):
+        assert self.target_config is not None
+        assert self.target_config.name is not None
         log_data = df.limit(20).collect()
         if len(log_data) == 0:
             logger.info(f"log for [{self.target_config.name}]: no data to show")
@@ -323,7 +353,9 @@ class Step:
             self.collect_report(message=f"{str(log_data[0])}")
 
     def _write_for_check_step(self, df: BackendTable, context: ProcessorContext):
+        assert self.target_config is not None
         if self.target_config.is_target_name_a_func():
+            assert self.target_config.name is not None
             if not self.func_runner.run_func(self.target_config.name, context.vars_context):
                 message = (
                     f"check failed! check function returned False. check={self.target_config.name}, vars={context.vars}"
@@ -370,7 +402,7 @@ class StepFactory:
         self.reporter = reporter
         self.func_runner = func_runner
 
-    def create_from_sql(self, sql: str, includes: Dict[str, str] = None) -> List[Step]:
+    def create_from_sql(self, sql: str, includes: Optional[Dict[str, str]] = None) -> List[Step]:
         includes = includes or {}
         resolved_sql = self._resolve_include(sql, includes)
         lines = resolved_sql.split("\n")
@@ -414,6 +446,7 @@ class StepFactory:
             line_stripped = line.strip()
             if re.match(include_sql_pattern, line_stripped, flags=re.IGNORECASE):
                 matches = re.match(include_sql_pattern, line_stripped, flags=re.IGNORECASE)
+                assert matches is not None
                 if len(matches.groups()) != 1:
                     raise SqlProcessorException(
                         "parse include config failed. must provide complete module name and the sql variable name."
@@ -435,6 +468,7 @@ class StepFactory:
                     resoloved_sqls.append(SqlSnippetsReader.read_file(file))
             elif re.match(include_py_pattern, line_stripped, flags=re.IGNORECASE):
                 matches = re.match(include_py_pattern, line_stripped, flags=re.IGNORECASE)
+                assert matches is not None
                 if len(matches.groups()) != 2:
                     raise SqlProcessorException(
                         "parse include config failed. must provide complete module name and the sql variable name."
@@ -470,7 +504,7 @@ class StepFactory:
 
 class SqlSnippetsReader:
     @staticmethod
-    def read_file(file_name: str, base_path: str = None) -> str:
+    def read_file(file_name: str, base_path: Optional[str] = None) -> str:
         possible_paths = [file_name]
         if base_path is not None:
             possible_paths.append(path.join(base_path, file_name))

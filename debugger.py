@@ -1,6 +1,6 @@
 import sys
 from os import path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 src_path = path.dirname(path.abspath(__file__))
 sys.path.insert(0, src_path)
@@ -8,7 +8,7 @@ sys.path.insert(0, src_path)
 __all__ = ["create_debugger", "create_pg_debugger", "create_ch_debugger"]
 
 
-def create_debugger(sql_file_path: str, vars: Dict[str, Any] = None, funcs: Dict[str, Any] = None):
+def create_debugger(sql_file_path: str, vars: Optional[Dict[str, Any]] = None, funcs: Optional[Dict[str, Any]] = None):
     import os
     import subprocess
 
@@ -35,7 +35,9 @@ def create_debugger(sql_file_path: str, vars: Dict[str, Any] = None, funcs: Dict
     return debugger
 
 
-def create_pg_debugger(sql_file_path: str, vars: Dict[str, Any] = None, funcs: Dict[str, Any] = None):
+def create_pg_debugger(
+    sql_file_path: str, vars: Optional[Dict[str, Any]] = None, funcs: Optional[Dict[str, Any]] = None
+):
     from easy_sql.sql_processor.backend.rdb import RdbBackend
 
     pg = RdbBackend("postgresql://postgres:123456@testpg:15432/postgres")
@@ -45,7 +47,9 @@ def create_pg_debugger(sql_file_path: str, vars: Dict[str, Any] = None, funcs: D
     return debugger
 
 
-def create_ch_debugger(sql_file_path: str, vars: Dict[str, Any] = None, funcs: Dict[str, Any] = None):
+def create_ch_debugger(
+    sql_file_path: str, vars: Optional[Dict[str, Any]] = None, funcs: Optional[Dict[str, Any]] = None
+):
     from easy_sql.sql_processor.backend.rdb import RdbBackend
 
     ch = RdbBackend("clickhouse+native://default@testch:30123")

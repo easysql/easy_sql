@@ -17,11 +17,11 @@ from ...common import SqlProcessorAssertionError
 class SqlExpr:
     def __init__(
         self,
-        value_to_sql_expr: Callable[[Any], Optional[str]] = None,
-        column_sql_type_converter: Callable[[str, str, TypeEngine], Optional[str]] = None,
-        partition_col_converter: Callable[[str], str] = None,
-        partition_value_converter: Callable[[str, str], Any] = None,
-        partition_expr: Callable[[str, str], str] = None,
+        value_to_sql_expr: Optional[Callable[[Any], Optional[str]]] = None,
+        column_sql_type_converter: Optional[Callable[[str, str, TypeEngine], Optional[str]]] = None,
+        partition_col_converter: Optional[Callable[[str], str]] = None,
+        partition_value_converter: Optional[Callable[[str, str], Any]] = None,
+        partition_expr: Optional[Callable[[str, str], str]] = None,
     ):
         self.value_to_sql_expr = value_to_sql_expr
         self.column_sql_type_converter = column_sql_type_converter
@@ -74,12 +74,12 @@ class SqlExpr:
 
     def for_bigquery_type(self, col_name: str, col_type: Union[str, TypeEngine]) -> str:
         if self.column_sql_type_converter:
-            converted_col_type = self.column_sql_type_converter("bigquery", col_name, col_type)
+            converted_col_type = self.column_sql_type_converter("bigquery", col_name, col_type)  # type: ignore
             if converted_col_type is not None:
                 return converted_col_type
 
         if str(col_type.__class__) == "<class 'str'>":
-            return col_type
+            return col_type  # type: ignore
 
         import sqlalchemy
 

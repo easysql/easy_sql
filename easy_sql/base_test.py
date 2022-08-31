@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 if TYPE_CHECKING:
     from pyspark.sql import SparkSession
@@ -15,7 +15,7 @@ from .local_spark import LocalSpark
 from .logger import log_time
 
 
-def should_run_integration_test(key: str = None):
+def should_run_integration_test(key: Optional[str] = None):
     if key is None or key in ["pg", "ch", "mc", "bq", "flink_hive"]:
         return False
     return True
@@ -74,11 +74,11 @@ def next_id():
 def run_sql(
     sql: str,
     result_table: str,
-    funcs: dict = None,
-    variables: dict = None,
+    funcs: Optional[Dict] = None,
+    variables: Optional[Dict] = None,
     dry_run: bool = False,
-    spark: SparkSession = None,
-    spark_conf: Dict = None,
+    spark: Optional[SparkSession] = None,
+    spark_conf: Optional[Dict] = None,
 ) -> List:
     spark = spark or LocalSpark.get(spark_conf)
     processor = SqlProcessor(spark, sql, [], variables or {})

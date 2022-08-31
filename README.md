@@ -14,57 +14,29 @@ More will be added in the near future.
 [![GitHub Action Build](https://github.com/easysql/easy_sql/actions/workflows/build.yaml/badge.svg?branch=main&event=push)](https://github.com/easysql/easy_sql/actions/workflows/build.yaml?query=branch%3Amain+event%3Apush)
 [![Docs Build](https://readthedocs.org/projects/easy-sql/badge/?version=latest)](https://easy-sql.readthedocs.io/en/latest/?badge=latest)
 [![EasySQL Coverage](https://codecov.io/gh/easysql/easy_sql/branch/main/graph/badge.svg)](https://codecov.io/gh/easysql/easy_sql)
+[![PyPI](https://img.shields.io/pypi/v/easy-sql-easy-sql)](https://pypi.org/project/easy-sql-easy-sql/)
 
 ## Install Easy SQL
 
-Install Easy SQL using pip: `python3 -m pip install easy_sql-easy_sql`
+Install Easy SQL using pip: `python3 -m pip install easy_sql-easy_sql[extra,extra]`
+
+Currently we are providing below extras, choose according to your need:
+- cli
+- linter
+- spark
+- pg
+- clickhouse
 
 ## Building Easy SQL
 
-Easy SQL is developed in Python and could be built with the following make command:
-
-```bash
-make package-pip
-```
+Internally we use `poetry` to manage the dependencies. So make sure you have [installed it](https://python-poetry.org/docs/master/#installation). Package could be built with the following make command: `make package-pip` or just `poetry build`.
 
 After the above command, there will be a file named `easy_sql*.whl` generated in the `dist` folder.
-You can install it with command `pip install dist/easy_sql*.whl`.
-
-## Dependencies
-
-Since there are several backends, we only need to install some specific dependencies if we only use one of them.
-
-For spark, you need to install some version of `pyspark`.
-
-For other backends, install the dependencies as listed below:
-```
-# for pg/clickhouse/bigquery backend only
-SQLAlchemy==1.3.23
-# for pg backend only
-psycopg2-binary==2.8.6
-# for clickhouse backend only
-clickhouse-driver==0.2.0
-clickhouse-sqlalchemy==0.1.6
-# for BigQuery backend only
-sqlalchemy-bigquery==1.4.3
-# for MaxCompute backend only
-pyodps==0.10.7.1
-```
-
-To use other tools / functionalities, install the dependencies as listed below:
-
-```
-# for Linter only
-sqlfluff==1.2.1
-colorlog==4.0.2
-regex==2022.6.2
-# for command line tools only
-click==6.7
-```
+You can install it with command `python3 -m pip install dist/easy_sql*.whl[extra]` or just `poetry install -E 'extra extra'`.
 
 ## First ETL with Easy SQL
 
-(You need to install click package (by command `python3 -m pip install click==6.7`) before run the command below.)
+Install easy_sql with spark as the backend: `python3 -m pip install easy_sql-easy_sql[spark,cli]`.
 
 ### For spark backend
 
@@ -121,6 +93,8 @@ docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=123456 postgres
 
 Create a file named `sample_etl.postgres.sql` with content as the test file [here](https://github.com/easysql/easy_sql/blob/main/test/sample_etl.postgres.sql).
 
+Make sure that you have install the corresponding backend with `python3 -m pip install easy-sql-easy-sql[cli,pg]`
+
 Run it with command:
 
 ```bash
@@ -138,6 +112,8 @@ docker run -d --name clickhouse -p 9000:9000 yandex/clickhouse-server:20.12.5.18
 ```
 
 Create a file named `sample_etl.clickhouse.sql` with content as the test file [here](https://github.com/easysql/easy_sql/blob/main/test/sample_etl.clickhouse.sql).
+
+Make sure that you have install the corresponding backend with `python3 -m pip install easy-sql-easy-sql[cli,clickhouse]`
 
 Run it with command:
 

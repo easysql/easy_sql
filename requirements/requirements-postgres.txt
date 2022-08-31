@@ -1,5 +1,0 @@
-SQLAlchemy==1.3.23
-psycopg2-binary==2.8.6
-sqlfluff==1.2.1
-colorlog==4.0.2
-regex==2022.6.2

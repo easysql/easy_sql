@@ -79,8 +79,11 @@ class ChSqlDialect(SqlDialect):
             f"where db_name = '{db}' and table_name = '{pure_table_name}' "
             f"and partition_value = '{partitions[0].value}'"
         )
-
-        pt_expr = f'tuple({", ".join([self.sql_expr.for_value(pt.value) for pt in partitions])})'
+        pt_value_expr = []
+        for pt in partitions:
+            assert pt.value is not None
+            pt_value_expr.append(self.sql_expr.for_value(pt.value))
+        pt_expr = f'tuple({", ".join(pt_value_expr)})'
         drop_pt = f"alter table {table_name} drop partition {pt_expr}"
 
         return [drop_pt, drop_pt_metadata]
@@ -133,24 +136,22 @@ class ChSqlDialect(SqlDialect):
             return [insert_data_sql, drop_pt_metadata_if_exist, insert_pt_metadata]
         return [insert_data_sql]
 
-    def move_data_sql(self, target_table_name: str, temp_table_name: str, partitions: List[Partition]):
+    def move_data_sql(self, target_table_name: str, temp_table_name: str, partitions: List[Partition]) -> List[str]:
         self._check_no_none_in_partition_values(partitions)
-        if len(partitions) != 0:
-            self._check_partition_field_single(partitions)
-            drop_pt_metadata_if_exist, insert_pt_metadata = self._generate_pt_metadata_sql(
-                target_table_name, partitions
+        assert len(partitions) != 0
+        self._check_partition_field_single(partitions)
+        drop_pt_metadata_if_exist, insert_pt_metadata = self._generate_pt_metadata_sql(target_table_name, partitions)
+        # Assumption: partition movement requires the two tables to have
+        # the same structure, partition key, engine family and storage policy,
+        # need to upgrade local clickhouse version (> 21) to
+        # support moving feature https://github.com/ClickHouse/ClickHouse/issues/14582
+        move_partition_sqls = []
+        for partition in partitions:
+            move_partition_sqls.append(
+                f"alter table {temp_table_name} move partition '{partition.value}' to table {target_table_name}"
             )
-            # Assumption: partition movement requires the two tables to have
-            # the same structure, partition key, engine family and storage policy,
-            # need to upgrade local clickhouse version (> 21) to
-            # support moving feature https://github.com/ClickHouse/ClickHouse/issues/14582
-            move_partition_sqls = []
-            for partition in partitions:
-                move_partition_sqls.append(
-                    f"alter table {temp_table_name} move partition '{partition.value}' to table {target_table_name}"
-                )
-            move_data_sql = " ".join(move_partition_sqls)
-            return [move_data_sql, drop_pt_metadata_if_exist, insert_pt_metadata]
+        move_data_sql = " ".join(move_partition_sqls)
+        return [move_data_sql, drop_pt_metadata_if_exist, insert_pt_metadata]
 
     def drop_table_sql(self, table: str) -> List[str]:
         drop_table_sql = f"drop table if exists {table}"
@@ -184,7 +185,7 @@ class ChSqlDialect(SqlDialect):
     def create_table_like_sql(self, target_table_name: str, source_table_name: str, partitions: List[Partition]) -> str:
         return f"create table if not exists {target_table_name} as {source_table_name}"
 
-    def _generate_pt_metadata_sql(self, table_name: str, partitions: List[Partition]) -> List[str]:
+    def _generate_pt_metadata_sql(self, table_name: str, partitions: List[Partition]) -> Tuple[str, str]:
         db, pure_table_name = split_table_name(table_name)
         drop_pt_metadata_if_exist = (
             f"alter table {self.partitions_table_name} delete "

@@ -81,6 +81,7 @@ class PgSqlDialect(SqlDialect):
             raise SqlProcessorAssertionError(
                 f"Only support exactly one partition column, found: {[str(p) for p in partitions]}"
             )
+        assert partitions[0].value is not None
         partition = PostgrePartition(partitions[0].field, partitions[0].value)
         return f"drop table if exists {partition.partition_table_name(table_name)}"
 
@@ -133,11 +134,12 @@ class PgSqlDialect(SqlDialect):
             raise SqlProcessorAssertionError(
                 f"Only support exactly one partition column, found: {[str(p) for p in partitions]}"
             )
+        assert partitions[0].value is not None
         partition = PostgrePartition(partitions[0].field, partitions[0].value)
         partition_table_name = partition.partition_table_name(target_table_name)
-        if_not_exists = "if not exists" if if_not_exists else ""
+        _if_not_exists = "if not exists" if if_not_exists else ""
         return (
-            f"create table {if_not_exists} {partition_table_name} partition of {target_table_name} "
+            f"create table {_if_not_exists} {partition_table_name} partition of {target_table_name} "
             f"for values from ({partition.value_expr}) to ({partition.value_next_expr})"
         )
 
@@ -155,6 +157,7 @@ class PgSqlDialect(SqlDialect):
                 raise SqlProcessorAssertionError(
                     f"Only support exactly one partition column, found: {[str(p) for p in partitions]}"
                 )
+            assert partition[0].value is not None
             partition = PostgrePartition(partition[0].field, partition[0].value)
             partition_table_name = partition.partition_table_name(target_table_name)
             temp_table_name = f"{partition_table_name}__temp"
@@ -188,6 +191,7 @@ class PgSqlDialect(SqlDialect):
     def move_data_sql(self, target_table: str, temp_table: str, partitions: List[Partition]) -> List[str]:
         sql = []
         for partition in partitions:
+            assert partition.value is not None
             pg_partition = PostgrePartition(partition.field, partition.value)
             temp_partition_table_name = pg_partition.partition_table_name(temp_table)
             target_partition_table_name = pg_partition.partition_table_name(target_table)
