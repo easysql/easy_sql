@@ -1,4 +1,4 @@
-from typing import Dict, Callable, List, Tuple
+from typing import Any, Dict, Callable, List, Optional, Tuple
 
 import json
 import os
@@ -9,16 +9,15 @@ from pyflink.table import (EnvironmentSettings, TableEnvironment)
 from pyflink.common import Row as PyFlinkRow
 from pyflink.table.table_result import TableResult
 from pyflink.table.catalog import ObjectPath
-from ...udf import udfs
 
 __all__ = [
     'FlinkRow', 'FlinkTable', 'FlinkBackend'
 ]
 
-
 class FlinkRow(Row):
 
-    def __init__(self, row: PyFlinkRow = None, fields: List[str] = None):
+    def __init__(self, row: Optional[PyFlinkRow] = None, fields: Optional[List[str]] = None):
+        assert row is not None
         self.row: PyFlinkRow = row
         if fields is not None:
             self.row._fields = fields
@@ -27,7 +26,7 @@ class FlinkRow(Row):
         return self.row.as_dict()
 
     def as_tuple(self) -> Tuple:
-        return self.row
+        return self.row # type: ignore
 
     def __eq__(self, other):
         return self.row.__eq__(other.row)
@@ -64,7 +63,7 @@ class FlinkTable(Table):
     def limit(self, count: int) -> 'FlinkTable':
         return FlinkTable(self.table.limit(count))
 
-    def with_column(self, name: str, value: any) -> 'FlinkTable':
+    def with_column(self, name: str, value: Any) -> 'FlinkTable':
         from pyflink.table.expressions import lit
         from pyflink.table.expression import Expression
         return FlinkTable(self.table.add_columns((value if isinstance(value, Expression) else lit(value)).alias(name)))
@@ -84,10 +83,10 @@ class FlinkTable(Table):
 class FlinkBackend(Backend):
 
     # todo: 考虑是否需要在外面实例化flink: TableEnvironment
-    def __init__(self, is_batch: bool = True):
+    def __init__(self, is_batch: Optional[bool] = True):
         self.flink: TableEnvironment = TableEnvironment.create(EnvironmentSettings.in_batch_mode() if is_batch else EnvironmentSettings.in_streaming_mode())
 
-    def init_udfs(self, scala_udf_initializer: str = None, *args, **kwargs):
+    def init_udfs(self, scala_udf_initializer: Optional[str] = None, *args, **kwargs):
         if scala_udf_initializer:
             from py4j.java_gateway import java_import
 
@@ -101,7 +100,7 @@ class FlinkBackend(Backend):
         from pyflink.table.udf import UserDefinedScalarFunctionWrapper
         for key in funcs:
             func = funcs[key]
-            if isinstance(funcs[key], UserDefinedScalarFunctionWrapper):
+            if isinstance(func, UserDefinedScalarFunctionWrapper):
                 self.flink.create_temporary_system_function(key, func)
 
     def clean(self):
@@ -120,9 +119,11 @@ class FlinkBackend(Backend):
         return FlinkTable('')
 
     def create_temp_table(self, table: 'Table', name: str):
+        assert isinstance(table, FlinkTable)
         self.flink.create_temporary_view(name, table.table)
 
     def create_cache_table(self, table: 'Table', name: str):
+        assert isinstance(table, FlinkTable)
         self.flink.create_temporary_view(name, table.table)
 
     def table_exists(self, table: 'TableMeta'):
@@ -173,27 +174,30 @@ class FlinkBackend(Backend):
         if len(tables) == 0:
             return
         for table in tables:
-            db_name = table.strip().split('.')[0]
-            database = next(filter(lambda t: t['name'] == db_name, flink_config['databases']), None)
-            if not database:
-                logger.warn(f"database {db_name} does not exist in flink tables config file, register table {table} failed.")
-                continue
-            
-            table_config = next(filter(lambda t: t['name'] == table.strip().split('.')[1], database['tables']), None)
-            if not table_config:
-                logger.warn(f"table {table} does not exist in flink tables config file, register table {table} failed.")
-                continue
+            db_name, table_config, connector = self.get_table_config_and_connector(flink_config, table)
+            if db_name and table_config and connector:
+                self.exec_native_sql(f'create database if not exists {db_name}')
+                self._create_table(table, table_config, connector)
+    
+    def get_table_config_and_connector(self, flink_config, table: str):
+        db_name = table.strip().split('.')[0]
+        database = next(filter(lambda t: t['name'] == db_name, flink_config['databases']), None)
+        if not database:
+            logger.warn(f"database {db_name} does not exist in flink tables config file, register table {table} failed.")
+            return None, None, None
+        
+        table_config = next(filter(lambda t: t['name'] == table.strip().split('.')[1], database['tables']), None)
+        if not table_config:
+            logger.warn(f"table {table} does not exist in flink tables config file, register table {table} failed.")
+            return None, None, None
 
-            connectors = database['connectors']
-            connector_name = table_config['connector']['name']
-            connector = next(filter(lambda conn: conn['name'] == connector_name, connectors), None)
-            if not connector:
-                logger.warn(f"connector {connector_name} does not exist in flink tables config file, register table {table} failed.")
-                continue
-
-            self.exec_native_sql(f'create database if not exists {db_name}')
-            
-            self._create_table(table, table_config, connector)
+        connectors = database['connectors']
+        connector_name = table_config['connector']['name']
+        connector = next(filter(lambda conn: conn['name'] == connector_name, connectors), None)
+        if not connector:
+            logger.warn(f"connector {connector_name} does not exist in flink tables config file, register table {table} failed.")
+            return None, None, None
+        return db_name, table_config, connector
 
     def _create_table(self, table:str, table_config, connector):
         schema = table_config['schema']

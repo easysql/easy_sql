@@ -3,7 +3,7 @@
         "catalog": {
             "name": "myhiveCatalog",
             "type": "hive",
-            "hive-conf-dir": "/opt/apache-hive/conf"
+            "hive-conf-dir": "test/flink_hive_conf"
         }
     },
     "databases": [
