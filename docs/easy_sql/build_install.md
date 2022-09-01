@@ -13,6 +13,7 @@ Currently we are providing below extras, choose according to your need:
 - spark
 - pg
 - clickhouse
+- flink
 
 ## Building Easy SQL
 

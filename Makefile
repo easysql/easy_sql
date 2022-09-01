@@ -29,6 +29,9 @@ e2e-test-clickhouse:
 e2e-test-flink-postgres:
 	python3 -m easy_sql.data_process -f test/sample_etl.flink.postgres.sql
 
+e2e-test-flink-hive:
+	python3 -m easy_sql.data_process -f test/sample_etl.flink.hive.sql
+
 test-coverage-all:
 	export PYSPARK_PYTHON=python3 && export PYSPARK_DRIVER_PYTHON=python3 && \
  		PG_URL=${PG_URL} CLICKHOUSE_URL=${CLICKHOUSE_URL} python3 -m coverage run -m unittest discover -s easy_sql -t . -p '*test.py'
