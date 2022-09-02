@@ -5,10 +5,6 @@ import os
 
 from .base import *
 from ...logger import logger
-from pyflink.table import (EnvironmentSettings, TableEnvironment)
-from pyflink.common import Row as PyFlinkRow
-from pyflink.table.table_result import TableResult
-from pyflink.table.catalog import ObjectPath
 
 __all__ = [
     'FlinkRow', 'FlinkTable', 'FlinkBackend'
@@ -16,9 +12,10 @@ __all__ = [
 
 class FlinkRow(Row):
 
+    from pyflink.common import Row as PyFlinkRow
     def __init__(self, row: Optional[PyFlinkRow] = None, fields: Optional[List[str]] = None):
         assert row is not None
-        self.row: PyFlinkRow = row
+        self.row = row
         if fields is not None:
             self.row._fields = fields
 
@@ -84,6 +81,7 @@ class FlinkBackend(Backend):
 
     # todo: 考虑是否需要在外面实例化flink: TableEnvironment
     def __init__(self, is_batch: Optional[bool] = True):
+        from pyflink.table import (EnvironmentSettings, TableEnvironment)
         self.flink: TableEnvironment = TableEnvironment.create(EnvironmentSettings.in_batch_mode() if is_batch else EnvironmentSettings.in_streaming_mode())
 
     def init_udfs(self, scala_udf_initializer: Optional[str] = None, *args, **kwargs):
@@ -107,6 +105,7 @@ class FlinkBackend(Backend):
         for temp_view in self.flink.list_temporary_views():
             self.flink.drop_temporary_view(temp_view)
 
+    from pyflink.table.table_result import TableResult
     def exec_native_sql(self, sql: str) -> TableResult:
         logger.info(f'will exec sql: {sql}')
         return self.flink.execute_sql(sql)
@@ -129,6 +128,7 @@ class FlinkBackend(Backend):
     def table_exists(self, table: 'TableMeta'):
         catalog = table.catalog_name if table.catalog_name else self.flink.get_current_catalog()
         database = table.dbname if table.dbname else self.flink.get_current_database()
+        from pyflink.table.catalog import ObjectPath
         return self.flink.get_catalog(catalog).table_exists(ObjectPath(database, table.pure_table_name))
 
     def save_table(self, source_table_meta: 'TableMeta', target_table_meta: 'TableMeta', save_mode: 'SaveMode', create_target_table: bool = False):

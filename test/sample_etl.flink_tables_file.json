@@ -11,7 +11,7 @@
                         "connector": "jdbc",
                         "url": "jdbc:postgresql://localhost:5432/postgres",
                         "username": "postgres",
-                        "password": "123456"
+                        "password": "postgres"
                     }
                 },
                 {
@@ -23,7 +23,7 @@
                         "database-name": "postgres",
                         "schema-name": "postgres",
                         "username": "postgres",
-                        "password": "123456"
+                        "password": "postgres"
                     }
                 }
             ],
