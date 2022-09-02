@@ -1030,7 +1030,7 @@ sqlcipher = ["sqlcipher3_binary"]
 
 [[package]]
 name = "sqlfluff"
-version = "1.3.0"
+version = "1.2.1"
 description = "The SQL Linter for Humans"
 category = "main"
 optional = true
@@ -1176,14 +1176,14 @@ cli = ["click"]
 clickhouse = ["SQLAlchemy", "clickhouse-driver", "clickhouse-sqlalchemy"]
 flink = ["apache-flink"]
 linter = ["sqlfluff", "colorlog", "regex"]
-maxcompute = []
+maxcompute = ["pyodps"]
 pg = ["SQLAlchemy", "psycopg2"]
 spark = ["pyspark"]
 
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "0cba9ecfa5511916d5b34d194e48715e3c0d53a1d4d451fca16997d9ee14cfe4"
+content-hash = "7a70dc4a73c1d20bba9de6ba2943ca7a7c0c913c7ad22100d1c1470999d546ea"
 
 [metadata.files]
 apache-beam = [
@@ -2246,8 +2246,8 @@ SQLAlchemy = [
     {file = "SQLAlchemy-1.4.40.tar.gz", hash = "sha256:44a660506080cc975e1dfa5776fe5f6315ddc626a77b50bf0eee18b0389ea265"},
 ]
 sqlfluff = [
-    {file = "sqlfluff-1.3.0-py3-none-any.whl", hash = "sha256:47dff29a8a533dabc543b573f23a9c4371c1ff9fb346ed1cc83d1f4cf23a1962"},
-    {file = "sqlfluff-1.3.0.tar.gz", hash = "sha256:2f3e3daff41c4c61f8021f33ebcd4f0eba1a874bbb51e49f38da692794d0cf2e"},
+    {file = "sqlfluff-1.2.1-py3-none-any.whl", hash = "sha256:f6bb6f399e76bd7ebca2202d6ede42abc3083d8db42525c9367d48ed4bd125b3"},
+    {file = "sqlfluff-1.2.1.tar.gz", hash = "sha256:e266b3e1e795aa425dc36a42cd5a257721634431f03b899cb891c29451f3a624"},
 ]
 tblib = [
     {file = "tblib-1.7.0-py2.py3-none-any.whl", hash = "sha256:289fa7359e580950e7d9743eab36b0691f0310fce64dee7d9c31065b8f723e23"},
