@@ -64,6 +64,11 @@ src_paths = ["easy_sql"]
 line-length = 120
 preview = true
 
+[tool.pytest.ini_options]
+testpaths = [
+    "easy_sql",
+]
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
