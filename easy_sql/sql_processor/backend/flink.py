@@ -155,8 +155,8 @@ class FlinkBackend(Backend):
         pass
 
     def _register_catalog(self, flink_config):
-        catalog = flink_config['excution']['catalog']
-        if catalog:
+        if 'excution' in flink_config.keys() and 'catalog' in flink_config['excution'].keys():
+            catalog = flink_config['excution']['catalog']
             catalog_name = catalog['name']
             del catalog['name']
             catalog_expr = " , ".join(
