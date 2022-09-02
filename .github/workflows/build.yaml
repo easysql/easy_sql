@@ -110,7 +110,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-pg
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-flink
     - run: poetry install --no-interaction -E "flink cli pg"
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: poetry run make e2e-test-flink-postgres
