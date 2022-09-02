@@ -84,20 +84,6 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-      hive:
-        image: sharpetl/hive3:3.1.2
-        ports:
-          - "9083:9083"
-          - "10000:10000"
-          - "10002:10002"
-        volumes:
-          - ${HOME}/Documents/warehouse:${HOME}/Documents/warehouse
-      mysql:
-        image: mysql:5.7.28
-        ports:
-          - "3306:3306"
-        volumes:
-          - ${PWD}/mysql:/docker-entrypoint-initdb.d
     strategy:
       matrix:
         python-version: ['3.7', '3.8']
@@ -127,15 +113,8 @@ jobs:
     - run: poetry install --no-interaction -E "flink cli"
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: poetry run make e2e-test-flink-postgres
-    - run: poetry run make e2e-test-flink-hive
       env:
         PG_URL: postgresql://postgres:postgres@localhost/postgres
-        MYSQL_ROOT_PASSWORD: root
-        CONNECTION_URL: jdbc:mysql://mysql:3306/hive?useSSL=false
-        CONNECTION_USER_NAME: root
-        CONNECTION_PASSWORD: root
-        WAREHOUSE_DIR: file://${HOME}/Documents/warehouse
-        WAIT_HOSTS: mysql:3306
 
   e2e-test-postgres:
     runs-on: ubuntu-latest
