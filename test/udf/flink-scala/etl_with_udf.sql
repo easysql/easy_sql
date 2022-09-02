@@ -3,4 +3,4 @@
 -- config: easy_sql.scala_udf_initializer=your.company.udfs
 
 -- target=log.test_udf
-select test_func(1, 2) as stringset
+select test_func(1, 2) as sum_value
