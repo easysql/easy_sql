@@ -49,7 +49,7 @@ linter = ["sqlfluff","colorlog","regex"]
 pg = ["SQLAlchemy", "psycopg2"]
 clickhouse = ["SQLAlchemy","clickhouse-driver","clickhouse-sqlalchemy"]
 maxcompute = ["pyodps"]
-flink = ["SQLAlchemy", "apache-flink"]
+flink = ["apache-flink"]
 
 [tool.isort]
 profile = "black"
