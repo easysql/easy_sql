@@ -155,7 +155,6 @@ class FlinkBackend(Backend):
         pass
 
     def _register_catalog(self, flink_config):
-        assert flink_config['excution']['catalog']
         catalog = flink_config['excution']['catalog']
         if catalog:
             catalog_name = catalog['name']

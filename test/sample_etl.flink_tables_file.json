@@ -1,10 +1,5 @@
 {
     "excution": {
-        "catalog": {
-            "name": "myhiveCatalog",
-            "type": "hive",
-            "hive-conf-dir": "test/flink_hive_conf"
-        }
     },
     "databases": [
         {
