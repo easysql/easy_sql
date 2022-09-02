@@ -118,6 +118,10 @@ def create_sql_processor_backend(backend_type: str, sql: str, task_name: str, ta
         
         exec_sql = lambda sql: backend.exec_native_sql(sql)
         flink_tables_file_path = next(filter(lambda c: get_key_by_splitter_and_strip(c) == 'flink_tables_file_path', customized_easy_sql_conf), None)
+        backend.add_jars([
+            resolve_file('test/flink/jars/flink-connector-jdbc-1.15.1.jar', abs_path=True),
+            resolve_file('test/flink/jars/flink-sql-connector-hive-3.1.2_2.12-1.15.1.jar', abs_path=True)
+        ])
         if flink_tables_file_path:
             flink_tables_file_path = resolve_file(get_value_by_splitter_and_strip(flink_tables_file_path), abs_path=True)
             backend.register_tables(flink_tables_file_path, tables)

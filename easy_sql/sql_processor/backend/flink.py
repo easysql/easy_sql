@@ -12,10 +12,10 @@ __all__ = [
 
 class FlinkRow(Row):
 
-    from pyflink.common import Row as PyFlinkRow
-    def __init__(self, row: Optional[PyFlinkRow] = None, fields: Optional[List[str]] = None):
+    def __init__(self, row = None, fields: Optional[List[str]] = None):
         assert row is not None
-        self.row = row
+        from pyflink.common import Row as PyFlinkRow
+        self.row: PyFlinkRow  = row
         if fields is not None:
             self.row._fields = fields
 
@@ -105,8 +105,7 @@ class FlinkBackend(Backend):
         for temp_view in self.flink.list_temporary_views():
             self.flink.drop_temporary_view(temp_view)
 
-    from pyflink.table.table_result import TableResult
-    def exec_native_sql(self, sql: str) -> TableResult:
+    def exec_native_sql(self, sql: str):
         logger.info(f'will exec sql: {sql}')
         return self.flink.execute_sql(sql)
 
@@ -227,3 +226,7 @@ class FlinkBackend(Backend):
                 config = json.loads(f.read())
                 self._register_catalog(config)
                 self._register_tables(config, tables)
+
+    def add_jars(self, jars_path: List[str]):
+        self.flink.get_config().set('pipeline.jars', f'{";".join([f"file://{path}" for path in jars_path])}')
+
