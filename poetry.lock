@@ -456,7 +456,7 @@ name = "psycopg2"
 version = "2.9.3"
 description = "psycopg2 - Python-PostgreSQL Database Adapter"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.6"
 
 [[package]]
@@ -803,13 +803,14 @@ testing = ["func-timeout", "jaraco.itertools", "pytest (>=6)", "pytest-black (>=
 cli = ["click"]
 clickhouse = ["SQLAlchemy", "clickhouse-driver", "clickhouse-sqlalchemy"]
 linter = ["sqlfluff", "colorlog", "regex"]
-pg = ["SQLAlchemy"]
+maxcompute = []
+pg = ["SQLAlchemy", "psycopg2"]
 spark = ["pyspark"]
 
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "5d9473066300b390523558376522b8773198a9f9b56e105ed0e83893f58fb222"
+content-hash = "8d2e400d4475f35e831e222ba353f86c8dbfc67280dff0f22aff6864c3328358"
 
 [metadata.files]
 appdirs = [
