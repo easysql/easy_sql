@@ -36,6 +36,7 @@ apache-flink = {version = "^1.15.2", optional = true}
 pyodps = {version = "^0.11.2.1", optional = true}
 
 [tool.poetry.dev-dependencies]
+pytest = "^7.1.2"
 pymongo = "^3.8.0"
 coverage = "^6.4.3"
 pre-commit = "^2.20.0"

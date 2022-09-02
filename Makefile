@@ -1,6 +1,6 @@
 test-coverage:
 	export PYSPARK_PYTHON=python3 && export PYSPARK_DRIVER_PYTHON=python3 && \
- 		python3 -m coverage run -m unittest discover -s easy_sql -t . -p '*_test.py'
+ 		python3 -m coverage run -m pytest easy_sql
 	python3 -m coverage report -m
 	- mkdir build
 	- rm -r build/coverage
@@ -8,7 +8,7 @@ test-coverage:
 
 unit-test:
 	export PYSPARK_PYTHON=python3 && export PYSPARK_DRIVER_PYTHON=python3 && \
- 		python3 -m unittest discover -s easy_sql -t . -p '*_test.py'
+ 		python3 -m pytest easy_sql
 
 # Note: env var named PG_URL and CLICKHOUSE_URL must be set to run e2e test
 e2e-test:
@@ -28,7 +28,7 @@ e2e-test-clickhouse:
 
 test-coverage-all:
 	export PYSPARK_PYTHON=python3 && export PYSPARK_DRIVER_PYTHON=python3 && \
- 		PG_URL=${PG_URL} CLICKHOUSE_URL=${CLICKHOUSE_URL} python3 -m coverage run -m unittest discover -s easy_sql -t . -p '*test.py'
+ 		PG_URL=${PG_URL} CLICKHOUSE_URL=${CLICKHOUSE_URL} python3 -m coverage run -m pytest easy_sql
 	python3 -m coverage report -m
 	python3 -m coverage xml
 
