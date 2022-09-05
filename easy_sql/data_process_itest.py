@@ -42,7 +42,6 @@ class DataProcessTest(unittest.TestCase):
             '--python "[^"]+/easy_sql/data_process.py" '
             "-f .+/test/sample_etl.flink.hive.sql --dry-run 0",
         )
-        data_process._data_process(os.path.join(proj_base_dir, 'test/sample_etl.flink.hive.sql'), None, None, False)
     
     def test_flink_hive_postgres(self):
         command = data_process._data_process(os.path.join(proj_base_dir, 'test/sample_etl.flink.hive.postgres.sql'), None, None, True)
