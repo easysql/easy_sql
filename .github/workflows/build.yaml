@@ -69,6 +69,43 @@ jobs:
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: poetry run make test-coverage
 
+  e2e-test-spark:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ '3.7', '3.8']
+        java-version: ['8', '11']
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - uses: actions/setup-python@v3
+      id: setup-python
+      with:
+        python-version: ${{ matrix.python-version }}
+    - uses: actions/setup-java@v3
+      with:
+        distribution: 'adopt'
+        java-version: ${{ matrix.java-version }}
+    - name: Load cached Poetry installation
+      uses: actions/cache@v2
+      with:
+        path: ~/.local/  # the path depends on the OS
+        key: poetry-1  # increment to reset cache
+    - name: Install Poetry
+      uses: snok/install-poetry@v1.3.1
+      with:
+        virtualenvs-in-project: true
+    - name: Load cached Poetry dependencies
+      id: cached-poetry-dependencies
+      uses: actions/cache@v2
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-spark
+    - run: poetry install --no-interaction -E "spark cli"
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+    - run: poetry run make e2e-test-spark
+
   e2e-test-flink:
     runs-on: ubuntu-latest
     services:
@@ -229,7 +266,6 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-
     steps:
     - uses: actions/checkout@v2
       with:
