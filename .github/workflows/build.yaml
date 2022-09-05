@@ -115,7 +115,7 @@ jobs:
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-pg
-    - run: poetry run pip install -r requirements-all.txt -r requirements-flink.txt
+    - run: poetry run pip install -r requirements-flink.txt
     - run: poetry run make e2e-test-flink-postgres
       env:
         PG_URL: postgresql://postgres:postgres@localhost/postgres
@@ -258,7 +258,7 @@ jobs:
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-all
     - run: poetry install --no-interaction -E "clickhouse pg spark cli linter"
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-    - run: poetry run pip install -r requirements-all.txt -r requirements-flink.txt
+    - run: poetry run pip install -r requirements-flink.txt
     - run: poetry run make test-coverage-all
       env:
         CLICKHOUSE_URL: clickhouse+native://default@localhost:9000
