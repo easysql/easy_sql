@@ -211,7 +211,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.8']
-        java-version: ['11']
+        java-version: ['8', '11']
     services:
       clickhouse:
         image: yandex/clickhouse-server:21
@@ -259,6 +259,7 @@ jobs:
     - run: poetry install --no-interaction -E "clickhouse pg spark cli linter"
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: poetry run pip install -r requirements-flink.txt
+    - run: poetry run make download-flink-jars
     - run: poetry run make test-coverage-all
       env:
         CLICKHOUSE_URL: clickhouse+native://default@localhost:9000
