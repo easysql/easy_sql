@@ -1,0 +1,2 @@
+apache-flink==1.15.1; python_version >= "3.7"
+sqlalchemy==1.4.40; (python_version >= "2.7" and python_full_version < "3.0.0") or (python_full_version >= "3.6.0")
