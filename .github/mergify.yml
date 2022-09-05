@@ -21,18 +21,10 @@ pull_request_rules:
         - and:
           - "#approved-reviews-by>=1"
           - -draft
-          - check-success=unit-test
-          - check-success=e2e-test-spark
-          - check-success=e2e-test-postgres
-          - check-success=e2e-test-clickhouse
           - check-success=test-coverage-all
         - and:
           - label=can-merge
           - -draft
-          - check-success=unit-test
-          - check-success=e2e-test-spark
-          - check-success=e2e-test-postgres
-          - check-success=e2e-test-clickhouse
           - check-success=test-coverage-all
     actions:
       queue:
