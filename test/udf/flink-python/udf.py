@@ -1,4 +1,3 @@
-
 from pyflink.table import DataTypes
 from pyflink.table.udf import udf
 
