@@ -116,13 +116,14 @@ def create_sql_processor_backend(backend_type: str, sql: str, task_name: str, ta
         etl_type = next(filter(lambda c: get_key_by_splitter_and_strip(c) == 'etl_type', customized_easy_sql_conf), None)
         backend = FlinkBackend(get_value_by_splitter_and_strip(etl_type) == 'batch' if etl_type else True)
         
+        # just for test
+        test_jar_path = 'test/flink/jars'
+        backend.add_jars([resolve_file(os.path.join(test_jar_path, jar), abs_path=True) \
+            for jar in os.listdir(test_jar_path)])
+        
         exec_sql = lambda sql: backend.exec_native_sql(sql)
         flink_tables_file_path = next(filter(lambda c: get_key_by_splitter_and_strip(c) == 'flink_tables_file_path', customized_easy_sql_conf), None)
-        backend.add_jars([
-            resolve_file('test/flink/jars/flink-connector-jdbc-1.15.1.jar', abs_path=True),
-            resolve_file('test/flink/jars/flink-sql-connector-hive-3.1.2_2.12-1.15.1.jar', abs_path=True),
-            resolve_file('test/flink/jars/postgresql-42.2.14.jar', abs_path=True)
-        ])
+        
         if flink_tables_file_path:
             flink_tables_file_path = resolve_file(get_value_by_splitter_and_strip(flink_tables_file_path), abs_path=True)
             backend.register_tables(flink_tables_file_path, tables)
