@@ -52,3 +52,8 @@ install-test-pip:
 upload-pip:
 	rm -rf ./dist
 	poetry publish --build
+
+download-flink-jars:
+	wget -P test/flink/jars https://repo1.maven.org/maven2/org/apache/flink/flink-connector-jdbc/1.15.1/flink-connector-jdbc-1.15.1.jar
+	wget -P test/flink/jars https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-hive-3.1.2_2.12/1.15.1/flink-sql-connector-hive-3.1.2_2.12-1.15.1.jar
+	wget -P test/flink/jars https://repo1.maven.org/maven2/org/postgresql/postgresql/42.2.14/postgresql-42.2.14.jar
