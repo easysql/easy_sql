@@ -124,8 +124,10 @@ class SqlProcessorReporter(ReportCollector):
             [
                 "bash",
                 "-c",
-                f"hdfs dfs -mkdir -p {os.path.basename(self.report_hdfs_path)} && "
-                f"hdfs dfs -put {local_tmp_file} {self.report_hdfs_path}",
+                (
+                    f"hdfs dfs -mkdir -p {os.path.basename(self.report_hdfs_path)} && "
+                    f"hdfs dfs -put {local_tmp_file} {self.report_hdfs_path}"
+                ),
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
