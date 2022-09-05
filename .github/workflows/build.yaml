@@ -211,7 +211,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.8']
-        java-version: ['8']
+        java-version: ['8', '11']
     services:
       clickhouse:
         image: yandex/clickhouse-server:21
