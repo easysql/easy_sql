@@ -145,8 +145,16 @@ jobs:
       uses: snok/install-poetry@v1.3.1
       with:
         virtualenvs-in-project: true
+    - name: Load cached Poetry dependencies
+      id: cached-poetry-dependencies
+      uses: actions/cache@v2
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-pg
+    - run: poetry install --no-interaction -E "pg cli linter"
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+    - run: poetry run pip install apache-flink==1.15.1
     - run: poetry run make download-flink-jars
-    - run: poetry run pip install -r requirements-flink.txt
     - run: poetry run make e2e-test-flink-postgres
       env:
         PG_URL: postgresql://postgres:postgres@localhost/postgres
@@ -288,7 +296,7 @@ jobs:
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-all
     - run: poetry install --no-interaction -E "clickhouse pg spark cli linter"
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-    - run: poetry run pip install -r requirements-flink.txt
+    - run: poetry run pip install apache-flink==1.15.1
     - run: poetry run make download-flink-jars
     - run: poetry run make test-coverage-all
       env:
