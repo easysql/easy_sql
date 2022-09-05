@@ -28,7 +28,13 @@ class FlinkTest(unittest.TestCase):
         self.run_test_table(backend)
         
     def test_flink_backend_pg(self):
-        backend = FlinkBackend()
+        backend = FlinkBackend()   
+        
+        # just for test
+        test_jar_path = 'test/flink/jars'
+        base_path = os.path.abspath(os.curdir)
+        backend.add_jars([os.path.join(base_path, test_jar_path, jar) \
+            for jar in os.listdir(test_jar_path)])
 
         schema = DataTypes.ROW([DataTypes.FIELD("id", DataTypes.INT()), DataTypes.FIELD("val", DataTypes.STRING())])
         table = backend.flink.from_elements([(1, '1'), (2, '2'), (3, '3')],schema=schema)
