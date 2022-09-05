@@ -47,6 +47,7 @@ openpyxl = "^3.0.10"
 [tool.poetry.extras]
 cli = ["click"]
 linter = ["sqlfluff","colorlog","regex"]
+spark = ["pyspark"]
 pg = ["SQLAlchemy", "psycopg2"]
 clickhouse = ["SQLAlchemy","clickhouse-driver","clickhouse-sqlalchemy"]
 maxcompute = ["pyodps"]
