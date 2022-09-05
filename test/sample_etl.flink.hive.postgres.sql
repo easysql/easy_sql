@@ -19,11 +19,11 @@ select
     ${a} as id,
     '2' as val
 union all
-select id, val from myhiveCatalog.myhive.hive_table
+select id, val from myhiveCatalog.default.hive_table
 union all
 select id, val from db_1.source_1
 
--- target=output.myhiveCatalog.myhive.hive_out_table
+-- target=output.myhiveCatalog.default.hive_out_table
 select id, val from result_view
 
 -- target=log.sample_result
