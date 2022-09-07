@@ -26,6 +26,12 @@ e2e-test-postgres:
 e2e-test-clickhouse:
 	python3 -m easy_sql.data_process -f test/sample_etl.clickhouse.sql
 
+e2e-test-flink-postgres:
+	python3 -m easy_sql.data_process -f test/sample_etl.flink.postgres.sql
+
+e2e-test-flink-hive:
+	python3 -m easy_sql.data_process -f test/sample_etl.flink.hive.sql
+
 test-coverage-all:
 	export PYSPARK_PYTHON=python3 && export PYSPARK_DRIVER_PYTHON=python3 && \
  		PG_URL=${PG_URL} CLICKHOUSE_URL=${CLICKHOUSE_URL} python3 -m coverage run -m pytest -o python_files=*test.py
@@ -46,3 +52,12 @@ install-test-pip:
 upload-pip:
 	rm -rf ./dist
 	poetry publish --build
+
+download-flink-jars:
+	test -f test/flink/jars/flink-connector-jdbc-1.15.1.jar || wget -P test/flink/jars https://repo1.maven.org/maven2/org/apache/flink/flink-connector-jdbc/1.15.1/flink-connector-jdbc-1.15.1.jar
+	test -f test/flink/jars/flink-sql-connector-hive-3.1.2_2.12-1.15.1.jar || wget -P test/flink/jars https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-hive-3.1.2_2.12/1.15.1/flink-sql-connector-hive-3.1.2_2.12-1.15.1.jar
+	test -f test/flink/jars/postgresql-42.2.14.jar || wget -P test/flink/jars https://repo1.maven.org/maven2/org/postgresql/postgresql/42.2.14/postgresql-42.2.14.jar
+
+install-flink-backend: download-flink-jars
+	poetry install -E 'cli pg linter'
+	poetry run pip install apache-flink==1.15.1

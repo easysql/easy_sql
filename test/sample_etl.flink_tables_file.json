@@ -1,0 +1,75 @@
+{
+    "excution": {
+        "catalog": {
+            "name": "myhiveCatalog",
+            "type": "hive",
+            "hive-conf-dir": "test/flink/flink_hive_conf"
+        }
+    },
+    "databases": [
+        {
+            "name": "db_1",
+            "connectors": [
+                {
+                    "name": "connector_1",
+                    "options": {
+                        "connector": "jdbc",
+                        "url": "jdbc:postgresql://localhost:5432/postgres",
+                        "username": "postgres",
+                        "password": "postgres"
+                    }
+                },
+                {
+                    "name": "connector_2",
+                    "options": {
+                        "connector": "postgres-cdc",
+                        "hostname": "localhost",
+                        "port": "5432",
+                        "database-name": "postgres",
+                        "schema-name": "postgres",
+                        "username": "postgres",
+                        "password": "postgres"
+                    }
+                }
+            ],
+            "tables": [
+                {
+                    "name": "source_1",
+                    "connector": {
+                        "name": "connector_1",
+                        "options": {
+                            "table-name": "sample.test"
+                        }
+                    },
+                    "schema": [
+                        "`id` INT",
+                        "val VARCHAR",
+                        "PRIMARY KEY (id) NOT ENFORCED"
+                    ],
+                    "partition_by": ["id", "val"]
+                },
+                {
+                    "name": "target_1",
+                    "connector": {
+                        "name": "connector_1",
+                        "options": {
+                            "table-name": "out_put_table"
+                        }
+                    },
+                    "schema": [
+                        "id INT",
+                        "val VARCHAR",
+                        "PRIMARY KEY (id) NOT ENFORCED"
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "db_2",
+            "connectors": [
+            ],
+            "tables": [
+            ]
+        }
+    ]
+}

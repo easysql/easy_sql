@@ -22,7 +22,7 @@ class SqlLinter:
     def __init__(self, sql: str, include_rules: Optional[List[str]] = None, exclude_rules: Optional[List[str]] = None):
         self.origin_sql = sql
         self.fixed_sql_list = []
-        self.supported_backend = ["spark", "postgres", "clickhouse", "bigquery"]
+        self.supported_backend = ["spark", "postgres", "clickhouse", "bigquery", "flink"]
         self.step_list = self._get_step_list()
         self.include_rules = include_rules
         self.exclude_rules = exclude_rules

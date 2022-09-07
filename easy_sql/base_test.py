@@ -16,9 +16,9 @@ from .logger import log_time
 
 
 def should_run_integration_test(key: Optional[str] = None):
-    if key is None or key in ["pg", "ch", "mc", "bq"]:
+    if key is None or key in ["pg", "ch", "mc", "bq", "flink_hive"]:
         return False
-    return False
+    return True
 
 
 TEST_PG_URL = os.environ.get("PG_URL", "postgresql://postgres:123456@testpg:15432/postgres")
