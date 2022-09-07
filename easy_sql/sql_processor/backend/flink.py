@@ -3,7 +3,7 @@ import os
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from ...logger import logger
-from .base import *
+from .base import Backend, Row, SaveMode, Table, TableMeta
 
 __all__ = ["FlinkRow", "FlinkTable", "FlinkBackend"]
 
