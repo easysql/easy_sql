@@ -84,7 +84,7 @@ class FlinkTest(unittest.TestCase):
         database = backend.flink.get_current_database()
         catalog_table = CatalogBaseTable(
             backend.flink._j_tenv.getCatalogManager()
-            .getTable(gateway.jvm.ObjectIdentifier.of(catalog, database, "out_put_table"))
+            .getTable(gateway.jvm.ObjectIdentifier.of(catalog, database, "out_put_table"))  # type: ignore
             .get()
             .getTable()
         )
@@ -210,7 +210,7 @@ class FlinkTest(unittest.TestCase):
         # first save without transformation or partitions
         backend.save_table(TableMeta("test_view"), TableMeta("out_put_table"), SaveMode.append)
         self.assertListEqual(
-            backend.exec_sql("select * from out_put_table").collect(),
+            backend.exec_sql("select * from out_put_table order by id").collect(),
             [
                 FlinkRow(Row(1, "1"), ["id", "val"]),
                 FlinkRow(Row(2, "2"), ["id", "val"]),
@@ -226,7 +226,7 @@ class FlinkTest(unittest.TestCase):
 
         backend.save_table(TableMeta("append_table"), TableMeta("out_put_table"), SaveMode.append)
         self.assertListEqual(
-            backend.exec_sql("select * from out_put_table").collect(),
+            backend.exec_sql("select * from out_put_table order by id").collect(),
             [
                 FlinkRow(Row(1, "1"), ["id", "val"]),
                 FlinkRow(Row(2, "2"), ["id", "val"]),
