@@ -370,8 +370,8 @@ There are several UDFs implemented in Easy SQL. Below are a list of them for ref
 
 ### Spark UDFs
 
-- [`remove_all_whitespaces(value: str) -> str`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/udf/udfs/index.html#easy_sql.udf.udfs.SparkUdfs.remove_all_whitespaces)
-- [`trim_all(value: str) -> str`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/udf/udfs/index.html#easy_sql.udf.udfs.SparkUdfs.trim_all)
+- [`remove_all_whitespaces(value: Union[str, NoneType]) -> Union[str, NoneType]`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/udf/udfs/index.html#easy_sql.udf.udfs.SparkUdfs.remove_all_whitespaces)
+- [`trim_all(value: Union[str, NoneType]) -> Union[str, NoneType]`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/udf/udfs/index.html#easy_sql.udf.udfs.SparkUdfs.trim_all)
 
 
 

@@ -144,16 +144,16 @@ For convenience, there are several utility functions implemented as well:
 Below are a list of them for referencing.
 
 
-        ### Functions for spark backend
+### Functions for spark backend
 
 
 #### Partition functions
 
-- [`ensure_dwd_partition_exists(step, *args) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_dwd_partition_exists)
-- [`ensure_partition_exists(step, *args) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_partition_exists)
-- [`ensure_partition_or_first_partition_exists(step, *args) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_partition_or_first_partition_exists)
+- [`ensure_dwd_partition_exists(step: Step, *args) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_dwd_partition_exists)
+- [`ensure_partition_exists(step: Step, *args) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_partition_exists)
+- [`ensure_partition_or_first_partition_exists(step: Step, *args) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_partition_or_first_partition_exists)
 - [`get_first_partition(table_name: str) -> str`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_first_partition)
-- [`get_first_partition_optional(table_name: str) -> Union[str, NoneType]`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_first_partition_optional)
+- [`get_first_partition_optional(table_name: str) -> Optional[str]`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_first_partition_optional)
 - [`get_last_partition(table_name: str) -> str`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_last_partition)
 - [`get_partition_col(table_name: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_partition_col)
 - [`get_partition_cols(table_name: str) -> List[str]`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_spark/index.html#easy_sql.sql_processor.funcs_spark.PartitionFuncs.get_partition_cols)
@@ -189,21 +189,21 @@ Below are a list of them for referencing.
 #### IO functions
 
 - [`rename_csv_output(spark_output_path: str, to_file: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_spark/index.html#easy_sql.sql_processor.funcs_spark.IOFuncs.rename_csv_output)
-- [`update_json_local(context, vars: str, list_vars: str, json_attr: str, output_file: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_spark/index.html#easy_sql.sql_processor.funcs_spark.IOFuncs.update_json_local)
+- [`update_json_local(context: ProcessorContext, vars: str, list_vars: str, json_attr: str, output_file: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_spark/index.html#easy_sql.sql_processor.funcs_spark.IOFuncs.update_json_local)
 - [`write_csv(table: str, output_file: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_spark/index.html#easy_sql.sql_processor.funcs_spark.IOFuncs.write_csv)
 - [`write_json_local(table: str, output_file: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_spark/index.html#easy_sql.sql_processor.funcs_spark.IOFuncs.write_json_local)
 
 
 #### Alert functions
 
-- [`alert(step, context, rule_name: str, pass_condition: str, alert_template: str, mentioned_users: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.AlertFunc.alert)
+- [`alert(step: Step, context: ProcessorContext, rule_name: str, pass_condition: str, alert_template: str, mentioned_users: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.AlertFunc.alert)
 - [`alert_exception_handler(rule_name: str, mentioned_users: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.AlertFunc.alert_exception_handler)
 
 
 #### Table functions
 
-- [`check_not_null_column_in_table(step: easy_sql.sql_processor.step.Step, table_name: str, not_null_column: str, query: str = None) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.TableFuncs.check_not_null_column_in_table)
-- [`ensure_no_null_data_in_table(step: easy_sql.sql_processor.step.Step, table_name: str, query: str = None) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.TableFuncs.ensure_no_null_data_in_table)
+- [`check_not_null_column_in_table(step: Step, table_name: str, not_null_column: str, query: Optional[str] = None) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.TableFuncs.check_not_null_column_in_table)
+- [`ensure_no_null_data_in_table(step: Step, table_name: str, query: Optional[str] = None) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.TableFuncs.ensure_no_null_data_in_table)
 
 
 #### Model functions
@@ -213,16 +213,16 @@ Below are a list of them for referencing.
 
 
 
-        ### Functions for rdb backend (PostgreSQL Clickhouse BigQuery)
+### Functions for rdb backend (PostgreSQL Clickhouse BigQuery)
 
 
 #### Partition functions
 
-- [`ensure_dwd_partition_exists(step, *args) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_dwd_partition_exists)
-- [`ensure_partition_exists(step, *args) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_partition_exists)
-- [`ensure_partition_or_first_partition_exists(step, *args) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_partition_or_first_partition_exists)
+- [`ensure_dwd_partition_exists(step: Step, *args) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_dwd_partition_exists)
+- [`ensure_partition_exists(step: Step, *args) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_partition_exists)
+- [`ensure_partition_or_first_partition_exists(step: Step, *args) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_partition_or_first_partition_exists)
 - [`get_first_partition(table_name: str) -> str`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_first_partition)
-- [`get_first_partition_optional(table_name: str) -> Union[str, NoneType]`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_first_partition_optional)
+- [`get_first_partition_optional(table_name: str) -> Optional[str]`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_first_partition_optional)
 - [`get_last_partition(table_name: str) -> str`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_last_partition)
 - [`get_partition_col(table_name: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_partition_col)
 - [`get_partition_cols(table_name: str) -> List[str]`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_rdb/index.html#easy_sql.sql_processor.funcs_rdb.PartitionFuncs.get_partition_cols)
@@ -244,14 +244,14 @@ Below are a list of them for referencing.
 
 #### Alert functions
 
-- [`alert(step, context, rule_name: str, pass_condition: str, alert_template: str, mentioned_users: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.AlertFunc.alert)
+- [`alert(step: Step, context: ProcessorContext, rule_name: str, pass_condition: str, alert_template: str, mentioned_users: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.AlertFunc.alert)
 - [`alert_exception_handler(rule_name: str, mentioned_users: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.AlertFunc.alert_exception_handler)
 
 
 #### Table functions
 
-- [`check_not_null_column_in_table(step: easy_sql.sql_processor.step.Step, table_name: str, not_null_column: str, query: str = None) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.TableFuncs.check_not_null_column_in_table)
-- [`ensure_no_null_data_in_table(step: easy_sql.sql_processor.step.Step, table_name: str, query: str = None) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.TableFuncs.ensure_no_null_data_in_table)
+- [`check_not_null_column_in_table(step: Step, table_name: str, not_null_column: str, query: Optional[str] = None) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.TableFuncs.check_not_null_column_in_table)
+- [`ensure_no_null_data_in_table(step: Step, table_name: str, query: Optional[str] = None) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.TableFuncs.ensure_no_null_data_in_table)
 
 
 #### Model functions

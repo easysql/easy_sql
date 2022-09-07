@@ -32,6 +32,7 @@ Contents
    easy_sql/functions.md
    easy_sql/udfs.md
    easy_sql/variables.md
+   easy_sql/backend/flink.md
    autoapi/index
 
 
