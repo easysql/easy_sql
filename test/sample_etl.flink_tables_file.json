@@ -4,6 +4,11 @@
             "name": "myhiveCatalog",
             "type": "hive",
             "hive-conf-dir": "test/flink/flink_hive_conf"
+        },
+        {
+            "name": "myhiveCatalog_1",
+            "type": "hive",
+            "hive-conf-dir": "test/flink/flink_hive_conf"
         }
     ],
     "databases": [
