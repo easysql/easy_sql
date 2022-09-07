@@ -106,6 +106,59 @@ jobs:
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: poetry run make e2e-test-spark
 
+  e2e-test-flink:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    strategy:
+      matrix:
+        python-version: ['3.7', '3.8']
+        java-version: ['11']
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+    - uses: actions/setup-python@v3
+      id: setup-python
+      with:
+        python-version: ${{ matrix.python-version }}
+    - uses: actions/setup-java@v3
+      with:
+        distribution: 'adopt'
+        java-version: ${{ matrix.java-version }}
+    - name: Load cached Poetry installation
+      uses: actions/cache@v2
+      with:
+        path: ~/.local/  # the path depends on the OS
+        key: poetry-1  # increment to reset cache
+    - name: Install Poetry
+      uses: snok/install-poetry@v1.3.1
+      with:
+        virtualenvs-in-project: true
+    - name: Load cached Poetry dependencies
+      id: cached-poetry-dependencies
+      uses: actions/cache@v2
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-pg
+    - run: poetry install --no-interaction -E "pg cli linter"
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+    - run: poetry run pip install apache-flink==1.15.1
+    - run: poetry run make download-flink-jars
+    - run: poetry run make e2e-test-flink-postgres
+      env:
+        PG_URL: postgresql://postgres:postgres@localhost/postgres
+
   e2e-test-postgres:
     runs-on: ubuntu-latest
     services:
@@ -197,7 +250,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.8']
-        java-version: ['8']
+        java-version: ['8', '11']
     services:
       clickhouse:
         image: yandex/clickhouse-server:21
@@ -243,6 +296,8 @@ jobs:
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-all
     - run: poetry install --no-interaction -E "clickhouse pg spark cli linter"
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+    - run: poetry run pip install apache-flink==1.15.1
+    - run: poetry run make download-flink-jars
     - run: poetry run make test-coverage-all
       env:
         CLICKHOUSE_URL: clickhouse+native://default@localhost:9000
