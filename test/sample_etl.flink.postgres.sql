@@ -11,7 +11,7 @@
 -- prepare-sql: create table public.out_put_table (id int4 PRIMARY KEY, val text)
 
 -- target=variables
-select 
+select
     'append'           as __save_mode__
 
 -- target=variables

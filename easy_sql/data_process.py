@@ -6,6 +6,7 @@ import urllib.parse
 from datetime import datetime
 from os import path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
 from easy_sql.sql_processor.backend import FlinkBackend
 
 if TYPE_CHECKING:
@@ -45,16 +46,16 @@ def read_sql(sql_file: str):
         return f.read()
 
 
-@click.command(name='data_process')
-@click.option('--sql-file', '-f', type=str)
-@click.option('--vars', '-v', type=str, required=False)
-@click.option('--dry-run', type=str, required=False, help='if dry run, one of [true, 1, false, 0]')
-@click.option('--print-command', '-p', is_flag=True)
+@click.command(name="data_process")
+@click.option("--sql-file", "-f", type=str)
+@click.option("--vars", "-v", type=str, required=False)
+@click.option("--dry-run", type=str, required=False, help="if dry run, one of [true, 1, false, 0]")
+@click.option("--print-command", "-p", is_flag=True)
 def data_process(sql_file: str, vars: str, dry_run: str, print_command: bool):
     _data_process(sql_file, vars, dry_run, print_command)
 
 
-def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], print_command: bool)-> Optional[str]:
+def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], print_command: bool) -> Optional[str]:
     if not sql_file.endswith(".sql"):
         raise Exception(f"sql_file must ends with .sql, found `{sql_file}`")
     dry_run = dry_run if dry_run is not None else "0"
@@ -95,7 +96,9 @@ def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], pr
 
         sql_processor.run(dry_run=is_dry_run)
 
-    backend: Backend = create_sql_processor_backend(config.backend, config.sql, config.task_name, config.tables, config.customized_easy_sql_conf)
+    backend: Backend = create_sql_processor_backend(
+        config.backend, config.sql, config.task_name, config.tables, config.customized_easy_sql_conf
+    )
 
     backend_is_bigquery = config.backend == "bigquery"
     pre_defined_vars = {"temp_db": backend.temp_schema if backend_is_bigquery else None}  # type: ignore
@@ -105,34 +108,45 @@ def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], pr
         backend.clean()
 
 
-def create_sql_processor_backend(backend_type: str, sql: str, task_name: str, tables: List[str], customized_easy_sql_conf: List[str]) -> Backend:
+def create_sql_processor_backend(
+    backend_type: str, sql: str, task_name: str, tables: List[str], customized_easy_sql_conf: List[str]
+) -> Backend:
     if backend_type == "spark":
         from easy_sql.spark_optimizer import get_spark
         from easy_sql.sql_processor.backend import SparkBackend
 
         backend = SparkBackend(get_spark(task_name))
         exec_sql = lambda sql: backend.exec_native_sql(sql)  # noqa: E731
-    elif backend_type == 'flink':
-        etl_type = next(filter(lambda c: get_key_by_splitter_and_strip(c) == 'etl_type', customized_easy_sql_conf), None)
-        backend = FlinkBackend(get_value_by_splitter_and_strip(etl_type) == 'batch' if etl_type else True)
-        
+    elif backend_type == "flink":
+        etl_type = next(
+            filter(lambda c: get_key_by_splitter_and_strip(c) == "etl_type", customized_easy_sql_conf), None
+        )
+        backend = FlinkBackend(get_value_by_splitter_and_strip(etl_type) == "batch" if etl_type else True)
+
         # just for test
-        test_jar_path = 'test/flink/jars'
-        backend.add_jars([resolve_file(os.path.join(test_jar_path, jar), abs_path=True) \
-            for jar in os.listdir(test_jar_path)])
-        
+        test_jar_path = "test/flink/jars"
+        backend.add_jars(
+            [resolve_file(os.path.join(test_jar_path, jar), abs_path=True) for jar in os.listdir(test_jar_path)]
+        )
+
         exec_sql = lambda sql: backend.exec_native_sql(sql)
-        flink_tables_file_path = next(filter(lambda c: get_key_by_splitter_and_strip(c) == 'flink_tables_file_path', customized_easy_sql_conf), None)
-        
+        flink_tables_file_path = next(
+            filter(lambda c: get_key_by_splitter_and_strip(c) == "flink_tables_file_path", customized_easy_sql_conf),
+            None,
+        )
+
         if flink_tables_file_path:
-            flink_tables_file_path = resolve_file(get_value_by_splitter_and_strip(flink_tables_file_path), abs_path=True)
+            flink_tables_file_path = resolve_file(
+                get_value_by_splitter_and_strip(flink_tables_file_path), abs_path=True
+            )
             backend.register_tables(flink_tables_file_path, tables)
             if tables:
                 conn = get_conn_from(flink_tables_file_path, backend, tables[0])
                 if conn:
                     from easy_sql.sql_processor.backend.rdb import _exec_sql
+
                     exec_sql = lambda sql: _exec_sql(conn, sql)
-            
+
     elif backend_type == "maxcompute":
         odps_params = {"access_id": "xx", "secret_access_key": "xx", "project": "xx", "endpoint": "xx"}
         from easy_sql.sql_processor.backend.maxcompute import (
@@ -216,13 +230,23 @@ class EasySqlConfig:
 
         udf_file_path, func_file_path, scala_udf_initializer = None, None, None
         for c in customized_easy_sql_conf:
-            if c.startswith('udf_file_path'):
+            if c.startswith("udf_file_path"):
                 udf_file_path = get_value_by_splitter_and_strip(c)
-            elif c.startswith('func_file_path'):
+            elif c.startswith("func_file_path"):
                 func_file_path = get_value_by_splitter_and_strip(c)
             elif c.startswith("scala_udf_initializer"):
                 scala_udf_initializer = get_value_by_splitter_and_strip(c)
-        return EasySqlConfig(sql_file, sql, backend, customized_backend_conf, customized_easy_sql_conf, udf_file_path, func_file_path, scala_udf_initializer, tables)
+        return EasySqlConfig(
+            sql_file,
+            sql,
+            backend,
+            customized_backend_conf,
+            customized_easy_sql_conf,
+            udf_file_path,
+            func_file_path,
+            scala_udf_initializer,
+            tables,
+        )
 
     @property
     def spark_submit(self):
@@ -267,20 +291,20 @@ class EasySqlConfig:
             '"',
         ]
         args = self.build_conf_command_args(default_conf, ["spark.files", "spark.jars", "spark.submit.pyFiles"])
-        return [f'--conf {arg}={args[arg]}' for arg in args]
+        return [f"--conf {arg}={args[arg]}" for arg in args]
 
     def flink_conf_command_args(self) -> List[str]:
         # config 的优先级：1. sql 代码里的 config 优先级高于这里的 default 配置
         # 对于数组类的 config，sql 代码里的 config 会添加进来，而不是覆盖默认配置
         assert self.sql_file is not None
         default_conf = [
-            'parallelism=1',
-            f'pyFiles={resolve_file(self.sql_file, abs_path=True)}'
+            "parallelism=1",
+            f"pyFiles={resolve_file(self.sql_file, abs_path=True)}"
             f'{"," + resolve_file(self.udf_file_path, abs_path=True) if self.udf_file_path else ""}'
             f'{"," + resolve_file(self.func_file_path, abs_path=True) if self.func_file_path else ""}',
         ]
         args = self.build_conf_command_args(default_conf, ["pyFiles"])
-        return [f'--{arg} {args[arg]}' for arg in args]
+        return [f"--{arg} {args[arg]}" for arg in args]
 
     def build_conf_command_args(self, default_conf: List[str], merge_keys: List[str]) -> dict[str, str]:
         # config 的优先级：1. sql 代码里的 config 优先级高于这里的 default 配置
@@ -299,10 +323,10 @@ class EasySqlConfig:
                 if conf_key in merge_keys:
                     customized_values = [
                         resolve_file(val.strip(), abs_path=True)
-                        for val in get_value_by_splitter_and_strip(customized_conf, '=', '"').split(",")
+                        for val in get_value_by_splitter_and_strip(customized_conf, "=", '"').split(",")
                         if val.strip()
                     ]
-                    default_values = [v for v in get_value_by_splitter_and_strip(conf, '=', '"').split(",") if v]
+                    default_values = [v for v in get_value_by_splitter_and_strip(conf, "=", '"').split(",") if v]
                     args.update({conf_key: f'"{",".join(set(default_values + customized_values))}"'})
                 else:
                     args.update({conf_key: get_value_by_splitter_and_strip(customized_conf)})
@@ -338,30 +362,33 @@ def _parse_backend(sql: str):
     backend = "spark"
     for line in sql_lines:
         if re.match(r"^-- \s*backend:.*$", line):
-            backend = get_value_by_splitter_and_strip(line, 'backend:').split(" ")[0]
+            backend = get_value_by_splitter_and_strip(line, "backend:").split(" ")[0]
             break
-    supported_backends = ['spark', 'postgres', 'clickhouse', 'maxcompute', 'bigquery', 'flink']
+    supported_backends = ["spark", "postgres", "clickhouse", "maxcompute", "bigquery", "flink"]
     if backend not in supported_backends:
         raise Exception(f"unsupported backend `${backend}`, all supported backends are: {supported_backends}")
     return backend
 
+
 def _parse_tables(sql: str):
     sql_lines = sql.split("\n")
-    INPUTS = 'inputs:'
-    OUTPUTS = 'outputs:'
+    INPUTS = "inputs:"
+    OUTPUTS = "outputs:"
     tables = []
     for line in sql_lines:
         if re.match(rf"^-- \s*{INPUTS}.*$", line):
-            tables += get_value_by_splitter_and_strip(line, INPUTS).split(',')
+            tables += get_value_by_splitter_and_strip(line, INPUTS).split(",")
         elif re.match(rf"^-- \s*{OUTPUTS}.*$", line):
-            tables += get_value_by_splitter_and_strip(line, OUTPUTS).split(',')
+            tables += get_value_by_splitter_and_strip(line, OUTPUTS).split(",")
     return list(set(map(lambda t: t.strip(), tables)))
+
 
 def get_conn_from(flink_tables_file_path: str, backend: FlinkBackend, table: str):
     db_url = retrieve_jdbc_url_from(flink_tables_file_path, backend, table)
     if db_url:
         from sqlalchemy import create_engine
         from sqlalchemy.engine.base import Connection, Engine
+
         engine: Engine = create_engine(db_url, isolation_level="AUTOCOMMIT", pool_size=1)
         conn: Connection = engine.connect()
         return conn
@@ -371,24 +398,30 @@ def retrieve_jdbc_url_from(flink_tables_file_path: str, backend: FlinkBackend, t
     if table and flink_tables_file_path and os.path.exists(flink_tables_file_path):
         with open(flink_tables_file_path, "r") as f:
             import json
+
             config = json.loads(f.read())
             _, _, connector = backend.get_table_config_and_connector(config, table)
-            if connector and connector['options']['connector'] == 'jdbc':
-                base_url = connector['options']['url']
-                username = connector['options']['username']
-                password = connector['options']['password']
+            if connector and connector["options"]["connector"] == "jdbc":
+                base_url = connector["options"]["url"]
+                username = connector["options"]["username"]
+                password = connector["options"]["password"]
                 split_expr = "://"
                 split_expr_index = base_url.index(split_expr)
-                db_type = base_url[len('jdbc:') : split_expr_index]
-                url = f"{db_type}{split_expr}{username}:{password}@{get_value_by_splitter_and_strip(base_url, split_expr)}"
+                db_type = base_url[len("jdbc:") : split_expr_index]
+                url = (
+                    f"{db_type}{split_expr}{username}:{password}@{get_value_by_splitter_and_strip(base_url, split_expr)}"
+                )
                 return url
 
-def get_key_by_splitter_and_strip(source: str, splitter: Optional[str] = '=', strip: Optional[str] = None):
+
+def get_key_by_splitter_and_strip(source: str, splitter: Optional[str] = "=", strip: Optional[str] = None):
     return source.strip()[: source.strip().index(splitter or "=")].strip(strip)
 
-def get_value_by_splitter_and_strip(source: str, splitter: Optional[str] = '=', strip: Optional[str] = None):
+
+def get_value_by_splitter_and_strip(source: str, splitter: Optional[str] = "=", strip: Optional[str] = None):
     splitter = splitter or "="
     return source.strip()[source.strip().index(splitter) + len(splitter) :].strip(strip)
+
 
 if __name__ == "__main__":
     # test cases:
