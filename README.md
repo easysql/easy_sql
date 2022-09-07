@@ -121,6 +121,26 @@ Run it with command:
 CLICKHOUSE_URL=clickhouse+native://default@localhost:9000 python3 -m easy_sql.data_process -f sample_etl.clickhouse.sql
 ```
 
+### For flink backend:
+
+If you want to use postgres as storage, need to start a postgres instance first.
+
+If you have docker, run the command below:
+
+```bash
+docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=123456 postgres
+```
+
+Create a file named `sample_etl.flink.postgres.sql` with content as the test file [here](https://github.com/easysql/easy_sql/blob/main/test/sample_etl.flink.postgres.sql).
+
+Make sure that you have install the corresponding backend with: `poetry run make install-flink-backend`
+
+Run it with command:
+
+```bash
+PG_URL=postgresql://postgres:123456@localhost:5432/postgres python3 -m easy_sql.data_process -f sample_etl.flink.postgres.sql
+```
+
 ### For other backends:
 
 The usage is similar, please refer to API.
