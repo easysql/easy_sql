@@ -13,7 +13,6 @@ Currently we are providing below extras, choose according to your need:
 - spark
 - pg
 - clickhouse
-- flink
 
 ## Building Easy SQL
 
@@ -21,3 +20,5 @@ Internally we use `poetry` to manage the dependencies. So make sure you have [in
 
 After the above command, there will be a file named `easy_sql*.whl` generated in the `dist` folder.
 You can install it with command `python3 -m pip install dist/easy_sql*.whl[extra]` or just `poetry install -E 'extra extra'`.
+
+We also provided flink as backend, but because of dependency conflicts between pyspark and apache-flink, you need to install the flink backend manually with the following make command `poetry run make install-flink-backend`.
