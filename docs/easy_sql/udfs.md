@@ -243,8 +243,7 @@ sum_value=13
 
 ### Register and use python UDF
 
-To register a python UDF is much easier. But if you choose to implement UDF in python, there might be a performance issue
-since spark application runs in Java and must talk to a python process when calling UDF.
+To register a python UDF is much easier. But if you choose to implement UDF in python, there might be a performance issue.
 
 First, we need to define a UDF in a python file:
 

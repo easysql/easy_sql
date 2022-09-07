@@ -138,7 +138,7 @@ Because of dependency conflicts between pyspark and apache-flink, you need to in
 Run it with command:
 
 ```bash
-PG_URL=postgresql://postgres:postgres@localhost:5432/postgres python3 -m easy_sql.data_process -f sample_etl.flink.postgres.sql
+bash -c "$(PG_URL=postgresql://postgres:postgres@localhost:5432/postgres python3 -m easy_sql.data_process -f sample_etl.flink.postgres.sql -p)"
 ```
 
 ### For other backends:
