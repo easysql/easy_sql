@@ -147,6 +147,148 @@ messages:
 stringset=['a', 'b']
 ```
 
+## For flink backend
+
+We can create flink UDF/UDAF using scala or python.
+
+It's easy to create a flink UDF. An example is as below:
+
+```scala
+class TestFunction extends ScalarFunction {
+  def eval(a: Integer, b: Integer): Integer = {
+    a + b + 10
+  }
+}
+```
+
+For details, please refer to flink [UDF](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/table/functions/udfs/) introduction page.
+
+```python
+from pyflink.table import DataTypes
+from pyflink.table.udf import udf
+
+__all__ = ["test_func"]
+
+@udf(result_type=DataTypes.BIGINT())
+def test_func(a: int, b: int) -> int:
+    return a + b
+```
+
+For details, please refer to pyflink [UDF](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/python/table/udfs/overview/) introduction page.
+
+### Register and use scala UDF
+
+To define and register a scala UDF, we need to create a scala file with a funciton named `initUdf`.
+Below is an example:
+
+```scala
+// udfs.scala
+package your.company
+
+import org.apache.flink.table.api._
+import org.apache.flink.table.functions.ScalarFunction
+
+class TestFunction extends ScalarFunction {
+  def eval(a: Integer, b: Integer): Integer = {
+    a + b + 10
+  }
+}
+
+object udfs {
+    def initUdfs(flink: TableEnvironment) {
+        flink.createTemporarySystemFunction("test_func", classOf[TestFunction])
+    }
+}
+```
+
+The next thing is to compile this file and package it into a jar file. An example command line could be:
+
+```bash
+# SCALA_BIN is a path to the bin folder of scala sdk directory.
+# SCALA_CP is the java class path for compiling. Usually are some jars.
+${SCALA_BIN}/scalac -nobootcp -cp ${SCALA_CP} -d classes your/company/*.scala
+cd classes && jar -cvf ../udf.jar .
+```
+
+After the command above, you'll get a jar file named `udf.jar`.
+
+We can register the above UDFs in ETL configuration block. Below is an example:
+
+```sql
+-- backend: flink
+-- config: jarfile=udf.jar
+-- config: easy_sql.scala_udf_initializer=your.company.udfs
+
+-- target=log.test_udf
+select test_func(1, 2) as sum_value
+```
+
+Save the file above to a file named `etl_with_udf.sql`, and then run command below to execute the ETL.
+
+```bash
+python3 -m easy_sql.data_process -f etl_with_udf.sql
+```
+
+You'll get a result like:
+
+```
+===================== REPORT FOR step-1 ==================
+config: StepConfig(target=log.test_udf, condition=None, line_no=5)
+sql: select test_func(1, 2) as sum_value
+status: SUCCEEDED
+start time: 2022-09-07 11:14:53, end time: 2022-09-07 11:15:01, execution time: 8.114609s - 99.82%
+messages:
+sum_value=13
+```
+
+### Register and use python UDF
+
+To register a python UDF is much easier. But if you choose to implement UDF in python, there might be a performance issue
+since spark application runs in Java and must talk to a python process when calling UDF.
+
+First, we need to define a UDF in a python file:
+
+```python
+from pyflink.table import DataTypes
+from pyflink.table.udf import udf
+
+__all__ = ["test_func"]
+
+@udf(result_type=DataTypes.BIGINT())
+def test_func(a: int, b: int) -> int:
+    return a + b
+```
+
+Let's assume the file name is `udf.py`.
+
+We can register the above UDFs in ETL configuration block. Below is an example:
+
+```sql
+-- backend: flink
+-- config: easy_sql.udf_file_path=udf.py
+
+-- target=log.test_udf
+select test_func(1, 2) as sum_value
+```
+
+Save the file above to a file named `etl_with_udf.sql`, and then run command below to execute the ETL.
+
+```bash
+bash -c "$(python3 -m easy_sql.data_process -f etl_with_udf.sql -p)"
+```
+
+You'll get a result like:
+
+```
+===================== REPORT FOR step-1 ==================
+config: StepConfig(target=log.test_udf, condition=None, line_no=4)
+sql: select test_func(1, 2) as sum_value
+status: SUCCEEDED
+start time: 2022-09-07 11:18:45, end time: 2022-09-07 11:18:55, execution time: 9.959185s - 98.94%
+messages:
+sum_value=3
+```
+
 ## For other backends
 
 For other backends, we can create UDF/UDAF with SQL.
