@@ -300,9 +300,11 @@ class EasySqlConfig:
         assert self.sql_file is not None
         default_conf = [
             "parallelism=1",
-            f"pyFiles={resolve_file(self.sql_file, abs_path=True)}"
-            f'{"," + resolve_file(self.udf_file_path, abs_path=True) if self.udf_file_path else ""}'
-            f'{"," + resolve_file(self.func_file_path, abs_path=True) if self.func_file_path else ""}',
+            (
+                f"pyFiles={resolve_file(self.sql_file, abs_path=True)}"
+                f'{"," + resolve_file(self.udf_file_path, abs_path=True) if self.udf_file_path else ""}'
+                f'{"," + resolve_file(self.func_file_path, abs_path=True) if self.func_file_path else ""}'
+            ),
         ]
         args = self.build_conf_command_args(default_conf, ["pyFiles"])
         return [f"--{arg} {args[arg]}" for arg in args]
