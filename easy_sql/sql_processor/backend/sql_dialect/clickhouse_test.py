@@ -13,7 +13,9 @@ class RdbTest(unittest.TestCase):
             sql,
             [
                 "alter table test.test drop partition tuple('20210101')",
-                "alter table dataplat.__table_partitions__ delete "
-                "where db_name = 'test' and table_name = 'test' and partition_value = '20210101'",
+                (
+                    "alter table dataplat.__table_partitions__ delete "
+                    "where db_name = 'test' and table_name = 'test' and partition_value = '20210101'"
+                ),
             ],
         )

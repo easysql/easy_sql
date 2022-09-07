@@ -284,12 +284,16 @@ class EasySqlConfig:
             "spark.submit.deployMode=client",
             f"spark.app.name={self.task_name}",
             "spark.sql.warehouse.dir=/tmp/spark-warehouse-localdw",
-            'spark.driver.extraJavaOptions="-Dderby.system.home=/tmp/spark-warehouse-metastore'
-            ' -Dderby.stream.error.file=/tmp/spark-warehouse-metastore.log"',
-            f'spark.files="{resolve_file(self.sql_file, abs_path=True)}'
-            f'{"," + resolve_file(self.udf_file_path, abs_path=True) if self.udf_file_path else ""}'
-            f'{"," + resolve_file(self.func_file_path, abs_path=True) if self.func_file_path else ""}'
-            '"',
+            (
+                'spark.driver.extraJavaOptions="-Dderby.system.home=/tmp/spark-warehouse-metastore'
+                ' -Dderby.stream.error.file=/tmp/spark-warehouse-metastore.log"'
+            ),
+            (
+                f'spark.files="{resolve_file(self.sql_file, abs_path=True)}'
+                f'{"," + resolve_file(self.udf_file_path, abs_path=True) if self.udf_file_path else ""}'
+                f'{"," + resolve_file(self.func_file_path, abs_path=True) if self.func_file_path else ""}'
+                '"'
+            ),
         ]
         args = self.build_conf_command_args(default_conf, ["spark.files", "spark.jars", "spark.submit.pyFiles"])
         return [f"--conf {arg}={args[arg]}" for arg in args]
