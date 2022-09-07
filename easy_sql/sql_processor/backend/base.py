@@ -107,6 +107,7 @@ class Backend:
     ):
         raise NotImplementedError()
 
+
 class Partition:
     def __init__(self, field: str, value=None):
         self.field = field
@@ -177,9 +178,11 @@ class TableMeta:
         return any([pt.value is None for pt in self.partitions])
 
     def get_full_table_name(self, temp_db: Optional[str] = None):
-        return f"{self.catalog_name}.{self.dbname or temp_db}.{self.pure_table_name}" \
-            if self.catalog_name \
+        return (
+            f"{self.catalog_name}.{self.dbname or temp_db}.{self.pure_table_name}"
+            if self.catalog_name
             else f"{self.dbname or temp_db}.{self.pure_table_name}"
+        )
 
 
 class Table:
