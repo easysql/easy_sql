@@ -9,6 +9,7 @@ from .base import Backend, Row, SaveMode, Table, TableMeta
 
 if TYPE_CHECKING:
     from pyflink.common import Row as PyFlinkRow
+    from pyflink.table import Table as PyFlinkTable
 
 __all__ = ["FlinkRow", "FlinkTable", "FlinkBackend"]
 
@@ -41,13 +42,11 @@ class FlinkRow(Row):
 
 class FlinkTable(Table):
     def __init__(self, table):
-        from pyflink.table import Table
-
-        self.table: Table = table
+        self.table: PyFlinkTable = table
 
     def is_empty(self) -> bool:
         with self.table.limit(1).execute().collect() as result:
-            return len(result) == 0
+            return len(list(result)) == 0
 
     def field_names(self) -> List[str]:
         return self.table.get_schema().get_field_names()
@@ -76,7 +75,7 @@ class FlinkTable(Table):
 
     def count(self) -> int:
         with self.table.execute().collect() as result:
-            return len(result)
+            return len(list(result))
 
 
 class FlinkBackend(Backend):
@@ -162,7 +161,7 @@ class FlinkBackend(Backend):
         )
         for p in static_partitions:
             temp_res = temp_res.add_columns(lit(p.value).alias(p.field))
-        temp_res = temp_res.select(*list(lambda column: col(column), columns))
+        temp_res = temp_res.select(*[col(column) for column in columns])
 
         temp_res.execute_insert(target_table_meta.table_name, save_mode == SaveMode.overwrite)
 
