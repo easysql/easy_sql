@@ -170,22 +170,22 @@ class FlinkBackend(Backend):
         pass
 
     def _register_catalog(self, flink_config):
-        if "excution" in flink_config and "catalog" in flink_config["excution"]:
-            catalog = flink_config["excution"]["catalog"]
-            catalog_name = catalog["name"]
-            del catalog["name"]
-            catalog_expr = " , ".join([f"'{option}' = '{catalog[option]}'" for option in catalog])
-            try:  # noqa: SIM105
-                self.exec_native_sql(
-                    f"""
-                        CREATE CATALOG {catalog_name}
-                        WITH (
-                            {catalog_expr}
-                        );
-                    """
-                )
-            except Exception:
-                logger.warn(f"create hive catalog {catalog_name} failed.")
+        if "catalogs" in flink_config:
+            for catalog in flink_config["catalogs"]:
+                catalog_name = catalog["name"]
+                del catalog["name"]
+                catalog_expr = " , ".join([f"'{option}' = '{catalog[option]}'" for option in catalog])
+                try:  # noqa: SIM105
+                    self.exec_native_sql(
+                        f"""
+                            CREATE CATALOG {catalog_name}
+                            WITH (
+                                {catalog_expr}
+                            );
+                        """
+                    )
+                except Exception:
+                    logger.warn(f"create hive catalog {catalog_name} failed.")
 
     def _register_tables(self, flink_config, tables: List[str]):
         if len(tables) == 0:
