@@ -174,7 +174,7 @@ class FlinkTest(unittest.TestCase):
         self.assertTrue(backend.table_exists(TableMeta("test_table_exist")))
         self.assertFalse(backend.table_exists(TableMeta("t.test_xx")))
 
-        backend.create_temp_table(backend.exec_sql("select * from test limit 2 order by id"), "test_limit")
+        backend.create_temp_table(backend.exec_sql("select * from test order by id limit 2 "), "test_limit")
         self.assertListEqual(
             backend.exec_sql("select * from test_limit").collect(),
             [FlinkRow(Row(1, "1"), ["id", "val"]), FlinkRow(Row(2, "2"), ["id", "val"])],
