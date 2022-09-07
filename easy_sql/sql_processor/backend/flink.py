@@ -1,9 +1,14 @@
+from __future__ import annotations
+
 import json
 import os
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 
 from ...logger import logger
 from .base import Backend, Row, SaveMode, Table, TableMeta
+
+if TYPE_CHECKING:
+    from pyflink.common import Row as PyFlinkRow
 
 __all__ = ["FlinkRow", "FlinkTable", "FlinkBackend"]
 
@@ -11,8 +16,6 @@ __all__ = ["FlinkRow", "FlinkTable", "FlinkBackend"]
 class FlinkRow(Row):
     def __init__(self, row=None, fields: Optional[List[str]] = None):
         assert row is not None
-        from pyflink.common import Row as PyFlinkRow
-
         self.row: PyFlinkRow = row
         if fields is not None:
             self.row._fields = fields
@@ -44,28 +47,27 @@ class FlinkTable(Table):
 
     def is_empty(self) -> bool:
         with self.table.limit(1).execute().collect() as result:
-            collected_result = [item for item in result]
-        return len(collected_result) == 0
+            return len(result) == 0
 
     def field_names(self) -> List[str]:
         return self.table.get_schema().get_field_names()
 
-    def first(self) -> "Row":
+    def first(self) -> Row:
         fields = self.table.get_schema().get_field_names()
         with self.table.execute().collect() as result:
             collected_result = [FlinkRow(item, fields) for item in result]
         return FlinkRow() if len(collected_result) == 0 else collected_result[0]
 
-    def limit(self, count: int) -> "FlinkTable":
+    def limit(self, count: int) -> FlinkTable:
         return FlinkTable(self.table.limit(count))
 
-    def with_column(self, name: str, value: Any) -> "FlinkTable":
+    def with_column(self, name: str, value: Any) -> FlinkTable:
         from pyflink.table.expression import Expression
         from pyflink.table.expressions import lit
 
         return FlinkTable(self.table.add_columns((value if isinstance(value, Expression) else lit(value)).alias(name)))
 
-    def collect(self) -> List["Row"]:
+    def collect(self) -> List[Row]:
         fields = self.table.get_schema().get_field_names()
         return [FlinkRow(item, fields) for item in self.table.execute().collect()]
 
@@ -74,8 +76,7 @@ class FlinkTable(Table):
 
     def count(self) -> int:
         with self.table.execute().collect() as result:
-            collected_result = [item for item in result]
-        return len(collected_result)
+            return len(result)
 
 
 class FlinkBackend(Backend):
@@ -113,22 +114,22 @@ class FlinkBackend(Backend):
         logger.info(f"will exec sql: {sql}")
         return self.flink.execute_sql(sql)
 
-    def exec_sql(self, sql: str) -> "Table":
+    def exec_sql(self, sql: str) -> Table:
         logger.info(f"will exec sql: {sql}")
         return FlinkTable(self.flink.sql_query(sql))
 
     def create_empty_table(self):
         return FlinkTable("")
 
-    def create_temp_table(self, table: "Table", name: str):
+    def create_temp_table(self, table: Table, name: str):
         assert isinstance(table, FlinkTable)
         self.flink.create_temporary_view(name, table.table)
 
-    def create_cache_table(self, table: "Table", name: str):
+    def create_cache_table(self, table: Table, name: str):
         assert isinstance(table, FlinkTable)
         self.flink.create_temporary_view(name, table.table)
 
-    def table_exists(self, table: "TableMeta"):
+    def table_exists(self, table: TableMeta):
         catalog = table.catalog_name if table.catalog_name else self.flink.get_current_catalog()
         database = table.dbname if table.dbname else self.flink.get_current_database()
         from pyflink.table.catalog import ObjectPath
@@ -137,9 +138,9 @@ class FlinkBackend(Backend):
 
     def save_table(
         self,
-        source_table_meta: "TableMeta",
-        target_table_meta: "TableMeta",
-        save_mode: "SaveMode",
+        source_table_meta: TableMeta,
+        target_table_meta: TableMeta,
+        save_mode: SaveMode,
         create_target_table: bool = False,
     ):
         from pyflink.table.expressions import col, lit
@@ -152,7 +153,6 @@ class FlinkBackend(Backend):
 
         temp_res = self.flink.sql_query(f"select * from {source_table_meta.table_name}")
         # 纯动态分区时，如果当日没有新增数据，则不会创建 partition。而我们希望对于静态分区，总是应该创建分区，即使当日没有数据
-        dynamic_partitions = list(filter(lambda p: not p.value, target_table_meta.partitions))
         static_partitions = list(filter(lambda p: p.value, target_table_meta.partitions))
         columns = (
             self.flink.sql_query(f"select * from {target_table_meta.table_name}")
@@ -162,7 +162,7 @@ class FlinkBackend(Backend):
         )
         for p in static_partitions:
             temp_res = temp_res.add_columns(lit(p.value).alias(p.field))
-        temp_res = temp_res.select(*list(map(lambda column: col(column), columns)))
+        temp_res = temp_res.select(*list(lambda column: col(column), columns))
 
         temp_res.execute_insert(target_table_meta.table_name, save_mode == SaveMode.overwrite)
 
@@ -171,7 +171,7 @@ class FlinkBackend(Backend):
         pass
 
     def _register_catalog(self, flink_config):
-        if "excution" in flink_config.keys() and "catalog" in flink_config["excution"].keys():
+        if "excution" in flink_config and "catalog" in flink_config["excution"]:
             catalog = flink_config["excution"]["catalog"]
             catalog_name = catalog["name"]
             del catalog["name"]
@@ -230,8 +230,7 @@ class FlinkBackend(Backend):
             if "partition_by" in table_config
             else ""
         )
-        options = dict()
-        options.update(connector["options"])
+        options = connector["options"]
         options.update(table_config["connector"]["options"])
         options_expr = " , ".join([f"'{option}' = '{options[option]}'" for option in options])
         create_sql = f"""

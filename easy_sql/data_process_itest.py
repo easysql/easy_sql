@@ -1,7 +1,7 @@
 import os.path
 import unittest
 
-from easy_sql import base_test, data_process
+from easy_sql import data_process
 
 proj_base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
