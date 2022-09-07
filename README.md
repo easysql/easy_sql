@@ -133,7 +133,7 @@ docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=123456 postgres
 
 Create a file named `sample_etl.flink.postgres.sql` with content as the test file [here](https://github.com/easysql/easy_sql/blob/main/test/sample_etl.flink.postgres.sql).
 
-Make sure that you have install the corresponding backend with: `poetry run make install-flink-backend`
+Because of dependency conflicts between pyspark and apache-flink, you need to install the corresponding backend with: `poetry run make install-flink-backend`
 
 Run it with command:
 
