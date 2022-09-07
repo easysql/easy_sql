@@ -381,7 +381,7 @@ def _parse_tables(sql: str):
             tables += get_value_by_splitter_and_strip(line, INPUTS).split(",")
         elif re.match(rf"^-- \s*{OUTPUTS}.*$", line):
             tables += get_value_by_splitter_and_strip(line, OUTPUTS).split(",")
-    return list(set(lambda t: t.strip(), tables))
+    return list({t.strip() for t in tables})
 
 
 def get_conn_from(flink_tables_file_path: str, backend: FlinkBackend, table: str):
