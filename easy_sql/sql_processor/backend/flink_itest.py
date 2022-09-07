@@ -1,12 +1,14 @@
+from __future__ import annotations
+
 import os
 import re
 import unittest
+from typing import TYPE_CHECKING
 
 from pyflink.common import Row
 from pyflink.table import DataTypes
 from pyflink.table.schema import Schema
 from pyflink.table.table_descriptor import TableDescriptor
-from sqlalchemy.engine.base import Connection, Engine
 
 from easy_sql import base_test
 from easy_sql.base_test import TEST_PG_URL
@@ -16,6 +18,9 @@ from easy_sql.sql_processor.backend.rdb import _exec_sql
 
 from .sql_dialect import SqlExpr
 from .sql_dialect.postgres import PgSqlDialect
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine.base import Connection, Engine
 
 
 class FlinkTest(unittest.TestCase):
@@ -56,7 +61,7 @@ class FlinkTest(unittest.TestCase):
         """,
         )
         backend.exec_native_sql(
-            f"""
+            """
             CREATE TABLE out_put_table (
                 id INT,
                 val VARCHAR,
@@ -171,13 +176,13 @@ class FlinkTest(unittest.TestCase):
 
         backend.create_temp_table(backend.exec_sql("select * from test limit 2"), "test_limit")
         self.assertListEqual(
-            backend.exec_sql(f"select * from test_limit").collect(),
+            backend.exec_sql("select * from test_limit").collect(),
             [FlinkRow(Row(1, "1"), ["id", "val"]), FlinkRow(Row(2, "2"), ["id", "val"])],
         )
 
         backend.create_cache_table(backend.exec_sql("select * from test"), "test_view")
         self.assertListEqual(
-            backend.exec_sql(f"select * from test_view").collect(),
+            backend.exec_sql("select * from test_view").collect(),
             [
                 FlinkRow(Row(1, "1"), ["id", "val"]),
                 FlinkRow(Row(2, "2"), ["id", "val"]),
@@ -192,9 +197,9 @@ class FlinkTest(unittest.TestCase):
         )
 
         exceptionMsg = (
-            f"org.apache.flink.table.api.ValidationException: INSERT OVERWRITE requires that the underlying"
-            f" DynamicTableSink of table 'default_catalog.default_database.out_put_table' implements the"
-            f" SupportsOverwrite interface."
+            "org.apache.flink.table.api.ValidationException: INSERT OVERWRITE requires that the underlying"
+            " DynamicTableSink of table 'default_catalog.default_database.out_put_table' implements the"
+            " SupportsOverwrite interface."
         )
         self.assertRaisesRegex(
             Exception,
@@ -204,21 +209,14 @@ class FlinkTest(unittest.TestCase):
 
         # first save without transformation or partitions
         backend.save_table(TableMeta("test_view"), TableMeta("out_put_table"), SaveMode.append)
-        collected_result = [str(item) for item in backend.exec_sql(f"select * from out_put_table").collect()]
-        expected_result = [
-            item
-            for item in map(
-                str,
-                [
-                    FlinkRow(Row(1, "1"), ["id", "val"]),
-                    FlinkRow(Row(2, "2"), ["id", "val"]),
-                    FlinkRow(Row(3, "3"), ["id", "val"]),
-                ],
-            )
-        ]
-        expected_result.sort()
-        collected_result.sort()
-        self.assertEqual(expected_result, collected_result)
+        self.assertListEqual(
+            backend.exec_sql("select * from out_put_table").collect(),
+            [
+                FlinkRow(Row(1, "1"), ["id", "val"]),
+                FlinkRow(Row(2, "2"), ["id", "val"]),
+                FlinkRow(Row(3, "3"), ["id", "val"]),
+            ],
+        )
 
         schema = DataTypes.ROW([DataTypes.FIELD("id", DataTypes.INT()), DataTypes.FIELD("val", DataTypes.STRING())])
         append_table = backend.flink.from_elements(
@@ -227,23 +225,16 @@ class FlinkTest(unittest.TestCase):
         backend.flink.register_table("append_table", append_table)
 
         backend.save_table(TableMeta("append_table"), TableMeta("out_put_table"), SaveMode.append)
-        collected_result = [str(item) for item in backend.exec_sql(f"select * from out_put_table").collect()]
-        expected_result = [
-            item
-            for item in map(
-                str,
-                [
-                    FlinkRow(Row(1, "1"), ["id", "val"]),
-                    FlinkRow(Row(2, "2"), ["id", "val"]),
-                    FlinkRow(Row(3, "3 has already been updated"), ["id", "val"]),
-                    FlinkRow(Row(5, "5"), ["id", "val"]),
-                    FlinkRow(Row(6, "6"), ["id", "val"]),
-                ],
-            )
-        ]
-        expected_result.sort()
-        collected_result.sort()
-        self.assertEqual(expected_result, collected_result)
+        self.assertListEqual(
+            backend.exec_sql("select * from out_put_table").collect(),
+            [
+                FlinkRow(Row(1, "1"), ["id", "val"]),
+                FlinkRow(Row(2, "2"), ["id", "val"]),
+                FlinkRow(Row(3, "3 has already been updated"), ["id", "val"]),
+                FlinkRow(Row(5, "5"), ["id", "val"]),
+                FlinkRow(Row(6, "6"), ["id", "val"]),
+            ],
+        )
 
         backend.clean()
         self.assertListEqual(backend.flink.list_temporary_views(), [])
@@ -253,65 +244,42 @@ class FlinkTest(unittest.TestCase):
     def run_test_backend_hive(self, backend: FlinkBackend):
         # first save without transformation or partitions
         backend.save_table(TableMeta("test"), TableMeta("testHiveCatalog.myhive.hive_table"), SaveMode.overwrite)
-        collected_result = [
-            str(item) for item in backend.exec_sql(f"select * from testHiveCatalog.myhive.hive_table").collect()
-        ]
-        expected_result = [
-            item
-            for item in map(
-                str,
-                [
-                    FlinkRow(Row(1, "1"), ["id", "val"]),
-                    FlinkRow(Row(2, "2"), ["id", "val"]),
-                    FlinkRow(Row(3, "3"), ["id", "val"]),
-                ],
-            )
-        ]
-        expected_result.sort()
-        collected_result.sort()
-        self.assertEqual(expected_result, collected_result)
+        self.assertListEqual(
+            backend.exec_sql("select * from testHiveCatalog.myhive.hive_table").collect(),
+            [
+                FlinkRow(Row(1, "1"), ["id", "val"]),
+                FlinkRow(Row(2, "2"), ["id", "val"]),
+                FlinkRow(Row(3, "3"), ["id", "val"]),
+            ],
+        )
 
         backend.save_table(
             TableMeta("testHiveCatalog.myhive.hive_table"),
             TableMeta("testHiveCatalog.myhive.hive_out_table"),
             SaveMode.overwrite,
         )
-        collected_result = [
-            str(item) for item in backend.exec_sql(f"select * from testHiveCatalog.myhive.hive_out_table").collect()
-        ]
-        expected_result = [
-            item
-            for item in map(
-                str,
-                [
-                    FlinkRow(Row(1, "1"), ["id", "val"]),
-                    FlinkRow(Row(2, "2"), ["id", "val"]),
-                    FlinkRow(Row(3, "3"), ["id", "val"]),
-                ],
-            )
-        ]
-        expected_result.sort()
-        collected_result.sort()
-        self.assertEqual(expected_result, collected_result)
+        self.assertListEqual(
+            backend.exec_sql("select * from testHiveCatalog.myhive.hive_out_table").collect(),
+            [
+                FlinkRow(Row(1, "1"), ["id", "val"]),
+                FlinkRow(Row(2, "2"), ["id", "val"]),
+                FlinkRow(Row(3, "3"), ["id", "val"]),
+            ],
+        )
 
         backend.create_temp_table(backend.exec_sql("select * from test limit 2"), "test_limit")
         self.assertListEqual(
-            backend.exec_sql(f"select * from test_limit").collect(),
+            backend.exec_sql("select * from test_limit").collect(),
             [FlinkRow(Row(1, "1"), ["id", "val"]), FlinkRow(Row(2, "2"), ["id", "val"])],
         )
 
         backend.save_table(
             TableMeta("test_limit"), TableMeta("testHiveCatalog.myhive.hive_out_table"), SaveMode.overwrite
         )
-        collected_result = [
-            str(item) for item in backend.exec_sql(f"select * from testHiveCatalog.myhive.hive_out_table").collect()
-        ]
-        expected_result = [
-            item for item in map(str, [FlinkRow(Row(1, "1"), ["id", "val"]), FlinkRow(Row(2, "2"), ["id", "val"])])
-        ]
-        expected_result.sort()
-        collected_result.sort()
-        self.assertEqual(expected_result, collected_result)
+        self.assertListEqual(
+            backend.exec_sql("select * from testHiveCatalog.myhive.hive_out_table").collect(),
+            [FlinkRow(Row(1, "1"), ["id", "val"]), FlinkRow(Row(2, "2"), ["id", "val"])],
+        )
 
         schema = DataTypes.ROW([DataTypes.FIELD("id", DataTypes.INT()), DataTypes.FIELD("val", DataTypes.STRING())])
         append_table = backend.flink.from_elements(
@@ -322,25 +290,16 @@ class FlinkTest(unittest.TestCase):
         backend.save_table(
             TableMeta("append_table"), TableMeta("testHiveCatalog.myhive.hive_out_table"), SaveMode.append
         )
-        collected_result = [
-            str(item) for item in backend.exec_sql(f"select * from testHiveCatalog.myhive.hive_out_table").collect()
-        ]
-        expected_result = [
-            item
-            for item in map(
-                str,
-                [
-                    FlinkRow(Row(1, "1"), ["id", "val"]),
-                    FlinkRow(Row(2, "2"), ["id", "val"]),
-                    FlinkRow(Row(2, "2 will not be updated in hive, but insert"), ["id", "val"]),
-                    FlinkRow(Row(5, "5"), ["id", "val"]),
-                    FlinkRow(Row(6, "6"), ["id", "val"]),
-                ],
-            )
-        ]
-        expected_result.sort()
-        collected_result.sort()
-        self.assertEqual(expected_result, collected_result)
+        self.assertListEqual(
+            backend.exec_sql("select * from testHiveCatalog.myhive.hive_out_table").collect(),
+            [
+                FlinkRow(Row(1, "1"), ["id", "val"]),
+                FlinkRow(Row(2, "2"), ["id", "val"]),
+                FlinkRow(Row(2, "2 will not be updated in hive, but insert"), ["id", "val"]),
+                FlinkRow(Row(5, "5"), ["id", "val"]),
+                FlinkRow(Row(6, "6"), ["id", "val"]),
+            ],
+        )
 
         schema = DataTypes.ROW([DataTypes.FIELD("id", DataTypes.INT()), DataTypes.FIELD("val", DataTypes.STRING())])
         table = backend.flink.from_elements([], schema=schema)
@@ -349,7 +308,7 @@ class FlinkTest(unittest.TestCase):
         backend.save_table(
             TableMeta("empty_table"), TableMeta("testHiveCatalog.myhive.hive_out_table"), SaveMode.overwrite, True
         )
-        self.assertListEqual(backend.exec_sql(f"select * from testHiveCatalog.myhive.hive_out_table").collect(), [])
+        self.assertListEqual(backend.exec_sql("select * from testHiveCatalog.myhive.hive_out_table").collect(), [])
 
         mock_dt_1, mock_dt_2 = "2021-01-01", "2021-01-02"
         # first save with partitions, should create
@@ -378,7 +337,7 @@ class FlinkTest(unittest.TestCase):
             True,
         )
         self.assertListEqual(
-            backend.exec_sql(f"select * from testHiveCatalog.myhive.hive_out_table_pt order by id, dt").collect(),
+            backend.exec_sql("select * from testHiveCatalog.myhive.hive_out_table_pt order by id, dt").collect(),
             [
                 FlinkRow(Row(1, "1", mock_dt_1), ["id", "val", "dt"]),
                 FlinkRow(Row(1, "1", mock_dt_2), ["id", "val", "dt"]),
@@ -396,7 +355,7 @@ class FlinkTest(unittest.TestCase):
             True,
         )
         self.assertListEqual(
-            backend.exec_sql(f"select * from testHiveCatalog.myhive.hive_out_table_pt order by id, dt").collect(),
+            backend.exec_sql("select * from testHiveCatalog.myhive.hive_out_table_pt order by id, dt").collect(),
             [
                 FlinkRow(Row(1, "1", mock_dt_1), ["id", "val", "dt"]),
                 FlinkRow(Row(1, "1", mock_dt_2), ["id", "val", "dt"]),
@@ -413,7 +372,7 @@ class FlinkTest(unittest.TestCase):
             True,
         )
         self.assertListEqual(
-            backend.exec_sql(f"select * from testHiveCatalog.myhive.hive_out_table_pt order by id, dt, val").collect(),
+            backend.exec_sql("select * from testHiveCatalog.myhive.hive_out_table_pt order by id, dt, val").collect(),
             [
                 FlinkRow(Row(1, "1", mock_dt_1), ["id", "val", "dt"]),
                 FlinkRow(Row(1, "1", mock_dt_2), ["id", "val", "dt"]),

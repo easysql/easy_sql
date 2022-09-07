@@ -11,6 +11,7 @@ from easy_sql.sql_processor.backend import FlinkBackend
 
 if TYPE_CHECKING:
     from easy_sql.sql_processor.backend import Backend
+    from sqlalchemy.engine.base import Connection, Engine
 
 import click
 
@@ -313,7 +314,7 @@ class EasySqlConfig:
         customized_conf_keys = [get_key_by_splitter_and_strip(c) for c in self.customized_backend_conf]
         customized_backend_conf = self.customized_backend_conf.copy()
 
-        args: dict[str, str] = dict()
+        args: dict[str, str] = {}
         for conf in default_conf:
             conf_key = get_key_by_splitter_and_strip(conf)
             if conf_key not in customized_conf_keys:
@@ -380,14 +381,13 @@ def _parse_tables(sql: str):
             tables += get_value_by_splitter_and_strip(line, INPUTS).split(",")
         elif re.match(rf"^-- \s*{OUTPUTS}.*$", line):
             tables += get_value_by_splitter_and_strip(line, OUTPUTS).split(",")
-    return list(set(map(lambda t: t.strip(), tables)))
+    return list(set(lambda t: t.strip(), tables))
 
 
 def get_conn_from(flink_tables_file_path: str, backend: FlinkBackend, table: str):
     db_url = retrieve_jdbc_url_from(flink_tables_file_path, backend, table)
     if db_url:
         from sqlalchemy import create_engine
-        from sqlalchemy.engine.base import Connection, Engine
 
         engine: Engine = create_engine(db_url, isolation_level="AUTOCOMMIT", pool_size=1)
         conn: Connection = engine.connect()
