@@ -27,7 +27,7 @@ Currently we are providing below extras, choose according to your need:
 - pg
 - clickhouse
 
-We also provide flink backend, but because of dependency confliction between pyspark and apache-flink, you need to install the flink backend dependencies manually with the following make command `python3 -m pip install apache-flink`.
+We also provide flink backend, but because of dependency confliction between pyspark and apache-flink, you need to install the flink backend dependencies manually with the following command `python3 -m pip install apache-flink`.
 
 Usually we read data from some data source and write data to some other system using flink with different connectors. So we need to download some jars for the used connectors as well. Refer [here](https://nightlies.apache.org/flink/flink-docs-release-1.15/docs/connectors/table/overview/) to get more information and [here](https://nightlies.apache.org/flink/flink-docs-release-1.15/docs/connectors/table/downloads/) to download the required connectors.
 
