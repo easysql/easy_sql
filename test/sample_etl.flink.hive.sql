@@ -20,7 +20,7 @@ select
 union all
 select id, val from myhiveCatalog.default.hive_table
 
--- target=output.myhiveCatalog.default.hive_out_table
+-- target=output.myhiveCatalog_1.default.hive_out_table
 select id, val from result_view
 
 -- target=log.sample_result
