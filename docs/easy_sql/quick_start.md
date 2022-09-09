@@ -111,6 +111,14 @@ If you have docker, run the command below:
 docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgres
 ```
 
+Download the required jars as below:
+
+```bash
+mkdir -pv test/flink/jars
+wget -P test/flink/jars https://repo1.maven.org/maven2/org/apache/flink/flink-connector-jdbc/1.15.1/flink-connector-jdbc-1.15.1.jar
+wget -P test/flink/jars https://repo1.maven.org/maven2/org/postgresql/postgresql/42.2.14/postgresql-42.2.14.jar
+```
+
 Create a file named `sample_etl.flink.postgres.sql` with content as the test file [here](https://github.com/easysql/easy_sql/blob/main/test/sample_etl.flink.postgres.sql).
 
 Create a connector configuration file named `sample_etl.flink_tables_file.json` with content as the test configuration file [here](https://github.com/easysql/easy_sql/blob/main/test/sample_etl.flink_tables_file.json).
