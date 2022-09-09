@@ -5,7 +5,7 @@ With Easy SQL, you can develop your ETL in SQL in an imperative way.
 It defines a few simple syntax on top of standard SQL, with which SQL could be executed one by one.
 Easy SQL also provides a processor to handle all the new syntax.
 Since this is SQL agnostic, any SQL engine could be plugged-in as a backend.
-There are built-in support for several popular SQL engines, including SparkSQL, PostgreSQL, Clickhouse, Aliyun Maxcompute, Google BigQuery.
+There are built-in support for several popular SQL engines, including SparkSQL, PostgreSQL, Clickhouse, FlinkSQL, Aliyun Maxcompute, Google BigQuery.
 More will be added in the near future.
 
 - Docs: <https://easy-sql.readthedocs.io/>
@@ -26,6 +26,10 @@ Currently we are providing below extras, choose according to your need:
 - spark
 - pg
 - clickhouse
+
+We also provide flink backend, but because of dependency confliction between pyspark and apache-flink, you need to install the flink backend dependencies manually with the following command `python3 -m pip install apache-flink`.
+
+Usually we read data from some data source and write data to some other system using flink with different connectors. So we need to download some jars for the used connectors as well. Refer [here](https://nightlies.apache.org/flink/flink-docs-release-1.15/docs/connectors/table/overview/) to get more information and [here](https://nightlies.apache.org/flink/flink-docs-release-1.15/docs/connectors/table/downloads/) to download the required connectors.
 
 ## Building Easy SQL
 
@@ -123,7 +127,9 @@ CLICKHOUSE_URL=clickhouse+native://default@localhost:9000 python3 -m easy_sql.da
 
 ### For flink backend:
 
-If you want to use postgres as storage, need to start a postgres instance first.
+Since there are many connectors for flink, you need to choose which connector to use before starting.
+
+As an example, if you want to read or write data to postgres, then you need to start a postgres instance first.
 
 If you have docker, run the command below:
 
@@ -133,17 +139,21 @@ docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgre
 
 Create a file named `sample_etl.flink.postgres.sql` with content as the test file [here](https://github.com/easysql/easy_sql/blob/main/test/sample_etl.flink.postgres.sql).
 
-Because of dependency conflicts between pyspark and apache-flink, you need to install the corresponding backend with: `poetry run make install-flink-backend`
+Create a connector configuration file named `sample_etl.flink_tables_file.json` with content as the test configuration file [here](https://github.com/easysql/easy_sql/blob/main/test/sample_etl.flink_tables_file.json).
+
+Because of dependency conflicts between pyspark and apache-flink, you need to install the corresponding backend with: `python3 -m pip install apache-flink`
 
 Run it with command:
 
 ```bash
-bash -c "$(PG_URL=postgresql://postgres:postgres@localhost:5432/postgres python3 -m easy_sql.data_process -f sample_etl.flink.postgres.sql -p)"
+bash -c "$(python3 -m easy_sql.data_process -f sample_etl.flink.postgres.sql -p)"
 ```
+
+There are a few other things to know about flink, click [here](https://easy-sql.readthedocs.io/en/latest/easy_sql/backend/flink.html) to get more information.
 
 ### For other backends:
 
-The usage is similar, please refer to API.
+The usage is similar, please refer to API doc [here](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/backend/index.html).
 
 ## Run ETL in your code
 

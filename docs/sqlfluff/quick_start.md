@@ -7,7 +7,7 @@ sqlfluff is a tool that can easily checkout sql code quality with varying SQL ba
 
 ## Python Requirement
 
-Sqlfluff not support for python 2, it need python 3+. Check your python version with the following:
+Sqlfluff does not support for python 2. It need python 3+. Check your python version with the following:
 
 ```bash
 $ python --version
