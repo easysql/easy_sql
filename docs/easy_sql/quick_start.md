@@ -89,6 +89,18 @@ CLICKHOUSE_URL=clickhouse+native://default@localhost:9000 python3 -m easy_sql.da
 
 ### For flink backend:
 
+Because of dependency conflicts between pyspark and apache-flink, you need to install the corresponding backend with command `python3 -m pip install apache-flink`.
+
+After the installation, you need to add flink commands directory to PATH environment variable to make flink commands discoverable by bash. To do it, execute the commands below:
+
+```bash
+export FLINK_HOME=$(python3 -m pyflink.find_flink_home)
+export PATH=$FLINK_HOME:$PATH
+export PYFLINK_CLIENT_EXECUTABLE=python3  # Set Python interpreter for flink client.
+```
+
+You can add these commands to your `.bashrc` or `.zshrc` file for convenience.
+
 Since there are many connectors for flink, you need to choose which connector to use before starting.
 
 As an example, if you want to read or write data to postgres, then you need to start a postgres instance first.
@@ -102,8 +114,6 @@ docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgre
 Create a file named `sample_etl.flink.postgres.sql` with content as the test file [here](https://github.com/easysql/easy_sql/blob/main/test/sample_etl.flink.postgres.sql).
 
 Create a connector configuration file named `sample_etl.flink_tables_file.json` with content as the test configuration file [here](https://github.com/easysql/easy_sql/blob/main/test/sample_etl.flink_tables_file.json).
-
-Because of dependency conflicts between pyspark and apache-flink, you need to install the corresponding backend with: `python3 -m pip install apache-flink`
 
 Run it with command:
 
