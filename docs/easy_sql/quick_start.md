@@ -89,13 +89,13 @@ CLICKHOUSE_URL=clickhouse+native://default@localhost:9000 python3 -m easy_sql.da
 
 ### For flink backend:
 
-Because of dependency conflicts between pyspark and apache-flink, you need to install the corresponding backend with command `python3 -m pip install apache-flink`.
+Because of dependency conflictions between pyspark and apache-flink, you need to install the flink manually with command `python3 -m pip install apache-flink`.
 
 After the installation, you need to add flink commands directory to PATH environment variable to make flink commands discoverable by bash. To do it, execute the commands below:
 
 ```bash
 export FLINK_HOME=$(python3 -m pyflink.find_flink_home)
-export PATH=$FLINK_HOME:$PATH
+export PATH=$FLINK_HOME/bin:$PATH
 export PYFLINK_CLIENT_EXECUTABLE=python3  # Set Python interpreter for flink client.
 ```
 
