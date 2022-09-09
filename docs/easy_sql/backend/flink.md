@@ -17,7 +17,7 @@ To specify which mode to use in the ETL, we could add a configuration as below:
 
 ### Connector configuration
 
-A flink application reads data from some data source and write data to some other system. Both the source and target are configured by connectors. (Refer [here](https://nightlies.apache.org/flink/flink-docs-release-1.15/docs/connectors/table/overview/) to know about it.)
+A flink application reads data from some data source and write data to some other system. Both the source and target are configured by connectors. (Refer [here](https://nightlies.apache.org/flink/flink-docs-release-1.15/docs/connectors/table/overview/) to know more about it.)
 
 To write a flink application in Easy SQL, we need to provide a configuration file to describe the connectors used.
 
@@ -45,7 +45,7 @@ The configuration file is in JSON format and the structure of it is intuitive. B
             "base-url" = "..."
         }
     ],
-    // Define databases and tables that will be regsitered in flink.
+    // Define databases and tables that will be registered in flink.
     // The below configuration could be generated from the data source.
     "databases": [
         {
