@@ -6,7 +6,7 @@ There is a debugger interface implemented in Easy SQL.
 
 We recommend debugging ETLs from jupyter. You can follow the steps below to start debugging your ETL.
 
-1. Install jupyter first with command `pip install jupyterlab`.
+1. Install jupyter first with command `python3 -m pip install jupyterlab`.
 
 2. Create a file named `debugger.py` with contents like below:
 
