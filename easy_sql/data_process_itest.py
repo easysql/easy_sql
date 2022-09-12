@@ -36,11 +36,14 @@ class DataProcessTest(unittest.TestCase):
         command = data_process._data_process(
             os.path.join(proj_base_dir, "test/sample_etl.flink.hive.sql"), None, None, True
         )
+
         assert command is not None
+        print(command)
         self.assertRegex(
             command,
-            r"flink run --parallelism 1 "
+            r"flink run --parallelism 2 "
             '--pyFiles [^"]+test/sample_etl.flink.hive.sql '
+            "-Djobmanager.memory.process.size=1024m -Dtaskmanager.memory.process.size=4096m -t local "
             '--python "[^"]+/easy_sql/data_process.py" '
             "-f .+/test/sample_etl.flink.hive.sql --dry-run 0",
         )

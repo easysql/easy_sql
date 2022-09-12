@@ -98,7 +98,12 @@ def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], pr
         sql_processor.run(dry_run=is_dry_run)
 
     backend: Backend = create_sql_processor_backend(
-        config.backend, config.sql, config.task_name, config.tables, config.customized_easy_sql_conf
+        config.backend,
+        config.sql,
+        config.task_name,
+        config.tables,
+        config.customized_easy_sql_conf,
+        config.customized_backend_conf,
     )
 
     backend_is_bigquery = config.backend == "bigquery"
@@ -110,7 +115,12 @@ def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], pr
 
 
 def create_sql_processor_backend(
-    backend_type: str, sql: str, task_name: str, tables: List[str], customized_easy_sql_conf: List[str]
+    backend_type: str,
+    sql: str,
+    task_name: str,
+    tables: List[str],
+    customized_easy_sql_conf: List[str],
+    customized_backend_conf: List[str],
 ) -> Backend:
     if backend_type == "spark":
         from easy_sql.spark_optimizer import get_spark
@@ -123,6 +133,18 @@ def create_sql_processor_backend(
             filter(lambda c: get_key_by_splitter_and_strip(c) == "etl_type", customized_easy_sql_conf), None
         )
         backend = FlinkBackend(get_value_by_splitter_and_strip(etl_type) == "batch" if etl_type else True)
+
+        python_configs = {}
+        for c in customized_backend_conf:
+            if get_key_by_splitter_and_strip(c).startswith("flink.python"):
+                python_configs.update(
+                    {
+                        get_value_by_splitter_and_strip(
+                            get_key_by_splitter_and_strip(c), "flink."
+                        ): get_value_by_splitter_and_strip(c)
+                    }
+                )
+        backend.set_configurations(python_configs)
 
         # just for test
         test_jar_path = "test/flink/jars"
@@ -310,8 +332,30 @@ class EasySqlConfig:
                 f'{"," + resolve_file(self.func_file_path, abs_path=True) if self.func_file_path else ""}'
             ),
         ]
+
+        cmd_values = [
+            get_value_by_splitter_and_strip(c)
+            for c in self.customized_backend_conf
+            if get_key_by_splitter_and_strip(c) == "flink.cmd"
+        ]
+
         args = self.build_conf_command_args(default_conf, ["pyFiles"])
-        return [f"--{arg} {args[arg]}" for arg in args]
+
+        d_args = [
+            f"-D{get_value_by_splitter_and_strip(arg, 'flink.')}={args[arg]}"
+            for arg in args
+            if arg.startswith("flink.") and not arg.startswith("flink.python") and not arg.startswith("flink.cmd")
+        ]
+
+        other_args = [f"--{arg} {args[arg]}" for arg in args if not arg.startswith("flink.")]
+
+        configs = other_args + cmd_values + d_args
+
+        sorted_configs = list(set(configs))
+
+        sorted_configs.sort()
+
+        return sorted_configs
 
     def build_conf_command_args(self, default_conf: List[str], merge_keys: List[str]) -> dict[str, str]:
         # config 的优先级：1. sql 代码里的 config 优先级高于这里的 default 配置
