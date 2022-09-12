@@ -67,9 +67,8 @@ class DataProcessTest(unittest.TestCase):
         assert command is not None
         self.assertRegex(
             command,
-            r"flink run --parallelism 1 "
+            r"flink run --jarfile udf.jar --parallelism 1 "
             '--pyFiles [^"]+test/udf/flink-scala/etl_with_udf.sql '
-            "--jarfile udf.jar "
             '--python "[^"]+/easy_sql/data_process.py" '
             "-f .+/test/udf/flink-scala/etl_with_udf.sql --dry-run 0",
         )
