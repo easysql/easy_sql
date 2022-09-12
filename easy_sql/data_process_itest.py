@@ -38,10 +38,9 @@ class DataProcessTest(unittest.TestCase):
         )
 
         assert command is not None
-        print(command)
         self.assertRegex(
             command,
-            r"flink run --parallelism 2 "
+            r"flink run --parallelism 1 "
             '--pyFiles [^"]+test/sample_etl.flink.hive.sql '
             "-Djobmanager.memory.process.size=1024m -Dtaskmanager.memory.process.size=4096m -t local "
             '--python "[^"]+/easy_sql/data_process.py" '
