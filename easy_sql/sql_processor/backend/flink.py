@@ -252,3 +252,7 @@ class FlinkBackend(Backend):
 
     def add_jars(self, jars_path: List[str]):
         self.flink.get_config().set("pipeline.jars", f'{";".join([f"file://{path}" for path in jars_path])}')
+
+    def set_configurations(self, configs: dict):
+        for c in configs:
+            self.flink.get_config().set(c, configs[c])
