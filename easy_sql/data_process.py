@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 import click
 
 
-def resolve_file(file_path: str, abs_path: bool = False) -> str:
+def resolve_file(file_path: str, abs_path: bool = False, prefix: str = "") -> str:
     if file_path.lower().startswith("hdfs://"):
         # do not resolve if it is hdfs path
         return file_path
@@ -35,7 +35,7 @@ def resolve_file(file_path: str, abs_path: bool = False) -> str:
         # Remove space inside file path, since spark will raise issue with this case.
         # We must ensure there is a soft link to the path with space removed to the end.
         file_path = "/".join([re.sub(r" .*$", "", part) for part in parts])
-    return file_path
+    return prefix + file_path
 
 
 def resolve_files(files_path: str, abs_path: bool = False) -> str:
@@ -329,20 +329,28 @@ class EasySqlConfig:
         default_conf = [
             "--parallelism=1",
             (
-                f"--pyFiles={resolve_file(self.sql_file, abs_path=True)}"
-                f'{"," + resolve_file(self.udf_file_path, abs_path=True) if self.udf_file_path else ""}'
-                f'{"," + resolve_file(self.func_file_path, abs_path=True) if self.func_file_path else ""}'
+                f"--pyFiles={resolve_file(self.sql_file, abs_path=True, prefix='file://')}"
+                f'{"," + resolve_file(self.udf_file_path, abs_path=True, prefix="file://") if self.udf_file_path else ""}'
+                f'{"," + resolve_file(self.func_file_path, abs_path=True, prefix="file://") if self.func_file_path else ""}'
             ),
         ]
 
-        cmd_values = [
-            f'{get_key_by_splitter_and_strip(get_value_by_splitter_and_strip(c), " ")}'
-            f'={get_value_by_splitter_and_strip(get_value_by_splitter_and_strip(c), " ")}'
-            for c in self.customized_backend_conf
-            if get_key_by_splitter_and_strip(c) == "flink.cmd"
-        ]
+        need_resolve_file_keys = ["-pyarch", "--pyArchives", "-pyreq", "--pyRequirements", "-s", "--fromSavepoint"]
+        cmd_value_args = []
+        for c in self.customized_backend_conf:
+            if get_key_by_splitter_and_strip(c) == "flink.cmd":
+                key = get_key_by_splitter_and_strip(get_value_by_splitter_and_strip(c), " ")
+                value = get_value_by_splitter_and_strip(get_value_by_splitter_and_strip(c), " ")
+                if key in need_resolve_file_keys:
+                    resolve_files = [
+                        f'{resolve_file(val.strip(), abs_path=True, prefix="file://")}'
+                        for val in value.split(",")
+                        if val.strip()
+                    ]
+                    value = f'"{",".join(set(resolve_files))}"'
+                cmd_value_args.append(f"{key}={value}")
 
-        args = self.build_conf_command_args(default_conf, ["--pyFiles"], cmd_values)
+        args = self.build_conf_command_args(default_conf, ["--pyFiles"], cmd_value_args)
         cmd_args = [f"{arg} {args[arg]}" for arg in args if not arg.startswith("flink.")]
 
         d_args = [
