@@ -317,7 +317,9 @@ class EasySqlConfig:
                 '"'
             ),
         ]
-        args = self.build_conf_command_args(default_conf, ["spark.files", "spark.jars", "spark.submit.pyFiles"])
+        args = self.build_conf_command_args(
+            default_conf, ["spark.files", "spark.jars", "spark.submit.pyFiles"], self.customized_backend_conf
+        )
         return [f"--conf {arg}={args[arg]}" for arg in args]
 
     def flink_conf_command_args(self) -> List[str]:
@@ -325,44 +327,45 @@ class EasySqlConfig:
         # 对于数组类的 config，sql 代码里的 config 会添加进来，而不是覆盖默认配置
         assert self.sql_file is not None
         default_conf = [
-            "parallelism=1",
+            "--parallelism=1",
             (
-                f"pyFiles={resolve_file(self.sql_file, abs_path=True)}"
+                f"--pyFiles={resolve_file(self.sql_file, abs_path=True)}"
                 f'{"," + resolve_file(self.udf_file_path, abs_path=True) if self.udf_file_path else ""}'
                 f'{"," + resolve_file(self.func_file_path, abs_path=True) if self.func_file_path else ""}'
             ),
         ]
 
         cmd_values = [
-            get_value_by_splitter_and_strip(c)
+            f'{get_key_by_splitter_and_strip(get_value_by_splitter_and_strip(c), " ")}'
+            f'={get_value_by_splitter_and_strip(get_value_by_splitter_and_strip(c), " ")}'
             for c in self.customized_backend_conf
             if get_key_by_splitter_and_strip(c) == "flink.cmd"
         ]
 
-        args = self.build_conf_command_args(default_conf, ["pyFiles"])
+        args = self.build_conf_command_args(default_conf, ["--pyFiles"], cmd_values)
+        cmd_args = [f"{arg} {args[arg]}" for arg in args if not arg.startswith("flink.")]
 
         d_args = [
-            f"-D{get_value_by_splitter_and_strip(arg, 'flink.')}={args[arg]}"
-            for arg in args
+            f"-D{get_value_by_splitter_and_strip(get_key_by_splitter_and_strip(arg), 'flink.')}"
+            f"={get_value_by_splitter_and_strip(arg)}"
+            for arg in self.customized_backend_conf
             if arg.startswith("flink.") and not arg.startswith("flink.python") and not arg.startswith("flink.cmd")
         ]
 
-        other_args = [f"--{arg} {args[arg]}" for arg in args if not arg.startswith("flink.")]
+        configs = list(set(cmd_args + d_args))
 
-        configs = other_args + cmd_values + d_args
+        configs.sort()
 
-        sorted_configs = list(set(configs))
+        return configs
 
-        sorted_configs.sort()
-
-        return sorted_configs
-
-    def build_conf_command_args(self, default_conf: List[str], merge_keys: List[str]) -> dict[str, str]:
+    def build_conf_command_args(
+        self, default_conf: List[str], merge_keys: List[str], customized_confs: List[str]
+    ) -> dict[str, str]:
         # config 的优先级：1. sql 代码里的 config 优先级高于这里的 default 配置
         # 对于数组类的 config，sql 代码里的 config 会添加进来，而不是覆盖默认配置
         assert self.sql_file is not None
-        customized_conf_keys = [get_key_by_splitter_and_strip(c) for c in self.customized_backend_conf]
-        customized_backend_conf = self.customized_backend_conf.copy()
+        customized_conf_keys = [get_key_by_splitter_and_strip(c) for c in customized_confs]
+        customized_backend_conf = customized_confs.copy()
 
         args: dict[str, str] = {}
         for conf in default_conf:

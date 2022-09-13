@@ -1,7 +1,7 @@
 -- backend: flink
 -- config: easy_sql.flink_tables_file_path=sample_etl.flink_tables_file.json
 -- config: flink.cmd=-t local
--- config: flink.cmd=--parallelism 1
+-- config: flink.cmd=--parallelism 2
 -- config: flink.python.fn-execution.bundle.size=1000
 -- config: flink.python.client.executable=python
 -- config: flink.jobmanager.memory.process.size=1024m
