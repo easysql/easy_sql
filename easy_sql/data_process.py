@@ -350,7 +350,7 @@ class EasySqlConfig:
                     value = f'"{",".join(set(resolve_files))}"'
                 cmd_value_args.append(f"{key}={value}")
 
-        args = self.build_conf_command_args(default_conf, ["--pyFiles"], cmd_value_args)
+        args = self.build_conf_command_args(default_conf, ["-pyfs", "--pyFiles"], cmd_value_args, prefix="file://")
         cmd_args = [f"{arg} {args[arg]}" for arg in args if not arg.startswith("flink.")]
 
         d_args = [
@@ -367,7 +367,7 @@ class EasySqlConfig:
         return configs
 
     def build_conf_command_args(
-        self, default_conf: List[str], merge_keys: List[str], customized_confs: List[str]
+        self, default_conf: List[str], merge_keys: List[str], customized_confs: List[str], prefix: str = ""
     ) -> dict[str, str]:
         # config 的优先级：1. sql 代码里的 config 优先级高于这里的 default 配置
         # 对于数组类的 config，sql 代码里的 config 会添加进来，而不是覆盖默认配置
@@ -384,7 +384,7 @@ class EasySqlConfig:
                 customized_conf = [conf for conf in customized_backend_conf if conf.startswith(conf_key)][0]
                 if conf_key in merge_keys:
                     customized_values = [
-                        resolve_file(val.strip(), abs_path=True)
+                        resolve_file(val.strip(), abs_path=True, prefix=prefix)
                         for val in get_value_by_splitter_and_strip(customized_conf, "=", '"').split(",")
                         if val.strip()
                     ]
