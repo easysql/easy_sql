@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 import click
 
 
-def resolve_file(file_path: str, abs_path: bool = False) -> str:
+def resolve_file(file_path: str, abs_path: bool = False, prefix: str = "") -> str:
     if file_path.lower().startswith("hdfs://"):
         # do not resolve if it is hdfs path
         return file_path
@@ -35,7 +35,7 @@ def resolve_file(file_path: str, abs_path: bool = False) -> str:
         # Remove space inside file path, since spark will raise issue with this case.
         # We must ensure there is a soft link to the path with space removed to the end.
         file_path = "/".join([re.sub(r" .*$", "", part) for part in parts])
-    return file_path
+    return prefix + file_path
 
 
 def resolve_files(files_path: str, abs_path: bool = False) -> str:
@@ -98,7 +98,12 @@ def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], pr
         sql_processor.run(dry_run=is_dry_run)
 
     backend: Backend = create_sql_processor_backend(
-        config.backend, config.sql, config.task_name, config.tables, config.customized_easy_sql_conf
+        config.backend,
+        config.sql,
+        config.task_name,
+        config.tables,
+        config.customized_easy_sql_conf,
+        config.customized_backend_conf,
     )
 
     backend_is_bigquery = config.backend == "bigquery"
@@ -110,7 +115,12 @@ def _data_process(sql_file: str, vars: Optional[str], dry_run: Optional[str], pr
 
 
 def create_sql_processor_backend(
-    backend_type: str, sql: str, task_name: str, tables: List[str], customized_easy_sql_conf: List[str]
+    backend_type: str,
+    sql: str,
+    task_name: str,
+    tables: List[str],
+    customized_easy_sql_conf: List[str],
+    customized_backend_conf: List[str],
 ) -> Backend:
     if backend_type == "spark":
         from easy_sql.spark_optimizer import get_spark
@@ -123,6 +133,18 @@ def create_sql_processor_backend(
             filter(lambda c: get_key_by_splitter_and_strip(c) == "etl_type", customized_easy_sql_conf), None
         )
         backend = FlinkBackend(get_value_by_splitter_and_strip(etl_type) == "batch" if etl_type else True)
+
+        python_configs = {}
+        for c in customized_backend_conf:
+            if get_key_by_splitter_and_strip(c).startswith("flink.python"):
+                python_configs.update(
+                    {
+                        get_value_by_splitter_and_strip(
+                            get_key_by_splitter_and_strip(c), "flink."
+                        ): get_value_by_splitter_and_strip(c)
+                    }
+                )
+        backend.set_configurations(python_configs)
 
         # just for test
         test_jar_path = "test/flink/jars"
@@ -295,7 +317,9 @@ class EasySqlConfig:
                 '"'
             ),
         ]
-        args = self.build_conf_command_args(default_conf, ["spark.files", "spark.jars", "spark.submit.pyFiles"])
+        args = self.build_conf_command_args(
+            default_conf, ["spark.files", "spark.jars", "spark.submit.pyFiles"], self.customized_backend_conf
+        )
         return [f"--conf {arg}={args[arg]}" for arg in args]
 
     def flink_conf_command_args(self) -> List[str]:
@@ -303,22 +327,53 @@ class EasySqlConfig:
         # 对于数组类的 config，sql 代码里的 config 会添加进来，而不是覆盖默认配置
         assert self.sql_file is not None
         default_conf = [
-            "parallelism=1",
+            "--parallelism=1",
             (
-                f"pyFiles={resolve_file(self.sql_file, abs_path=True)}"
-                f'{"," + resolve_file(self.udf_file_path, abs_path=True) if self.udf_file_path else ""}'
-                f'{"," + resolve_file(self.func_file_path, abs_path=True) if self.func_file_path else ""}'
+                f"--pyFiles={resolve_file(self.sql_file, abs_path=True, prefix='file://')}"
+                f'{"," + resolve_file(self.udf_file_path, abs_path=True, prefix="file://") if self.udf_file_path else ""}'
+                f'{"," + resolve_file(self.func_file_path, abs_path=True, prefix="file://") if self.func_file_path else ""}'
             ),
         ]
-        args = self.build_conf_command_args(default_conf, ["pyFiles"])
-        return [f"--{arg} {args[arg]}" for arg in args]
 
-    def build_conf_command_args(self, default_conf: List[str], merge_keys: List[str]) -> dict[str, str]:
+        need_resolve_file_keys = ["-pyarch", "--pyArchives", "-pyreq", "--pyRequirements", "-s", "--fromSavepoint"]
+        cmd_value_args = []
+        for c in self.customized_backend_conf:
+            if get_key_by_splitter_and_strip(c) == "flink.cmd":
+                key = get_key_by_splitter_and_strip(get_value_by_splitter_and_strip(c), " ")
+                value = get_value_by_splitter_and_strip(get_value_by_splitter_and_strip(c), " ")
+                if key in need_resolve_file_keys:
+                    resolve_files = [
+                        f'{resolve_file(val.strip(), abs_path=True, prefix="file://")}'
+                        for val in value.split(",")
+                        if val.strip()
+                    ]
+                    value = f'"{",".join(set(resolve_files))}"'
+                cmd_value_args.append(f"{key}={value}")
+
+        args = self.build_conf_command_args(default_conf, ["-pyfs", "--pyFiles"], cmd_value_args, prefix="file://")
+        cmd_args = [f"{arg} {args[arg]}" for arg in args if not arg.startswith("flink.")]
+
+        d_args = [
+            f"-D{get_value_by_splitter_and_strip(get_key_by_splitter_and_strip(arg), 'flink.')}"
+            f"={get_value_by_splitter_and_strip(arg)}"
+            for arg in self.customized_backend_conf
+            if arg.startswith("flink.") and not arg.startswith("flink.python") and not arg.startswith("flink.cmd")
+        ]
+
+        configs = list(set(cmd_args + d_args))
+
+        configs.sort()
+
+        return configs
+
+    def build_conf_command_args(
+        self, default_conf: List[str], merge_keys: List[str], customized_confs: List[str], prefix: str = ""
+    ) -> dict[str, str]:
         # config 的优先级：1. sql 代码里的 config 优先级高于这里的 default 配置
         # 对于数组类的 config，sql 代码里的 config 会添加进来，而不是覆盖默认配置
         assert self.sql_file is not None
-        customized_conf_keys = [get_key_by_splitter_and_strip(c) for c in self.customized_backend_conf]
-        customized_backend_conf = self.customized_backend_conf.copy()
+        customized_conf_keys = [get_key_by_splitter_and_strip(c) for c in customized_confs]
+        customized_backend_conf = customized_confs.copy()
 
         args: dict[str, str] = {}
         for conf in default_conf:
@@ -329,7 +384,7 @@ class EasySqlConfig:
                 customized_conf = [conf for conf in customized_backend_conf if conf.startswith(conf_key)][0]
                 if conf_key in merge_keys:
                     customized_values = [
-                        resolve_file(val.strip(), abs_path=True)
+                        resolve_file(val.strip(), abs_path=True, prefix=prefix)
                         for val in get_value_by_splitter_and_strip(customized_conf, "=", '"').split(",")
                         if val.strip()
                     ]

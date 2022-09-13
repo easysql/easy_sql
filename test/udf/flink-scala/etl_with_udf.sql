@@ -1,5 +1,5 @@
 -- backend: flink
--- config: jarfile=udf.jar
+-- config: flink.cmd=--jarfile udf.jar
 -- config: easy_sql.scala_udf_initializer=your.company.udfs
 
 -- target=log.test_udf
