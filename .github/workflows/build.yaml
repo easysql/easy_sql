@@ -158,6 +158,9 @@ jobs:
     - run: poetry run make e2e-test-flink-postgres
       env:
         PG_URL: postgresql://postgres:123456@localhost/postgres
+        PG_JDBC_URL: jdbc:postgresql://localhost:5432/postgres
+        PG_JDBC_USER: postgres
+        PG_JDBC_PASSWD: 123456
 
   e2e-test-postgres:
     runs-on: ubuntu-latest
@@ -302,6 +305,9 @@ jobs:
       env:
         CLICKHOUSE_URL: clickhouse+native://default@localhost:9000
         PG_URL: postgresql://postgres:123456@localhost/postgres
+        PG_JDBC_URL: jdbc:postgresql://localhost:5432/postgres
+        PG_JDBC_USER: postgres
+        PG_JDBC_PASSWD: 123456
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v2
       with:
