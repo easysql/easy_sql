@@ -132,6 +132,8 @@ class FlinkBackendProcessor(BackendProcessor):
 
         backend = FlinkBackend(self.config.is_batch)
         config = FlinkBackendConfig(self.config, backend_config)
+
+        logger.info(f"Using flink configurations: {config.flink_configurations}")
         backend.set_configurations(config.flink_configurations)
 
         if config.flink_tables_file_path:
