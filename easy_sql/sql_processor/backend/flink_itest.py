@@ -71,7 +71,7 @@ class FlinkTest(unittest.TestCase):
                 'connector' = 'jdbc',
                 'url' = 'jdbc:postgresql://localhost:5432/postgres',
                 'username' = 'postgres',
-                'password' = 'postgres',
+                'password' = '123456',
                 'table-name' = 'out_put_table');
         """
         )
