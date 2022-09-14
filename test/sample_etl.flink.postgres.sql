@@ -1,6 +1,13 @@
 -- backend: flink
+
 -- config: easy_sql.flink_tables_file_path=test/sample_etl.flink_tables_file.json
 -- config: easy_sql.etl_type=streaming
+
+-- config: flink.cmd=-pyexec python3
+-- config: flink.cmd=-pyclientexec python3
+-- config: flink.cmd=-t local
+-- config: flink.pipeline.jars=test/flink/jars/flink-connector-jdbc-1.15.1.jar;test/flink/jars/postgresql-42.2.14.jar
+
 -- inputs: db_1.source_1, db_1.target_1
 -- outputs: db_1.target_1
 

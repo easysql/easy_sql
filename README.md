@@ -146,7 +146,7 @@ As an example, if you want to read or write data to postgres, then you need to s
 If you have docker, run the command below:
 
 ```bash
-docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgres
+docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=123456 postgres
 ```
 
 Download the required jars as below:
