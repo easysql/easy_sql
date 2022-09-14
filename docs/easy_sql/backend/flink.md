@@ -147,6 +147,27 @@ If we'd like to register tables in flink, we need to use the `inputs`/`outputs` 
 
 Easy SQL will only register tables if they are stated as inputs or outputs of the ETL.
 
+### Job configuration
+
+There are three types of configurations for a flink job.
+
+- Commandline configuration. Refer [here](https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/cli/).
+- Python configuration. Refer [here](https://nightlies.apache.org/flink/flink-docs-master/docs/dev/python/python_config/).
+- Java configuration. Refer [here](https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/config/).
+
+These configurations could be configured in ETL file following these simple conventions as below:
+
+- Commandline configuration starts with: `-- config: flink.cmd=`. E.g. `-- config: flink.cmd=-py some_file.py`
+- Python and java configuration starts with: `-- config: flink.xx=xx`. E.g. `-- config: flink.pipeline.jars=abc.jar`
+
+A sample configuration could be found [here](https://github.com/easysql/easy_sql/blob/main/test/sample_etl.flink.postgres.sql).
+
+File path will be resolved before submit to flink cluster to make the configuration easier. E.g. the above value `abc.jar` specified by config `pipeline.jars` will be resolved to a path like `file:///abs/path/to/abc.jar`.
+
+When Easy SQL runs the ETL, it will parse these configurations and print a bash command to standard out. It is why we need to use something like `bash -c "$(python3 -m ... -p)"` to run the ETL.
+
+If we'd like to find out the command to submitted to flink, we can just remove the `bash` wrapper. I.e. `python3 -m ... -p`
+
 ### `prepare-sql` directive
 
 Before we start, please be noted that the `prepare-sql` directive usually should be used only in test cases.
