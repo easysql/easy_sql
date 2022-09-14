@@ -11,7 +11,12 @@ from pyflink.table.schema import Schema
 from pyflink.table.table_descriptor import TableDescriptor
 
 from easy_sql import base_test
-from easy_sql.base_test import TEST_PG_URL
+from easy_sql.base_test import (
+    TEST_PG_JDBC_PASSWD,
+    TEST_PG_JDBC_URL,
+    TEST_PG_JDBC_USER,
+    TEST_PG_URL,
+)
 from easy_sql.sql_processor.backend import FlinkBackend, Partition, SaveMode, TableMeta
 from easy_sql.sql_processor.backend.flink import FlinkRow
 from easy_sql.sql_processor.backend.rdb import _exec_sql
@@ -61,7 +66,7 @@ class FlinkTest(unittest.TestCase):
         """,
         )
         backend.exec_native_sql(
-            """
+            f"""
             CREATE TABLE out_put_table (
                 id INT,
                 val VARCHAR,
@@ -69,9 +74,9 @@ class FlinkTest(unittest.TestCase):
             )
             WITH (
                 'connector' = 'jdbc',
-                'url' = 'jdbc:postgresql://localhost:5432/postgres',
-                'username' = 'postgres',
-                'password' = '123456',
+                'url' = '{TEST_PG_JDBC_URL}',
+                'username' = '{TEST_PG_JDBC_USER}',
+                'password' = '{TEST_PG_JDBC_PASSWD}',
                 'table-name' = 'out_put_table');
         """
         )

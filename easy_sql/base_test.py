@@ -22,6 +22,9 @@ def should_run_integration_test(key: Optional[str] = None):
 
 
 TEST_PG_URL = os.environ.get("PG_URL", "postgresql://postgres:123456@testpg:15432/postgres")
+TEST_PG_JDBC_URL = os.environ.get("PG_JDBC_URL", "jdbc:postgresql://testpg:15432/postgres")
+TEST_PG_JDBC_USER = os.environ.get("PG_JDBC_USER", "postgres")
+TEST_PG_JDBC_PASSWD = os.environ.get("PG_JDBC_PASSWD", "123456")
 TEST_CH_URL = os.environ.get("CLICKHOUSE_URL", "clickhouse+native://default@testch:30123")
 TEST_BQ_URL = os.environ.get("BQ_URL", "bigquery://")
 
