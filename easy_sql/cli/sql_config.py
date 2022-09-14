@@ -78,7 +78,9 @@ class EasySqlConfig:
         self.input_tables, self.output_tables = input_tables, output_tables
 
     @staticmethod
-    def from_sql(sql_file: Optional[str] = None, sql: Optional[str] = None) -> EasySqlConfig:  # type: ignore
+    def from_sql(
+        sql_file: Optional[str] = None, sql: Optional[str] = None, system_config_prefix: str = "easy_sql."  # type: ignore
+    ) -> EasySqlConfig:
         assert sql_file is not None or sql is not None, "sql_file or sql must be set"
         sql: str = read_sql(sql_file) if sql_file else sql  # type: ignore
         sql_lines = sql.split("\n")  # type: ignore
@@ -91,8 +93,8 @@ class EasySqlConfig:
         for line in sql_lines:
             if re.match(r"^-- \s*config:.*$", line):
                 config_value = get_value_by_splitter_and_strip(line, "config:")
-                if config_value.strip().lower().startswith("easy_sql."):
-                    customized_easy_sql_conf += [get_value_by_splitter_and_strip(config_value, "easy_sql.")]
+                if config_value.strip().lower().startswith(system_config_prefix):
+                    customized_easy_sql_conf += [get_value_by_splitter_and_strip(config_value, system_config_prefix)]
                 else:
                     customized_backend_conf += [config_value]
 
