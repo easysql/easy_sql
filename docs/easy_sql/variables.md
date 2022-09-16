@@ -10,6 +10,7 @@ Here are some description about what they are and how to use them.
 - `__create_output_table__`: When true and the output table does not exist, will try to create output table automatically.
 - `__partition__`: If specified, will save output data to the specified partition. There must be a partition column followed in the variable name.
 As an example, if we defined variable `__partition__dt`, then dt will be the partition column and the value of the variable will be the partition value.
+- `__save_mode__`: Value could be 'overwrite' or 'append'. If not specified, default to 'overwrite'. Will do append or overwrite when write data to table.
 
 ## Variables to control execution behaviour
 
