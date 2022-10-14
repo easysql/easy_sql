@@ -188,6 +188,7 @@ Below are a list of them for referencing.
 
 #### IO functions
 
+- [`move_file(source_file: str, target_file: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.IOFuncs.move_file)
 - [`rename_csv_output(spark_output_path: str, to_file: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_spark/index.html#easy_sql.sql_processor.funcs_spark.IOFuncs.rename_csv_output)
 - [`update_json_local(context: ProcessorContext, vars: str, list_vars: str, json_attr: str, output_file: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_spark/index.html#easy_sql.sql_processor.funcs_spark.IOFuncs.update_json_local)
 - [`write_csv(table: str, output_file: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_spark/index.html#easy_sql.sql_processor.funcs_spark.IOFuncs.write_csv)
@@ -209,6 +210,11 @@ Below are a list of them for referencing.
 #### Model functions
 
 - [`model_predict(model_save_path: str, table_name: str, feature_cols: str, id_col: str, output_ref_cols: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_spark/index.html#easy_sql.sql_processor.funcs_spark.ModelFuncs.model_predict)
+
+
+#### Analytics functions
+
+- [`data_profiling_report(table: str, query: str, output_folder: str, max_count=50000)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.AnalyticsFuncs.data_profiling_report)
 
 
 
@@ -258,3 +264,13 @@ Below are a list of them for referencing.
 
 - [`bq_model_predict_with_local_spark(model_save_path: str, input_table_name: str, output_table_name: str, feature_cols: str, id_col: str, output_ref_cols: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_rdb/index.html#easy_sql.sql_processor.funcs_rdb.ModelFuncs.bq_model_predict_with_local_spark)
 - [`model_predict_with_local_spark(model_save_path: str, input_table_name: str, output_table_name: str, feature_cols: str, id_col: str, output_ref_cols: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_rdb/index.html#easy_sql.sql_processor.funcs_rdb.ModelFuncs.model_predict_with_local_spark)
+
+
+#### IO functions
+
+- [`move_file(source_file: str, target_file: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.IOFuncs.move_file)
+
+
+#### Analytics functions
+
+- [`data_profiling_report(table: str, query: str, output_folder: str, max_count=50000)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.AnalyticsFuncs.data_profiling_report)
