@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import traceback
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, List, Optional, Union
@@ -8,12 +9,15 @@ from ..logger import logger
 from . import SqlProcessorException
 
 if TYPE_CHECKING:
+    import pandas as pd
+
     from .backend import Backend
+    from .backend.rdb import RdbBackend
     from .context import ProcessorContext
     from .step import Step
 
 
-__all__ = ["ColumnFuncs", "TableFuncs", "PartitionFuncs", "AlertFunc"]
+__all__ = ["ColumnFuncs", "TableFuncs", "PartitionFuncs", "AlertFunc", "AnalyticsFuncs"]
 
 
 class ColumnFuncs:
@@ -301,3 +305,87 @@ class AlertFunc:
             self.alerter.send_alert(f"执行{rule_name}失败: {e}", mentioned_users)
 
         return exception_handler
+
+
+class IOFuncs:
+    def move_file(self, source_file: str, target_file: str):
+        if not os.path.exists(source_file):
+            raise FileNotFoundError(source_file)
+        os.makedirs(os.path.dirname(target_file), exist_ok=True)
+        os.rename(source_file, target_file)
+        logger.info(f"file moved: {source_file} -> {target_file}")
+
+
+class AnalyticsFuncs:
+    def __init__(self, backend: Backend) -> None:
+        self.backend = backend
+
+    def data_profiling_report(self, table: str, query: str, output_folder: str, max_count=50000):
+        from pandas_profiling import ProfileReport
+
+        from easy_sql.sql_processor.backend.rdb import RdbBackend
+
+        backend = self.backend
+        if backend.is_rdb_backend:
+            if backend.is_bigquery_backend:
+                raise Exception(f"Not supported backend: {backend.__class__}")
+            assert isinstance(backend, RdbBackend)
+            df = self._read_data_rdb(backend, table, query, max_count)
+        elif backend.is_spark_backend:
+            df = self._read_data_spark(backend, table, query, max_count)
+        else:
+            raise Exception(f"Not supported backend: {backend.__class__}")
+
+        if df is None:
+            return
+
+        profile = ProfileReport(df, title=f"Profiling Report for {table}")
+
+        if "." in table:
+            db, table = tuple(table.split("."))
+            profiling_file = f"{output_folder}/{db}/{table}.html"
+        else:
+            profiling_file = f"{output_folder}/{table}.html"
+        os.makedirs(os.path.dirname(profiling_file), exist_ok=True)
+
+        profile.to_file(profiling_file)
+        logger.info(f"generated file: {profiling_file}")
+
+    def _read_data_rdb(self, backend: RdbBackend, table: str, query: str, max_count: int) -> pd.DataFrame:
+        import pandas as pd
+        from sqlalchemy.sql import text
+
+        rand_func = "rand" if backend.is_clickhouse_backend else "random"
+        condition_sql = "where " + query if query else ""
+        sql = f"select * from {table} {condition_sql} order by {rand_func}() limit {max_count}"
+        with backend.engine.connect().execution_options(autocommit=True) as conn:
+            query = conn.execute(text(sql))
+        return pd.DataFrame(query.fetchall())
+
+    def _read_data_spark(self, backend: Backend, table: str, query: str, max_count: int) -> Optional[pd.DataFrame]:
+        from pyspark.sql.functions import expr
+        from pyspark.sql.types import ArrayType, DecimalType, MapType
+
+        condition_sql = "where " + query if query else ""
+        sql = f"select count(*) from {table} {condition_sql}"
+        count = backend.exec_native_sql(sql).collect()[0][0]
+
+        sample_fraction = 1.0 if count < max_count else float(max_count) / float(count)
+
+        spark_df = backend.exec_native_sql(f"select * from {table} {condition_sql}").sample(fraction=sample_fraction)
+        spark_df.cache()
+
+        if spark_df.count() == 0:
+            # if we don't handle this case pandas profiling will raise error
+            logger.info(f"{table} is empty, no report generated")
+            return None
+
+        for field in spark_df.schema.fields:
+            if isinstance(field.dataType, DecimalType):
+                # cast decimal to double to avoid pandas object type after converting later on
+                spark_df = spark_df.withColumn(field.name, expr(f"cast(`{field.name}` as double)"))
+            if isinstance(field.dataType, (ArrayType, MapType)):
+                spark_df = spark_df.withColumn(field.name + "__size", expr(f"size(`{field.name}`)"))
+
+        df = spark_df.toPandas()
+        return df

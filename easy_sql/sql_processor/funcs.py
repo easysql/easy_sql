@@ -55,7 +55,9 @@ class FuncRunner:
     @staticmethod
     def _get_rdb_funcs(backend) -> Dict[str, Callable]:
         from easy_sql.sql_processor.funcs_rdb import (
+            AnalyticsFuncs,
             ColumnFuncs,
+            IOFuncs,
             ModelFuncs,
             PartitionFuncs,
             TableFuncs,
@@ -65,6 +67,8 @@ class FuncRunner:
         col_funcs = ColumnFuncs(backend)
         table_funcs = TableFuncs(backend)
         model_funcs = ModelFuncs(backend)
+        io_funcs = IOFuncs()
+        ana_funcs = AnalyticsFuncs(backend)
         return {
             "partition_exists": partition_funcs.partition_exists,
             "partition_not_exists": partition_funcs.partition_not_exists,
@@ -85,11 +89,14 @@ class FuncRunner:
             "ensure_no_null_data_in_table": table_funcs.ensure_no_null_data_in_table,
             "check_not_null_column_in_table": table_funcs.check_not_null_column_in_table,
             "all_cols_prefixed_with_exclusion_expr": col_funcs.all_cols_prefixed_with_exclusion_expr,
+            "move_file": io_funcs.move_file,
+            "data_profiling_report": ana_funcs.data_profiling_report,
         }
 
     @staticmethod
     def _get_spark_funcs(backend) -> Dict[str, Callable]:
         from easy_sql.sql_processor.funcs_spark import (
+            AnalyticsFuncs,
             CacheFuncs,
             ColumnFuncs,
             IOFuncs,
@@ -107,6 +114,7 @@ class FuncRunner:
         table_funcs = TableFuncs(backend)
         io_funcs = IOFuncs(spark)
         model_funcs = ModelFuncs(spark)
+        ana_funcs = AnalyticsFuncs(backend)
         return {
             "repartition": parallelism_funcs.repartition,
             "repartition_by_column": parallelism_funcs.repartition_by_column,
@@ -132,9 +140,11 @@ class FuncRunner:
             "unpersist": cache_funcs.unpersist,
             "write_csv": io_funcs.write_csv,
             "rename_csv_output": io_funcs.rename_csv_output,
+            "move_file": io_funcs.move_file,
             "write_json_local": io_funcs.write_json_local,
             "update_json_local": io_funcs.update_json_local,
             "model_predict": model_funcs.model_predict,
+            "data_profiling_report": ana_funcs.data_profiling_report,
         }
 
     def run_func(self, func_def: str, vars_replacer: VarsReplacer) -> bool:

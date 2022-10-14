@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING, Dict, List, Union
 
 from .backend import SparkBackend
 from .common import SqlProcessorAssertionError, _exec_sql, is_int_type
-from .funcs_common import AlertFunc, ColumnFuncs
+from .funcs_common import AlertFunc, AnalyticsFuncs, ColumnFuncs
+from .funcs_common import IOFuncs as CommonIOFuncs
 from .funcs_common import PartitionFuncs as PartitionFuncsBase
 from .funcs_common import TableFuncs
 
@@ -26,6 +27,7 @@ __all__ = [
     "AlertFunc",
     "TableFuncs",
     "ModelFuncs",
+    "AnalyticsFuncs",
 ]
 
 from ..logger import logger
@@ -57,7 +59,7 @@ class ParallelismFuncs:
         self.spark.conf.set("spark.sql.shuffle.partitions", partitions)
 
 
-class IOFuncs:
+class IOFuncs(CommonIOFuncs):
     def __init__(self, spark: SparkSession):
         self.spark = spark
 

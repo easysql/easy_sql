@@ -299,7 +299,7 @@ jobs:
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-all
     - run: poetry install --no-interaction -E "clickhouse pg spark cli linter"
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-    - run: poetry run pip install apache-flink==1.15.1
+    - run: poetry run pip install apache-flink==1.15.1 pandas_profiling==3.2.0
     - run: poetry run make download-flink-jars
     - run: poetry run make test-coverage-all
       env:
