@@ -4,11 +4,11 @@ from typing import List
 
 from .backend.rdb import RdbBackend
 from .common import is_int_type
-from .funcs_common import AlertFunc, ColumnFuncs
+from .funcs_common import AlertFunc, AnalyticsFuncs, ColumnFuncs, IOFuncs
 from .funcs_common import PartitionFuncs as PartitionFuncsBase
 from .funcs_common import TableFuncs
 
-__all__ = ["PartitionFuncs", "ColumnFuncs", "AlertFunc", "TableFuncs", "ModelFuncs"]
+__all__ = ["PartitionFuncs", "ColumnFuncs", "AlertFunc", "TableFuncs", "ModelFuncs", "IOFuncs", "AnalyticsFuncs"]
 
 
 class ModelFuncs:

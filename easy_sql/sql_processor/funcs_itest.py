@@ -1,4 +1,5 @@
 import json
+import os
 import unittest
 from pathlib import Path
 from typing import Optional, Tuple
@@ -17,16 +18,18 @@ from easy_sql.sql_processor.context import (
 from easy_sql.sql_processor.funcs_common import (
     Alerter,
     AlertFunc,
+    AnalyticsFuncs,
     ColumnFuncs,
-    TableFuncs,
 )
+from easy_sql.sql_processor.funcs_common import IOFuncs as CommonIOFuncs
+from easy_sql.sql_processor.funcs_common import TableFuncs
 from easy_sql.sql_processor.funcs_rdb import PartitionFuncs
 from easy_sql.sql_processor.funcs_spark import CacheFuncs, IOFuncs, ParallelismFuncs
 from easy_sql.sql_processor.funcs_spark import PartitionFuncs as SparkPartitionFuncs
 from easy_sql.sql_processor.step import ReportCollector
 
 
-class FuncsRdbTest(unittest.TestCase):
+class FuncsTest(unittest.TestCase):
     test_table_name = "t.func_test"
 
     def test_funcs_pg(self):
@@ -90,6 +93,13 @@ class FuncsRdbTest(unittest.TestCase):
             "/tmp/easysql-ut/test_write.json",
         )
         self.assertEqual(json.loads(Path("/tmp/easysql-ut/test_write.json").read_text())["c"]["d"]["a"], 2)
+
+        self._test_ana_funcs(backend)
+
+    def _test_ana_funcs(self, backend):
+        f = AnalyticsFuncs(backend)
+        f.data_profiling_report(self.test_table_name, "1=1", "/tmp/easysql-ut/ana-test/")
+        self.assertTrue(os.path.exists("/tmp/easysql-ut/ana-test/t/func_test.html"))
 
     def run_test(self, backend: Backend, types: Tuple[str, str, str]):
         try:
@@ -170,3 +180,20 @@ class FuncsRdbTest(unittest.TestCase):
             "a,b,c",
         )
         self.assertTrue(alerter.alert_msg is not None)
+
+        self._test_ana_funcs(backend)
+
+    def test_move_file(self):
+        f = CommonIOFuncs()
+        os.makedirs("/tmp/easysql-ut/io-test", exist_ok=True)
+        test_file = "/tmp/easysql-ut/io-test/move_file_test.txt"
+        test_file_moved = f"{test_file}.1"
+        if os.path.exists(test_file):
+            os.remove(test_file)
+        if os.path.exists(test_file_moved):
+            os.remove(test_file_moved)
+        with open(test_file, "w") as tmp_file:
+            tmp_file.write("")
+        f.move_file(test_file, test_file_moved)
+        self.assertFalse(os.path.exists(test_file))
+        self.assertTrue(os.path.exists(test_file_moved))
