@@ -51,18 +51,19 @@ class TimeLog:
 def _exec_sql(conn: Connection, sql: Union[str, TextClause, List[str]], *args, **kwargs) -> ResultProxy:
     from sqlalchemy.sql.elements import TextClause
 
+    quote_fstr = lambda str_to_quote: str(str_to_quote).replace("{", "{{").replace("}", "}}")
     start_msg = lambda sql: f"start to execute sql: {sql}, args={args}, kwargs={kwargs}"
-    end_msg = lambda sql: f"end to execute sql({TimeLog.time_took_tpl}): {sql}"
+    end_msg_tpl = lambda sql: f"end to execute sql({TimeLog.time_took_tpl}): {quote_fstr(sql)}"
 
     if isinstance(sql, (str, TextClause)):
-        with TimeLog(start_msg(sql), end_msg(sql)):
+        with TimeLog(start_msg(sql), end_msg_tpl(sql)):
             return conn.execute(sql, *args, **kwargs)  # type: ignore
     else:
         execute_result = None
         for each_sql in sql:
             each_sql = each_sql.strip()
             if each_sql:
-                with TimeLog(start_msg(each_sql), end_msg(each_sql)):
+                with TimeLog(start_msg(each_sql), end_msg_tpl(each_sql)):
                     execute_result = conn.execute(each_sql, *args, **kwargs)
         return execute_result  # type: ignore
 
