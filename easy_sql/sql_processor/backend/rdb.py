@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import time
+import traceback
 from datetime import datetime
 from random import random
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
@@ -40,6 +41,8 @@ class TimeLog:
         self.start_dt = datetime.now()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            logger.error(f"Error found:\n{traceback.format_exc()}")
         assert self.start_dt is not None
         time_took = (datetime.now() - self.start_dt).total_seconds()
         logger.info(self.end_log_tpl.format(time_took=time_took))
@@ -48,18 +51,20 @@ class TimeLog:
 def _exec_sql(conn: Connection, sql: Union[str, TextClause, List[str]], *args, **kwargs) -> ResultProxy:
     from sqlalchemy.sql.elements import TextClause
 
-    with TimeLog(
-        f"start to execute sql: {sql}, kwargs={kwargs}", f"end to execute sql({TimeLog.time_took_tpl}): {sql}"
-    ):
-        if isinstance(sql, (str, TextClause)):
+    start_msg = lambda sql: f"start to execute sql: {sql}, args={args}, kwargs={kwargs}"
+    end_msg = lambda sql: f"end to execute sql({TimeLog.time_took_tpl}): {sql}"
+
+    if isinstance(sql, (str, TextClause)):
+        with TimeLog(start_msg(sql), end_msg(sql)):
             return conn.execute(sql, *args, **kwargs)  # type: ignore
-        else:
-            execute_result = None
-            for each_sql in sql:
-                each_sql = each_sql.strip()
-                if each_sql:
+    else:
+        execute_result = None
+        for each_sql in sql:
+            each_sql = each_sql.strip()
+            if each_sql:
+                with TimeLog(start_msg(each_sql), end_msg(each_sql)):
                     execute_result = conn.execute(each_sql, *args, **kwargs)
-            return execute_result  # type: ignore
+        return execute_result  # type: ignore
 
 
 def _quote_str(x):
