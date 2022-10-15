@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import time
+import traceback
 import unittest
 from typing import TYPE_CHECKING
 
@@ -25,6 +26,12 @@ class RdbTest(unittest.TestCase):
     def test_log_time(self):
         with TimeLog("start", "end({time_took:.3f})"):
             time.sleep(0.1)
+        try:
+            with TimeLog("start", "end({time_took:.3f})"):
+                raise Exception("some exception")
+        except Exception:
+            print("printing exception in user code:")
+            traceback.print_exc()
 
     def test_clean_pg_temp_schema(self):
         pg = RdbBackend(TEST_PG_URL)
