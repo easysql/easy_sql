@@ -272,9 +272,32 @@ class Alerter:
 
 
 class AlertFunc:
-    def __init__(self, backend: Backend, alerter: Alerter):
+    def __init__(self, backend: Optional[Backend], alerter: Alerter):
         self.backend = backend
         self.alerter = alerter
+
+    def alert_with_backend(
+        self,
+        backend: Backend,
+        step: Step,
+        context: ProcessorContext,
+        rule_name: str,
+        pass_condition: str,
+        alert_template: str,
+        mentioned_users: str,
+    ):
+        # Fetch 10 rows at most
+        assert step.select_sql is not None
+        alert_data = backend.exec_sql(step.select_sql).limit(10).collect()
+
+        msg_list = []
+        for data in alert_data:
+            check_result = data.as_dict()
+            context.add_vars(check_result)
+            if not step.func_runner.run_func(pass_condition.format(**check_result), context.vars_context):
+                msg_list.append(alert_template.format(**check_result))
+        if msg_list:
+            self.alerter.send_alert("\n".join(msg_list), mentioned_users)
 
     def alert(
         self,
@@ -285,19 +308,8 @@ class AlertFunc:
         alert_template: str,
         mentioned_users: str,
     ):
-        # Fetch 10 rows at most
-        assert step.select_sql is not None
-        alert_data = self.backend.exec_sql(step.select_sql).limit(10).collect()
-        # alert_data = self.spark.sql(step.select_sql).limit(10).collect()
-
-        msg_list = []
-        for data in alert_data:
-            check_result = data.as_dict()
-            context.add_vars(check_result)
-            if not step.func_runner.run_func(pass_condition.format(**check_result), context.vars_context):
-                msg_list.append(alert_template.format(**check_result))
-        if msg_list:
-            self.alerter.send_alert("\n".join(msg_list), mentioned_users)
+        assert self.backend is not None
+        self.alert_with_backend(self.backend, step, context, rule_name, pass_condition, alert_template, mentioned_users)
 
     def alert_exception_handler(self, rule_name: str, mentioned_users: str):
         def exception_handler(e):
