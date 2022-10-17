@@ -112,6 +112,9 @@ class PartitionFuncs:
     def partition_exists(self, table_name: str, partition_value: str) -> bool:
         return partition_value in self._get_partition_values_as_str(table_name)
 
+    def get_partition_values_as_joined_str(self, table_name: str) -> str:
+        return ", ".join([f"'{v}'" for v in self._get_partition_values(table_name)])
+
     def ensure_partition_exists(self, step: Step, *args) -> bool:
         if len(args) < 2:
             raise Exception(

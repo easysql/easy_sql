@@ -158,6 +158,7 @@ Below are a list of them for referencing.
 - [`get_partition_col(table_name: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_partition_col)
 - [`get_partition_cols(table_name: str) -> List[str]`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_spark/index.html#easy_sql.sql_processor.funcs_spark.PartitionFuncs.get_partition_cols)
 - [`get_partition_or_first_partition(table_name: str, partition_value: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_partition_or_first_partition)
+- [`get_partition_values_as_joined_str(table_name: str) -> str`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_partition_values_as_joined_str)
 - [`has_partition_col(table_name: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.has_partition_col)
 - [`is_first_partition(table_name: str, partition_value: str) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.is_first_partition)
 - [`is_not_first_partition(table_name: str, partition_value: str) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.is_not_first_partition)
@@ -199,6 +200,7 @@ Below are a list of them for referencing.
 
 - [`alert(step: Step, context: ProcessorContext, rule_name: str, pass_condition: str, alert_template: str, mentioned_users: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.AlertFunc.alert)
 - [`alert_exception_handler(rule_name: str, mentioned_users: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.AlertFunc.alert_exception_handler)
+- [`alert_with_backend(backend: Backend, step: Step, context: ProcessorContext, rule_name: str, pass_condition: str, alert_template: str, mentioned_users: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.AlertFunc.alert_with_backend)
 
 
 #### Table functions
@@ -233,6 +235,7 @@ Below are a list of them for referencing.
 - [`get_partition_col(table_name: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_partition_col)
 - [`get_partition_cols(table_name: str) -> List[str]`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_rdb/index.html#easy_sql.sql_processor.funcs_rdb.PartitionFuncs.get_partition_cols)
 - [`get_partition_or_first_partition(table_name: str, partition_value: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_partition_or_first_partition)
+- [`get_partition_values_as_joined_str(table_name: str) -> str`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_partition_values_as_joined_str)
 - [`has_partition_col(table_name: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.has_partition_col)
 - [`is_first_partition(table_name: str, partition_value: str) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.is_first_partition)
 - [`is_not_first_partition(table_name: str, partition_value: str) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.is_not_first_partition)
@@ -252,6 +255,7 @@ Below are a list of them for referencing.
 
 - [`alert(step: Step, context: ProcessorContext, rule_name: str, pass_condition: str, alert_template: str, mentioned_users: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.AlertFunc.alert)
 - [`alert_exception_handler(rule_name: str, mentioned_users: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.AlertFunc.alert_exception_handler)
+- [`alert_with_backend(backend: Backend, step: Step, context: ProcessorContext, rule_name: str, pass_condition: str, alert_template: str, mentioned_users: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.AlertFunc.alert_with_backend)
 
 
 #### Table functions
