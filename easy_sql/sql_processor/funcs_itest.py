@@ -149,6 +149,7 @@ class FuncsTest(unittest.TestCase):
         self.assertEqual(pf.get_partition_cols(table_name), ["pt"])
         self.assertEqual(pf.get_partition_col(table_name), "pt")
         self.assertTrue(pf.has_partition_col(table_name))
+        self.assertEqual(pf.get_partition_values_as_joined_str(table_name), "'2022-01-01', '2022-01-02'")
 
         f = ColumnFuncs(backend)
         self.assertEqual(f.all_cols_with_exclusion_expr(table_name, "pt"), "func_test.id, func_test.val")
