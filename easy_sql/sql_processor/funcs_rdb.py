@@ -1,7 +1,14 @@
+from __future__ import annotations
+
 import json
 import os
-from typing import List
+import typing
+from typing import Any, Dict, List
 
+if typing.TYPE_CHECKING:
+    from pyspark.sql import DataFrame
+
+from ..logger import logger
 from .backend.rdb import RdbBackend
 from .common import is_int_type
 from .funcs_common import AlertFunc, AnalyticsFuncs, ColumnFuncs, IOFuncs
@@ -9,6 +16,31 @@ from .funcs_common import PartitionFuncs as PartitionFuncsBase
 from .funcs_common import TableFuncs
 
 __all__ = ["PartitionFuncs", "ColumnFuncs", "AlertFunc", "TableFuncs", "ModelFuncs", "IOFuncs", "AnalyticsFuncs"]
+
+
+class Settings:
+    def __init__(self, root_key: str) -> None:
+        workdir = os.path.dirname(os.environ.get("PWD"))  # type: ignore
+        self.local_settings_file = f"{workdir}/settings.local.json"
+        self.settings_file = f"{workdir}/settings.json"
+        self.root_key = root_key
+
+        with open(self.settings_file, "r") as json_file:
+            self.settings = json.load(json_file)
+
+        with open(self.local_settings_file, "r") as json_file:
+            self.local_settings = json.load(json_file)
+
+    def prioritized_setting(self, key: str, default_value: Any = None, required: bool = True) -> Any:
+        v = self.local_settings.get(self.root_key, {}).get(
+            key, self.settings.get(self.root_key, {}).get(key, default_value)
+        )
+        if default_value is None and v is None and required:
+            raise Exception(
+                f"Required configuration `{self.root_key}.{key}` not found or is null in file {self.settings_file} or"
+                f" {self.local_settings_file}"
+            )
+        return v
 
 
 class ModelFuncs:
@@ -24,50 +56,46 @@ class ModelFuncs:
         id_col: str,
         output_ref_cols: str,
     ):
-        from pyspark.ml import PipelineModel
-        from pyspark.sql.functions import expr
-
         from ..spark_optimizer import get_spark
 
-        SPARK_JARS = (
-            "/tmp/app/dataplat/lib/scala/lib_spark3/spark-bigquery-latest_2.12.jar,"
-            "/tmp/app/dataplat/lib/scala/lib_spark3/gcs-connector-hadoop2-latest.jar,"
-        )
+        settings = Settings("ml_model")
 
-        spark_config_settings_dict = {
-            "spark.jars": SPARK_JARS,
-            "spark.master": "local[2]",
-            "spark.submit.deployMode": "client",
-            "spark.executor.memory": "1g",
-            "spark.executor.cores": "1",
-            "spark.hadoop.fs.AbstractFileSystem.gs.impl": "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS",
-            "parentProject": "data-dev-workbench-prod-3fd9",
-            "spark.sql.warehouse.dir": "/tmp/spark-warehouse-localdw",
-            "spark.driver.extraJavaOptions": (
-                "-Dderby.system.home=/tmp/spark-warehouse-metastore "
-                "-Dderby.stream.error.file=/tmp/spark-warehouse-metastore.log"
-            ),
-            "credentialsFile": f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-prod.json",
-        }
+        spark_config_settings_dict: Dict[str, str] = settings.prioritized_setting("spark_conf")
+        home = os.environ.get("HOME", "/tmp")
+        spark_config_settings_dict = {k: v.replace("${HOME}", home) for k, v in spark_config_settings_dict}
 
-        spark = get_spark("test", spark_config_settings_dict)
-        bucket = "dataplat-gcp-demo"
+        spark = get_spark("ml_local", spark_config_settings_dict)
+        bucket = settings.prioritized_setting("bucket")
         spark.conf.set("temporaryGcsBucket", bucket)
 
         spark._jsc.hadoopConfiguration().set("fs.gs.impl", "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem")  # type: ignore
         spark._jsc.hadoopConfiguration().set("fs.gs.auth.service.account.enable", "true")  # type: ignore
         spark._jsc.hadoopConfiguration().set(  # type: ignore
             "google.cloud.auth.service.account.json.keyfile",
-            f"{os.environ.get('HOME', '/tmp')}/.bigquery/credential-prod.json",
+            settings.prioritized_setting("keyfile").replace("${HOME}", home),
         )
 
-        spark.read.format("bigquery").option("parentProject", "data-dev-workbench-prod-3fd9").option(
+        parentProject = settings.prioritized_setting("parentProject")
+        spark.read.format("bigquery").option("parentProject", parentProject).option(
             "table", input_table_name
-        ).load().createOrReplaceTempView("origin_input")
+        ).load().createOrReplaceTempView("__origin_input")
 
-        data = spark.sql(f"select {feature_cols} from origin_input")
+        data = spark.sql(f"select {feature_cols} from __origin_input")
 
-        _output_ref_cols = [col.strip() for col in output_ref_cols.split(",") if col.strip()]
+        output = self._predict(model_save_path, id_col, output_ref_cols, data)
+
+        writer = (
+            output.write.format("bigquery")
+            .option("parentProject", parentProject)
+            .option("table", output_table_name)
+            .mode("overwrite")
+        )
+        writer.save()
+
+    def _predict(self, model_save_path: str, id_col: str, output_ref_cols: str, data: DataFrame):
+        from pyspark.ml import PipelineModel
+        from pyspark.sql.functions import expr
+
         model = PipelineModel.load(model_save_path)
 
         int_cols = [f.name for f in data.schema.fields if is_int_type(f.dataType.typeName())]
@@ -75,11 +103,13 @@ class ModelFuncs:
             data = data.withColumn(col, expr(f"cast({col} as double)"))
 
         predictions = model.transform(data)
-        output = predictions.select(_output_ref_cols + [id_col, "prediction"])
 
-        output.write.format("bigquery").option("parentProject", "data-dev-workbench-prod-3fd9").option(
-            "table", output_table_name
-        ).mode("overwrite").save()
+        _output_ref_cols = [col.strip() for col in output_ref_cols.split(",") if col.strip()]
+        output_cols = _output_ref_cols + [id_col, "prediction"]
+        logger.info(f"output cols: {output_cols}, prediction cols: {predictions.dtypes}")
+        output = predictions.select(output_cols)
+
+        return output
 
     def model_predict_with_local_spark(
         self,
@@ -90,82 +120,43 @@ class ModelFuncs:
         id_col: str,
         output_ref_cols: str,
     ):
-        from pyspark.ml import PipelineModel
-        from pyspark.sql.functions import expr
-
         from ..spark_optimizer import get_spark
 
-        workdir = os.path.dirname(os.environ.get("PWD"))  # type: ignore
-        local_settings_dir = f"{workdir}/settings.local.json"
-        settings_dir = f"{workdir}/settings.json"
-
-        with open(settings_dir, "r") as json_file:
-            settings = json.load(json_file)
-            data_source_load_options = settings["ml_model"]["data_source_load_options"]
-            data_type_map = settings["ml_model"]["data_type_map"]
-            SPARK_JARS = "".join(settings["ml_model"]["spark_jars"])
-
-        with open(local_settings_dir, "r") as json_file:
-            local_settings = json.load(json_file)
-            local_data_source_load_options = local_settings["ml_model"]["data_source_load_options"]
-
-        file_dir = os.path.dirname(os.path.abspath(__file__))
-
-        spark_config_settings_dict = {
-            "spark.jars": SPARK_JARS,
-            "spark.master": "local[2]",
-            "spark.submit.deployMode": "client",
-            "spark.executor.memory": "1g",
-            "spark.executor.cores": "1",
-            "spark.sql.warehouse.dir": "/tmp/spark-warehouse-localdw",
-            "spark.driver.extraJavaOptions": (
-                "-Dderby.system.home=/tmp/spark-warehouse-metastore "
-                "-Dderby.stream.error.file=/tmp/spark-warehouse-metastore.log"
-            ),
-            "spark.driver.extraClassPath": os.path.join(file_dir, "../../../deps/lib/*"),
-        }
-
-        from py4j.java_gateway import java_import
-
+        settings = Settings("ml_model")
+        spark_config_settings_dict = settings.prioritized_setting("spark_conf")
         spark = get_spark("ml_local", spark_config_settings_dict)
-        gw = spark.sparkContext._gateway  # type: ignore
-        java_import(gw.jvm, "common.dataplat.sparkutils")
 
+        data_source = settings.prioritized_setting("data_source")
         data = (
-            spark.read.format(f"{data_source_load_options['format']}")
-            .option("driver", f"{data_source_load_options['driver']}")
-            .option("url", f"{data_source_load_options['url']}")
-            .option("user", f"{data_source_load_options['user']}")
-            .option("password", f"{local_data_source_load_options['password']}")
+            spark.read.format(f"{data_source['format']}")
+            .option("driver", f"{data_source['driver']}")
+            .option("url", f"{data_source['url']}")
+            .option("user", f"{data_source['user']}")
+            .option("password", f"{data_source['password']}")
             .option("dbtable", input_table_name)
             .load()
+            .createOrReplaceTempView("__origin_input")
         )
+        data = spark.sql(f"select {feature_cols} from __origin_input")
 
-        _output_ref_cols = [col.strip() for col in output_ref_cols.split(",") if col.strip()]
-        model = PipelineModel.load(model_save_path)
+        output = self._predict(model_save_path, id_col, output_ref_cols, data)
 
-        int_cols = [f.name for f in data.schema.fields if is_int_type(f.dataType.typeName())]
-        for col in int_cols:
-            data = data.withColumn(col, expr(f"cast({col} as double)"))
-
-        predictions = model.transform(data)
-        output = predictions.select(_output_ref_cols + [id_col, "prediction"])
-
+        data_type_map = settings.prioritized_setting("data_type_map", required=False)
         ddl = self.__get_ddl_by_backend(data_type_map, output_table_name, id_col, output.dtypes)
-
         self.backend.exec_native_sql(ddl)
         self.backend.exec_native_sql(f"truncate table {output_table_name}")
-        output.write.format(f"{data_source_load_options['format']}").mode("append").option(
-            "driver", f"{data_source_load_options['driver']}"
-        ).option("truncate", f"{data_source_load_options['truncate']}").option(
-            "url", f"{data_source_load_options['url']}"
-        ).option(
-            "user", f"{data_source_load_options['user']}"
-        ).option(
-            "password", f"{local_data_source_load_options['password']}"
-        ).option(
-            "dbtable", output_table_name
-        ).save()
+
+        writer = (
+            output.write.format(f"{data_source['format']}")
+            .mode("append")
+            .option("driver", f"{data_source['driver']}")
+            .option("truncate", f"{data_source['truncate']}")
+            .option("url", f"{data_source['url']}")
+            .option("user", f"{data_source['user']}")
+            .option("password", f"{data_source['password']}")
+            .option("dbtable", output_table_name)
+        )
+        writer.save()
 
     def __get_ddl_by_backend(self, data_type_map, output_table_name, id_col, output_dtypes) -> str:
         if self.backend.is_postgres_backend:
