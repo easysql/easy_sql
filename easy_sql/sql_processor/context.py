@@ -28,6 +28,8 @@ class CommentSubstitutor:
             )
         lines = []
         recognized_comment = []
+
+        # TODO: support of comment pattern: /* ... */
         for line in sql_expr.split("\n"):
             if line.startswith("-- "):
                 lines.append(CommentSubstitutor.COMMENT_IDENTIFIABLE_NAME + str(len(recognized_comment)) + "__")

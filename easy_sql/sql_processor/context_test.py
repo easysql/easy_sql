@@ -1,6 +1,6 @@
 import unittest
 
-from easy_sql.sql_processor.context import CommentSubstitutor
+from easy_sql.sql_processor.context import CommentSubstitutor, TemplatesContext
 
 
 class CommentSubstitutorTest(unittest.TestCase):
@@ -73,3 +73,25 @@ bbb -- ${a} in comment
    aaa -- some comment
         """,
         )
+
+
+class TemplateContextTest(unittest.TestCase):
+    def test_should_replace_template(self):
+        tc = TemplatesContext(True, {"a": "xx\n#{var}=abc, 123"})
+        replaced = tc.replace_templates("??@{a(var=${abc})}??")
+        self.assertEquals("??xx\n${abc}=abc, 123??", replaced)
+
+        # does not support var-func in template parameters
+        replaced = tc.replace_templates("??@{a(var=${fn(abc)})}??")
+        self.assertNotEquals("??xx\n${fn(abc)}=abc, 123??", replaced)
+
+    def test_multi_line_in_template_reference(self):
+        tc = TemplatesContext(True, {"a": "xx\n#{var}=abc, #{var1} 123"})
+        replaced = tc.replace_templates("??@{a(var=123\n,var1=234)}??")
+        self.assertEquals("??xx\n123=abc, 234 123??", replaced)
+
+        replaced = tc.replace_templates("??@{a(var=123,\nvar1=234)}??")
+        self.assertEquals("??xx\n123=abc, 234 123??", replaced)
+
+        replaced = tc.replace_templates("??@{a(\n  var\n=123\n,\nvar1=234)}??")
+        self.assertEquals("??xx\n123=abc, 234 123??", replaced)
