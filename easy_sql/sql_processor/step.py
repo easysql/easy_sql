@@ -174,16 +174,16 @@ class Step:
             if self.select_sql:
                 self.preprocess_select_sql(context)
             return backend.create_empty_table()
+        assert self.select_sql is not None
         self.preprocess_select_sql(context)
         if self.target_config.step_type == StepType.ACTION:
-            assert self.select_sql is not None
             backend.exec_native_sql(self.select_sql)
             return None
         else:
-            assert self.select_sql is not None
             return backend.exec_sql(self.select_sql)
 
-    def preprocess_select_sql(self, context):
+    def preprocess_select_sql(self, context: ProcessorContext):
+        assert self.select_sql is not None
         self.select_sql = context.replace_templates(self.select_sql)
         self.select_sql = context.replace_variables(self.select_sql)
 
