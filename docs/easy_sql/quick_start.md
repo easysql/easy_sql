@@ -158,3 +158,9 @@ select 1 as a
 ```
 
 More sample code about other backends could be referred [here](https://github.com/easysql/easy_sql/blob/main/test/sample_data_process.py)
+
+## ETL Language support
+
+We've created an extension for VS Code to ease the development of ETL in Easy SQL. A bunch of language features are provided, e.g. syntax highlight, code completion, diagnostics features etc. You can search `Easy SQL` in extension marketplace, or click [here](https://marketplace.visualstudio.com/items?itemName=EasySQL.easysql&ssr=false#overview) to get more information.
+
+We recommended to install the extension to develop ETL in Easy SQL.
