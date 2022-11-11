@@ -229,6 +229,12 @@ def create_debugger(sql_file_path: str, vars: Dict[str, Any] = None, funcs: Dict
 
 ![ETL Debugging](https://raw.githubusercontent.com/easysql/easy_sql/main/debugger-usage.gif)
 
+## ETL Language support
+
+We've created an extension for VS Code to ease the development of ETL in Easy SQL. A bunch of language features are provided, e.g. syntax highlight, code completion, diagnostics features etc. You can search `Easy SQL` in extension marketplace, or click [here](https://marketplace.visualstudio.com/items?itemName=EasySQL.easysql&ssr=false#overview) to get more information.
+
+We recommended to install the extension to develop ETL in Easy SQL.
+
 ## Contributing
 
 Please submit PR.
