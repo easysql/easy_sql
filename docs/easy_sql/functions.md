@@ -149,9 +149,11 @@ Below are a list of them for referencing.
 
 #### Partition functions
 
-- [`ensure_dwd_partition_exists(step: Step, *args) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_dwd_partition_exists)
+- [`ensure_dwd_partition_exists(step: Step, table_name: str, partition_value: str, *foreign_key_cols) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_dwd_partition_exists)
 - [`ensure_partition_exists(step: Step, *args) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_partition_exists)
 - [`ensure_partition_or_first_partition_exists(step: Step, *args) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_partition_or_first_partition_exists)
+- [`ensure_table_partition_exists(step: Step, partition_value: str, table: str, *tables: str) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_table_partition_exists)
+- [`ensure_table_partition_or_first_partition_exists(step: Step, partition_value: str, table: str, *tables: str) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_table_partition_or_first_partition_exists)
 - [`get_first_partition(table_name: str) -> str`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_first_partition)
 - [`get_first_partition_optional(table_name: str) -> Optional[str]`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_first_partition_optional)
 - [`get_last_partition(table_name: str) -> str`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_last_partition)
@@ -226,9 +228,11 @@ Below are a list of them for referencing.
 
 #### Partition functions
 
-- [`ensure_dwd_partition_exists(step: Step, *args) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_dwd_partition_exists)
+- [`ensure_dwd_partition_exists(step: Step, table_name: str, partition_value: str, *foreign_key_cols) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_dwd_partition_exists)
 - [`ensure_partition_exists(step: Step, *args) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_partition_exists)
 - [`ensure_partition_or_first_partition_exists(step: Step, *args) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_partition_or_first_partition_exists)
+- [`ensure_table_partition_exists(step: Step, partition_value: str, table: str, *tables: str) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_table_partition_exists)
+- [`ensure_table_partition_or_first_partition_exists(step: Step, partition_value: str, table: str, *tables: str) -> bool`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.ensure_table_partition_or_first_partition_exists)
 - [`get_first_partition(table_name: str) -> str`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_first_partition)
 - [`get_first_partition_optional(table_name: str) -> Optional[str]`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_first_partition_optional)
 - [`get_last_partition(table_name: str) -> str`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.PartitionFuncs.get_last_partition)

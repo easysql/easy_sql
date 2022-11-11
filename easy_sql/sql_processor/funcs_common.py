@@ -115,14 +115,8 @@ class PartitionFuncs:
     def get_partition_values_as_joined_str(self, table_name: str) -> str:
         return ", ".join([f"'{v}'" for v in self._get_partition_values(table_name)])
 
-    def ensure_partition_exists(self, step: Step, *args) -> bool:
-        if len(args) < 2:
-            raise Exception(
-                "must contains at least one table and exactly one partition_value when calling"
-                f" ensure_partition_exists, got {args}"
-            )
-        partition_value = args[-1]
-        tables = args[:-1]
+    def ensure_table_partition_exists(self, step: Step, partition_value: str, table: str, *tables: str) -> bool:
+        tables = (table,) + tables
         partition_not_exists_tables = []
         for table in tables:
             try:
@@ -137,15 +131,17 @@ class PartitionFuncs:
             return False
         return True
 
-    def ensure_dwd_partition_exists(self, step: Step, *args) -> bool:
+    def ensure_partition_exists(self, step: Step, *args) -> bool:
         if len(args) < 2:
             raise Exception(
-                "must contains one table and exactly one partition_value and one or more foreign key columns"
-                f" when calling ensure_dwd_partition_exists, got {args}"
+                "must contains at least one table and exactly one partition_value when calling"
+                f" ensure_partition_exists, got {args}"
             )
-        table_name = args[0]
-        partition_value = args[1]
-        foreign_key_cols = args[2:]
+        partition_value = args[-1]
+        tables = args[:-1]
+        return self.ensure_table_partition_exists(step, partition_value, tables[0], *tables[1:])
+
+    def ensure_dwd_partition_exists(self, step: Step, table_name: str, partition_value: str, *foreign_key_cols) -> bool:
         check_ok = True
         try:
             if not self.partition_exists(table_name, partition_value):
@@ -192,14 +188,10 @@ class PartitionFuncs:
 
         return check_ok
 
-    def ensure_partition_or_first_partition_exists(self, step: Step, *args) -> bool:
-        if len(args) < 2:
-            raise Exception(
-                "must contains at least one table and exactly one partition_value when calling"
-                f" ensure_partition_exists, got {args}"
-            )
-        partition_value = args[-1]
-        tables = args[:-1]
+    def ensure_table_partition_or_first_partition_exists(
+        self, step: Step, partition_value: str, table: str, *tables: str
+    ) -> bool:
+        tables = (table,) + tables
         partition_not_exists_tables = []
         for table in tables:
             try:
@@ -215,6 +207,16 @@ class PartitionFuncs:
             step.collect_report(message=message)
             return False
         return True
+
+    def ensure_partition_or_first_partition_exists(self, step: Step, *args) -> bool:
+        if len(args) < 2:
+            raise Exception(
+                "must contains at least one table and exactly one partition_value when calling"
+                f" ensure_partition_exists, got {args}"
+            )
+        partition_value = args[-1]
+        tables = args[:-1]
+        return self.ensure_table_partition_or_first_partition_exists(step, partition_value, tables[0], *tables[1:])
 
     def partition_not_exists(self, table_name: str, partition_value: str) -> bool:
         return not self.partition_exists(table_name, partition_value)
