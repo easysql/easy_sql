@@ -17,7 +17,7 @@ class FuncRunner:
         self.funcs.update(funcs)
 
     @staticmethod
-    def create(backend: Backend) -> "FuncRunner":
+    def system_funcs() -> Dict[str, Callable]:
         import builtins
 
         builtin_funcs = {
@@ -43,6 +43,11 @@ class FuncRunner:
                 "equal_ignore_case": lambda a, b: a.lower() == b.lower(),
             }
         )
+        return all_funcs
+
+    @staticmethod
+    def create(backend: Backend) -> "FuncRunner":
+        all_funcs = FuncRunner.system_funcs()
 
         if isinstance(backend, (SparkBackend,)):
             all_funcs.update(FuncRunner._get_spark_funcs(backend))
@@ -77,6 +82,8 @@ class FuncRunner:
             "previous_partition_exists": partition_funcs.previous_partition_exists,
             "get_partition_or_first_partition": partition_funcs.get_partition_or_first_partition,
             "ensure_dwd_partition_exists": partition_funcs.ensure_dwd_partition_exists,
+            "ensure_table_partition_exists": partition_funcs.ensure_table_partition_exists,
+            "ensure_table_partition_or_first_partition_exists": partition_funcs.ensure_table_partition_or_first_partition_exists,
             "get_partition_col": partition_funcs.get_partition_col,
             "get_first_partition": partition_funcs.get_first_partition,
             "get_last_partition": partition_funcs.get_last_partition,
@@ -128,6 +135,8 @@ class FuncRunner:
             "previous_partition_exists": partition_funcs.previous_partition_exists,
             "get_partition_or_first_partition": partition_funcs.get_partition_or_first_partition,
             "ensure_dwd_partition_exists": partition_funcs.ensure_dwd_partition_exists,
+            "ensure_table_partition_exists": partition_funcs.ensure_table_partition_exists,
+            "ensure_table_partition_or_first_partition_exists": partition_funcs.ensure_table_partition_or_first_partition_exists,
             "get_partition_col": partition_funcs.get_partition_col,
             "get_first_partition": partition_funcs.get_first_partition,
             "get_last_partition": partition_funcs.get_last_partition,
