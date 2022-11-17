@@ -7,6 +7,12 @@ from .common import SqlProcessorException, VarsReplacer
 __all__ = ["FuncRunner"]
 
 
+EASYSQL_FUNCS = {
+    "is_greater_or_equal": lambda a, b: a >= b,
+    "equal_ignore_case": lambda a, b: a.lower() == b.lower(),
+}
+
+
 class FuncRunner:
     _instance = None
 
@@ -37,17 +43,16 @@ class FuncRunner:
         all_funcs = {}
         all_funcs.update(builtin_funcs)
         all_funcs.update(operator_funcs)
-        all_funcs.update(
-            {
-                "is_greater_or_equal": lambda a, b: a >= b,
-                "equal_ignore_case": lambda a, b: a.lower() == b.lower(),
-            }
-        )
         return all_funcs
+
+    @staticmethod
+    def easysql_funcs() -> Dict[str, Callable]:
+        return EASYSQL_FUNCS
 
     @staticmethod
     def create(backend: Backend) -> "FuncRunner":
         all_funcs = FuncRunner.system_funcs()
+        all_funcs.update(FuncRunner.easysql_funcs())
 
         if isinstance(backend, (SparkBackend,)):
             all_funcs.update(FuncRunner._get_spark_funcs(backend))
