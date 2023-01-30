@@ -195,28 +195,28 @@ class FlinkBackend(Backend):
             if db_name and table_config and connector:
                 self.exec_native_sql(f"create database if not exists {db_name}")
                 self._create_table(table, table_config, connector)
+            else:
+                logger.warn(f"register table {table} failed, no configuration found")
 
-    def get_table_config_and_connector(self, flink_config, table: str):
+    def get_table_config_and_connector(
+        self, flink_config, table: str
+    ) -> Tuple[Optional[str], Optional[Dict], Optional[Dict]]:
         db_name = table.strip().split(".")[0]
         database = next(filter(lambda t: t["name"] == db_name, flink_config["databases"]), None)
         if not database:
-            logger.warn(
-                f"database {db_name} does not exist in flink tables config file, register table {table} failed."
-            )
+            logger.warn(f"database {db_name} does not exist in flink tables config file")
             return None, None, None
 
         table_config = next(filter(lambda t: t["name"] == table.strip().split(".")[1], database["tables"]), None)
         if not table_config:
-            logger.warn(f"table {table} does not exist in flink tables config file, register table {table} failed.")
+            logger.warn(f"table {table} does not exist in flink tables config file")
             return None, None, None
 
         connectors = database["connectors"]
         connector_name = table_config["connector"]["name"]
         connector = next(filter(lambda conn: conn["name"] == connector_name, connectors), None)
         if not connector:
-            logger.warn(
-                f"connector {connector_name} does not exist in flink tables config file, register table {table} failed."
-            )
+            logger.warn(f"connector {connector_name} does not exist in flink tables config file")
             return None, None, None
         return db_name, table_config, connector
 
@@ -229,8 +229,8 @@ class FlinkBackend(Backend):
             if "partition_by" in table_config
             else ""
         )
-        options = connector["options"]
-        options.update(table_config["connector"]["options"])
+        options = connector.get("options", {})
+        options.update(table_config.get("connector", {}).get("options", {}))
         options_expr = " , ".join([f"'{option}' = '{options[option]}'" for option in options])
         create_sql = f"""
             create table if not exists {table.strip()} (
