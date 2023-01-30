@@ -18,3 +18,4 @@ coverage.xml
 .coverage
 readme.local.md
 test/flink/jars
+test/*.local.*

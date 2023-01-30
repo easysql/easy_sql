@@ -25,13 +25,15 @@
                     }
                 },
                 {
-                    "name": "connector_2",
+                    "name": "connector_cdc",
                     "options": {
                         "connector": "postgres-cdc",
                         "hostname": "localhost",
                         "port": "5432",
                         "database-name": "postgres",
-                        "schema-name": "postgres",
+                        "slot.name": "cdc_slot",
+                        "decoding.plugin.name": "pgoutput",
+                        "schema-name": "sample",
                         "username": "postgres",
                         "password": "123456"
                     }
@@ -54,11 +56,26 @@
                     "partition_by": ["id", "val"]
                 },
                 {
+                    "name": "source_cdc",
+                    "connector": {
+                        "name": "connector_cdc",
+                        "options": {
+                            "table-name": "test"
+                        }
+                    },
+                    "schema": [
+                        "`id` INT",
+                        "val VARCHAR",
+                        "PRIMARY KEY (id) NOT ENFORCED"
+                    ],
+                    "partition_by": ["id", "val"]
+                },
+                {
                     "name": "target_1",
                     "connector": {
                         "name": "connector_1",
                         "options": {
-                            "table-name": "out_put_table"
+                            "table-name": "output_table"
                         }
                     },
                     "schema": [

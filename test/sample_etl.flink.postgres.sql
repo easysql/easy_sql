@@ -1,7 +1,6 @@
 -- backend: flink
 
 -- config: easy_sql.flink_tables_file_path=test/sample_etl.flink_tables_file.json
--- config: easy_sql.etl_type=streaming
 
 -- config: flink.cmd=-pyexec python3
 -- config: flink.cmd=-pyclientexec python3
@@ -14,8 +13,8 @@
 -- prepare-sql: drop schema if exists sample cascade
 -- prepare-sql: create schema sample
 -- prepare-sql: create table sample.test as select 1 as id, '1' as val
--- prepare-sql: drop table if exists public.out_put_table
--- prepare-sql: create table public.out_put_table (id int4 PRIMARY KEY, val text)
+-- prepare-sql: drop table if exists public.output_table
+-- prepare-sql: create table public.output_table (id int4 PRIMARY KEY, val text)
 
 -- target=variables
 select
