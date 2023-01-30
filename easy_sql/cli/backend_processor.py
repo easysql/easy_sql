@@ -139,7 +139,11 @@ class FlinkBackendProcessor(BackendProcessor):
         if config.flink_tables_file_path:
             backend.register_tables(config.flink_tables_file_path, self.config.tables)
             if self.config.tables:
-                conn = self.get_conn_from(config.flink_tables_file_path, backend, self.config.tables[0])
+                conn = None
+                for table in self.config.tables:
+                    conn = self.get_conn_from(config.flink_tables_file_path, backend, table)
+                    if conn:
+                        break
                 if conn:
                     from easy_sql.sql_processor.backend.rdb import _exec_sql
 
