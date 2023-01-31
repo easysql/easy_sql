@@ -153,12 +153,8 @@ class FlinkBackend(Backend):
         temp_res = self.flink.sql_query(f"select * from {source_table_meta.table_name}")
         # 纯动态分区时，如果当日没有新增数据，则不会创建 partition。而我们希望对于静态分区，总是应该创建分区，即使当日没有数据
         static_partitions = list(filter(lambda p: p.value, target_table_meta.partitions))
-        columns = (
-            self.flink.sql_query(f"select * from {target_table_meta.table_name}")
-            .limit(0)
-            .get_schema()
-            .get_field_names()
-        )
+        table_description = list(self.flink.execute_sql(f"desc {target_table_meta.table_name}").collect())
+        columns: List[str] = [f[0] for f in table_description]  # type: ignore
         for p in static_partitions:
             temp_res = temp_res.add_columns(lit(p.value).alias(p.field))
         temp_res = temp_res.select(*[col(column) for column in columns])

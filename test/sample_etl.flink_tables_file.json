@@ -87,9 +87,31 @@
             ]
         },
         {
-            "name": "db_2",
-            "connectors": [],
-            "tables": []
+            "name": "db_hudi",
+            "connectors": [
+                {
+                    "name": "connector_hudi",
+                    "options": {
+                        "connector": "hudi",
+                        "path": "/tmp/hudi-flink-test",
+                        "table.type": "MERGE_ON_READ",
+                        "changelog.enabled": true,
+                        "compaction.async.enabled": false
+                    }
+                }
+            ],
+            "tables": [
+                {
+                    "name": "target_hudi",
+                    "connector": {
+                        "name": "connector_hudi"
+                    },
+                    "schema": [
+                        "id INT NOT NULL PRIMARY KEY NOT ENFORCED",
+                        "val VARCHAR"
+                    ]
+                }
+            ]
         }
     ]
 }

@@ -155,9 +155,7 @@ class FlinkBackendProcessor(BackendProcessor):
         if self._exec_sql:
             self._exec_sql(prepare_sql)
         else:
-            logger.warn(
-                "Cannot execute prepare-sql: the connector is not configured or with no supported. Will skip this."
-            )
+            logger.warn("Cannot execute prepare-sql: the connector is not configured or not supported. Will skip this.")
 
     def get_conn_from(self, flink_tables_file_path: str, backend: Backend, table: str):
         from easy_sql.sql_processor.backend import FlinkBackend
