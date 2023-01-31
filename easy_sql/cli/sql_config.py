@@ -130,9 +130,9 @@ class EasySqlConfig:
     @property
     def is_batch(self) -> bool:
         etl_type_config = next(
-            filter(lambda c: get_key_by_splitter_and_strip(c) == "etl_type", self.customized_easy_sql_conf), "batch"
+            filter(lambda c: get_key_by_splitter_and_strip(c) == "etl_type", self.customized_easy_sql_conf), None
         )
-        return get_value_by_splitter_and_strip(etl_type_config) == "batch"
+        return get_value_by_splitter_and_strip(etl_type_config) == "batch" if etl_type_config else True
 
     @property
     def is_streaming(self) -> bool:
