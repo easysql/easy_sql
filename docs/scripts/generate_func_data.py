@@ -64,9 +64,7 @@ class FuncDoc:
         self.type = type
         self.tooltip = tooltip
         if self.tooltip["signature"]:
-            self.tooltip["signature"] = self.tooltip["signature"].replace(
-                "(self, ", "("
-            )
+            self.tooltip["signature"] = self.tooltip["signature"].replace("(self, ", "(")
 
     @staticmethod
     def from_sig_str(
@@ -87,9 +85,7 @@ class FuncDoc:
             parameters = parameters[1:]
 
         if any([p[1].kind == inspect.Parameter.VAR_KEYWORD for p in parameters]):
-            raise Exception(
-                "var keyword argument (**kwargs) not supported: " + func_name + str(sig)
-            )
+            raise Exception("var keyword argument (**kwargs) not supported: " + func_name + str(sig))
 
         end_var_arg_name = ""
         if parameters[-1][1].kind == inspect.Parameter.VAR_POSITIONAL:
@@ -129,16 +125,8 @@ def generate_doc(backend: str):
     for funcs_group in mod.__all__:
         mod_name: str = funcs_group
         funcs_group_mod = getattr(mod, funcs_group)
-        funcs = [
-            func
-            for func in dir(funcs_group_mod)
-            if not func.startswith("_") and func == func.lower()
-        ]
-        assert (
-            mod_name.endswith("Func")
-            or mod_name.endswith("Funcs")
-            or mod_name.endswith("Functions")
-        )
+        funcs = [func for func in dir(funcs_group_mod) if not func.startswith("_") and func == func.lower()]
+        assert mod_name.endswith("Func") or mod_name.endswith("Funcs") or mod_name.endswith("Functions")
 
         for func_name in funcs:
             func_mod = getattr(funcs_group_mod, func_name)
@@ -152,9 +140,7 @@ def generate_doc(backend: str):
 
     for func_name, func in FuncRunner.easysql_funcs().items():
         tooltip = JediCompletion.serialize_tooltip(
-            jedi.Script(
-                f"from from easy_sql.sql_processor import funcs; funcs.EASYSQL_FUNCS['{func_name}']"
-            )
+            jedi.Script(f"from from easy_sql.sql_processor import funcs; funcs.EASYSQL_FUNCS['{func_name}']")
         )
         sig = inspect.signature(func)
         func_docs.append(FuncDoc.from_sig_str(func_name, tooltip, sig))
@@ -163,9 +149,7 @@ def generate_doc(backend: str):
         import builtins
 
         mod = "builtins" if hasattr(builtins, func_name) else "operator"
-        tooltip = JediCompletion.serialize_tooltip(
-            jedi.Script(f"import {mod}; {mod}.{func_name}")
-        )
+        tooltip = JediCompletion.serialize_tooltip(jedi.Script(f"import {mod}; {mod}.{func_name}"))
         try:
             sig = inspect.signature(func)
             func_docs.append(FuncDoc.from_sig_str(func_name, tooltip, sig, "system"))

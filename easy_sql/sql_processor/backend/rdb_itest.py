@@ -144,8 +144,10 @@ class RdbTest(unittest.TestCase):
         _exec_sql(backend.conn, "create table t.dynamic_partition_test(id int, val varchar(100), a varchar(100))")
         _exec_sql(
             backend.conn,
-            "insert into t.dynamic_partition_test values(1, '1', '2021-01-01'), "
-            "(2, '2', '2021-01-02'),(3, '3', '2021-01-03')",
+            (
+                "insert into t.dynamic_partition_test values(1, '1', '2021-01-01'), "
+                "(2, '2', '2021-01-02'),(3, '3', '2021-01-03')"
+            ),
         )
 
         self.run_test_backend(backend)
@@ -162,8 +164,10 @@ class RdbTest(unittest.TestCase):
         )
         _exec_sql(
             backend.conn,
-            "insert into t.dynamic_partition_test values(1, '1', '2021-01-01 00:00:00'), "
-            "(2, '2', '2021-01-02 00:00:00'), (3, '3', '2021-01-03 00:00:00')",
+            (
+                "insert into t.dynamic_partition_test values(1, '1', '2021-01-01 00:00:00'), "
+                "(2, '2', '2021-01-02 00:00:00'), (3, '3', '2021-01-03 00:00:00')"
+            ),
         )
         self.run_test_backend(backend)
 
@@ -184,8 +188,10 @@ class RdbTest(unittest.TestCase):
         _exec_sql(backend.conn, "create table if not exists t.dynamic_partition_test(id int, val string, a date)")
         _exec_sql(
             backend.conn,
-            "insert into t.dynamic_partition_test values(1, '1', '2021-01-01'), (2, '2', '2021-01-02'), (3, '3',"
-            " '2021-01-03')",
+            (
+                "insert into t.dynamic_partition_test values(1, '1', '2021-01-01'), (2, '2', '2021-01-02'), (3, '3',"
+                " '2021-01-03')"
+            ),
         )
         self.run_test_backend(backend)
 
