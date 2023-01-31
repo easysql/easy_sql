@@ -21,8 +21,8 @@
 -- config: flink.cmd=-t remote
 -- config: flink.pipeline.jars=test/flink/jars/flink-connector-jdbc-1.15.1.jar;test/flink/jars/flink-sql-connector-postgres-cdc-2.3.0.jar;test/flink/jars/postgresql-42.2.14.jar
 
--- inputs: db_1.source_cdc
--- outputs: db_1.target_1
+-- inputs: db_pg.source_cdc
+-- outputs: db_pg.target_1
 
 -- prepare-sql: drop schema if exists sample cascade
 -- prepare-sql: create schema sample
@@ -51,10 +51,10 @@ select
     ${a} as id,
     '2' as val
 union all
-select id, val from db_1.source_cdc
+select id, val from db_pg.source_cdc
 
--- target=output.db_1.target_1
+-- target=output.db_pg.target_1
 select id, val from result_view
 
--- target=log.db_1__target_1
-select * from db_1.target_1
+-- target=log.db_pg__target_1
+select * from db_pg.target_1

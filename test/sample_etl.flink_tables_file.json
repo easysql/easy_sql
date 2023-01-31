@@ -13,7 +13,7 @@
     ],
     "databases": [
         {
-            "name": "db_1",
+            "name": "db_pg",
             "connectors": [
                 {
                     "name": "connector_1",

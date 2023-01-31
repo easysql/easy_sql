@@ -1,6 +1,6 @@
 -- backend: flink
 -- config: easy_sql.flink_tables_file_path=sample_etl.flink_tables_file.json
--- inputs: db_1.source_1
+-- inputs: db_pg.source_1
 
 -- target=variables
 select 2 as a
@@ -21,7 +21,7 @@ select
 union all
 select id, val from myhiveCatalog.default.hive_table
 union all
-select id, val from db_1.source_1
+select id, val from db_pg.source_1
 
 -- target=output.myhiveCatalog.default.hive_out_table
 select id, val from result_view
