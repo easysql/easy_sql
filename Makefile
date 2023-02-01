@@ -32,6 +32,7 @@ e2e-test-flink-postgres:
 e2e-test-flink-streaming:
 	python3 -m easy_sql.data_process -f test/sample_etl.flink.postgres-cdc.sql
 	python3 -m easy_sql.data_process -f test/sample_etl.flink.postgres-cdc.multi-sink.sql
+	python3 -m easy_sql.data_process -f test/sample_etl.flink.postgres-hudi.sql
 
 e2e-test-flink-hive:
 	python3 -m easy_sql.data_process -f test/sample_etl.flink.hive.sql
@@ -56,6 +57,13 @@ install-test-pip:
 upload-pip:
 	rm -rf ./dist
 	poetry publish --build
+
+prepare-flink-hadoop:
+	test -f test/flink/tools/hadoop/hadoop-3.3.4.tar.gz || ( \
+        mkdir -pv test/flink/tools/hadoop && \
+        wget -P test/flink/tools/hadoop https://dlcdn.apache.org/hadoop/common/hadoop-3.3.4/hadoop-3.3.4.tar.gz && \
+        cd test/flink/tools/hadoop && \
+        tar xf hadoop-3.3.4.tar.gz )
 
 download-flink-jars:
 	test -f test/flink/jars/flink-connector-jdbc-1.15.1.jar || wget -P test/flink/jars https://repo1.maven.org/maven2/org/apache/flink/flink-connector-jdbc/1.15.1/flink-connector-jdbc-1.15.1.jar

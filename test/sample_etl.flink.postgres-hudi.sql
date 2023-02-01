@@ -1,7 +1,9 @@
 -- Preparation:
--- 1. start a local flink cluster: your/site-packages/path/pyflink/bin/start-cluster.sh
--- 2. ensure postgres started with configuration: `wal_level=logical` (in file /var/lib/postgresql/data/postgresql.conf)
--- 3. use remote mode to run flink application: configure `flink.cmd=-t remote` (already done below)
+-- 1. download a hadoop release: wget https://dlcdn.apache.org/hadoop/common/hadoop-3.3.4/hadoop-3.3.4.tar.gz
+-- 2. set hadoop classpath: tar xf hadoop-3.3.4.tar.gz && export HADOOP_CLASSPATH=$($(pwd)/hadoop-3.3.4/bin/hadoop classpath)
+-- 3. start a local flink cluster: your/site-packages/path/pyflink/bin/start-cluster.sh
+-- 4. ensure postgres started with configuration: `wal_level=logical` (in file /var/lib/postgresql/data/postgresql.conf)
+-- 5. use remote mode to run flink application: configure `flink.cmd=-t remote` (already done below)
 --
 -- Verification:
 -- 1. verify there are two rows in hudi table /tmp/hudi-flink-test:
