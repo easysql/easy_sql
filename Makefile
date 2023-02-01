@@ -63,6 +63,7 @@ download-flink-jars:
 	test -f test/flink/jars/flink-sql-connector-hive-3.1.2_2.12-1.15.1.jar || wget -P test/flink/jars https://repo1.maven.org/maven2/org/apache/flink/flink-sql-connector-hive-3.1.2_2.12/1.15.1/flink-sql-connector-hive-3.1.2_2.12-1.15.1.jar
 	test -f test/flink/jars/postgresql-42.2.14.jar || wget -P test/flink/jars https://repo1.maven.org/maven2/org/postgresql/postgresql/42.2.14/postgresql-42.2.14.jar
 	test -f test/flink/jars/flink-sql-connector-postgres-cdc-2.3.0.jar || wget -P test/flink/jars https://repo1.maven.org/maven2/com/ververica/flink-sql-connector-postgres-cdc/2.3.0/flink-sql-connector-postgres-cdc-2.3.0.jar
+	test -f test/flink/jars/hudi-flink1.15-bundle-0.12.2.jar || wget -P test/flink/jars https://repo1.maven.org/maven2/org/apache/hudi/hudi-flink1.15-bundle/0.12.2/hudi-flink1.15-bundle-0.12.2.jar
 
 install-flink-backend: download-flink-jars
 	poetry install -E 'cli pg linter'

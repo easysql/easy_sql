@@ -155,7 +155,7 @@ jobs:
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: poetry run pip install apache-flink==1.15.1
     - run: poetry run make download-flink-jars
-    - run: bash $(python3 -c 'import pyflink; print(pyflink.__file__.replace("__init__.py", "bin/start-cluster.sh"))') && sleep 5
+    - run: bash $(poetry run python3 -c 'import pyflink; print(pyflink.__file__.replace("__init__.py", "bin/start-cluster.sh"))') && sleep 5
     - run: poetry run make e2e-test-flink-postgres e2e-test-flink-streaming
       env:
         PG_URL: postgresql://postgres:123456@localhost/postgres
