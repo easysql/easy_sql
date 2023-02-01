@@ -52,5 +52,8 @@ select id, val from db_pg.source_cdc
 -- target=output.db_hudi.target_hudi
 select id, val from result_view
 
+-- target=func.execute_streaming_inserts()
+-- trigger execution of inserts manually, or it will be triggered at the end of the job and the query of db_hudi.target_hudi fails.
+
 -- target=log.db_hudi__target_hudi
 select * from db_hudi.target_hudi
