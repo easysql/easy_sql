@@ -29,6 +29,11 @@ e2e-test-clickhouse:
 e2e-test-flink-postgres:
 	python3 -m easy_sql.data_process -f test/sample_etl.flink.postgres.sql
 
+e2e-test-flink-streaming:
+	python3 -m easy_sql.data_process -f test/sample_etl.flink.postgres-cdc.sql
+	python3 -m easy_sql.data_process -f test/sample_etl.flink.postgres-cdc.multi-sink.sql
+	python3 -m easy_sql.data_process -f test/sample_etl.flink.postgres-hudi.sql
+
 e2e-test-flink-hive:
 	python3 -m easy_sql.data_process -f test/sample_etl.flink.hive.sql
 

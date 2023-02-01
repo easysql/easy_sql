@@ -14,7 +14,7 @@
 
 -- backend: flink
 
--- config: easy_sql.flink_tables_file_path=test/sample_etl.flink_tables_file.local.json
+-- config: easy_sql.flink_tables_file_path=test/sample_etl.flink_tables_file.json
 -- config: easy_sql.etl_type=streaming
 
 -- config: flink.cmd=-pyexec python3
