@@ -325,8 +325,10 @@ class RdbTable(Table):
                     self.db_config.insert_data_sql(
                         target_table_name,
                         col_names,
-                        f"select {converted_col_names} from {self.backend.temp_schema}.{temp_table_name} where"
-                        f" {filter_expr}",
+                        (
+                            f"select {converted_col_names} from {self.backend.temp_schema}.{temp_table_name} where"
+                            f" {filter_expr}"
+                        ),
                         partitions,
                     )
                 )
@@ -768,8 +770,10 @@ class RdbBackend(Backend):
                     self.sql_dialect.insert_data_sql(
                         full_target_table_name,
                         col_names,
-                        f"select {col_names} from {source_table.get_full_table_name(self.temp_schema)} where"
-                        f" {filter_expr}",
+                        (
+                            f"select {col_names} from {source_table.get_full_table_name(self.temp_schema)} where"
+                            f" {filter_expr}"
+                        ),
                         save_partition,
                     ),
                 )

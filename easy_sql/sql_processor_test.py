@@ -328,9 +328,11 @@ select ${not_existed3}
     def test_should_do_action_step_ok(self):
         processor = SqlProcessor(
             LocalSpark.get(),
-            "-- target=variables\nselect true as __create_output_table__\n"
-            "-- target=output.t.some_table\nselect 1 as a, 0 as b\n"
-            "-- target=action.some_action\ndrop table t.some_table",
+            (
+                "-- target=variables\nselect true as __create_output_table__\n"
+                "-- target=output.t.some_table\nselect 1 as a, 0 as b\n"
+                "-- target=action.some_action\ndrop table t.some_table"
+            ),
         )
         processor.run()
         from easy_sql.sql_processor.backend import TableMeta
@@ -384,7 +386,16 @@ class FuncRunnerTest(unittest.TestCase):
             ],
             ["id", "fk1", "fk2", "pt"],
         ).write.mode("overwrite").partitionBy("pt").saveAsTable("data_table")
-        spark.createDataFrame([(1, "1", 20210101,)], ["id", "fk", "pt"]).write.mode("overwrite").partitionBy(
+        spark.createDataFrame(
+            [
+                (
+                    1,
+                    "1",
+                    20210101,
+                )
+            ],
+            ["id", "fk", "pt"],
+        ).write.mode("overwrite").partitionBy(
             "pt"
         ).saveAsTable("data_table1")
         # failure case1: 被检测表是空的
@@ -464,7 +475,15 @@ class FuncRunnerTest(unittest.TestCase):
         spark.createDataFrame(
             [], StructType([StructField("id", IntegerType()), StructField("pt", IntegerType())])
         ).write.mode("overwrite").partitionBy("pt").saveAsTable("empty_table")
-        spark.createDataFrame([(1, 20210101,)], ["id", "pt"]).write.mode("overwrite").partitionBy(
+        spark.createDataFrame(
+            [
+                (
+                    1,
+                    20210101,
+                )
+            ],
+            ["id", "pt"],
+        ).write.mode("overwrite").partitionBy(
             "pt"
         ).saveAsTable("data_table")
         # failure case1: 被检测表是空的
@@ -499,8 +518,10 @@ class FuncRunnerTest(unittest.TestCase):
         # failure case3: 检测多张表，message 中应该只有检查失败的表
         processor = SqlProcessor(
             spark,
-            "-- target=check.ensure_partition_or_first_partition_exists(${__step__}, empty_table, data_table,"
-            " 20210101)",
+            (
+                "-- target=check.ensure_partition_or_first_partition_exists(${__step__}, empty_table, data_table,"
+                " 20210101)"
+            ),
             [],
             {},
         )
