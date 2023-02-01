@@ -35,8 +35,6 @@
 -- prepare-sql: drop schema if exists sample cascade
 -- prepare-sql: create schema sample
 -- prepare-sql: create table sample.test as select 1 as id, '1' as val
--- prepare-sql: drop table if exists public.output_table
--- prepare-sql: create table public.output_table (id int4 PRIMARY KEY, val text)
 
 -- target=variables
 select

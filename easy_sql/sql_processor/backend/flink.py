@@ -10,6 +10,7 @@ from .base import Backend, Row, SaveMode, Table, TableMeta
 if TYPE_CHECKING:
     from pyflink.common import Row as PyFlinkRow
     from pyflink.table import Table as PyFlinkTable
+    from pyflink.table import TableResult
 
 __all__ = ["FlinkRow", "FlinkTable", "FlinkBackend"]
 
@@ -86,6 +87,8 @@ class FlinkBackend(Backend):
         self.flink: TableEnvironment = TableEnvironment.create(
             EnvironmentSettings.in_batch_mode() if is_batch else EnvironmentSettings.in_streaming_mode()
         )
+        self.streaming_insert_stmts = self.flink.create_statement_set() if not is_batch else None
+        self.has_streaming_insert_stmts = False
 
     def init_udfs(self, scala_udf_initializer: Optional[str] = None, *args, **kwargs):
         if scala_udf_initializer:
@@ -105,17 +108,32 @@ class FlinkBackend(Backend):
             if isinstance(func, UserDefinedScalarFunctionWrapper):
                 self.flink.create_temporary_system_function(key, func)
 
+    def execute_streaming_inserts(self):
+        if self.streaming_insert_stmts is not None:
+            if self.has_streaming_insert_stmts:
+                self.streaming_insert_stmts.execute()
+                logger.info("committed insert statements.")
+                self.streaming_insert_stmts = self.flink.create_statement_set()
+                self.has_streaming_insert_stmts = False
+            else:
+                logger.info("no insert statements to commit.")
+
     def clean(self):
         for temp_view in self.flink.list_temporary_views():
             self.flink.drop_temporary_view(temp_view)
+        self.execute_streaming_inserts()
 
-    def exec_native_sql(self, sql: str):
+    def exec_native_sql(self, sql: str) -> TableResult:
         logger.info(f"will exec sql: {sql}")
         return self.flink.execute_sql(sql)
 
+    def exec_native_sql_query(self, sql: str) -> PyFlinkTable:
+        logger.info(f"will exec sql: {sql}")
+        return self.flink.sql_query(sql)
+
     def exec_sql(self, sql: str) -> Table:
         logger.info(f"will exec sql: {sql}")
-        return FlinkTable(self.flink.sql_query(sql))
+        return FlinkTable(self.exec_native_sql_query(sql))
 
     def create_empty_table(self):
         return FlinkTable("")
@@ -150,16 +168,24 @@ class FlinkBackend(Backend):
                 f"cannot save table {target_table_meta.table_name} to {target_table_meta.table_name}"
             )
 
-        temp_res = self.flink.sql_query(f"select * from {source_table_meta.table_name}")
+        temp_res = self.exec_native_sql_query(f"select * from {source_table_meta.table_name}")
         # 纯动态分区时，如果当日没有新增数据，则不会创建 partition。而我们希望对于静态分区，总是应该创建分区，即使当日没有数据
         static_partitions = list(filter(lambda p: p.value, target_table_meta.partitions))
-        table_description = list(self.flink.execute_sql(f"desc {target_table_meta.table_name}").collect())
+        table_description = list(self.exec_native_sql(f"desc {target_table_meta.table_name}").collect())
         columns: List[str] = [f[0] for f in table_description]  # type: ignore
         for p in static_partitions:
             temp_res = temp_res.add_columns(lit(p.value).alias(p.field))
         temp_res = temp_res.select(*[col(column) for column in columns])
 
-        temp_res.execute_insert(target_table_meta.table_name, save_mode == SaveMode.overwrite)
+        logger.info(f"save table {source_table_meta.table_name} to {target_table_meta.table_name}")
+        if self.streaming_insert_stmts is not None:
+            logger.info("add insert to streaming_insert_stmts.")
+            self.streaming_insert_stmts.add_insert(
+                target_table_meta.table_name, temp_res, save_mode == SaveMode.overwrite
+            )
+            self.has_streaming_insert_stmts = True
+        else:
+            temp_res.execute_insert(target_table_meta.table_name, save_mode == SaveMode.overwrite)
 
     def refresh_table_partitions(self, table: TableMeta):
         # flink无法从`desc table`中解析出partition字段，但是可以在flink_source_file中配置table的partition字段

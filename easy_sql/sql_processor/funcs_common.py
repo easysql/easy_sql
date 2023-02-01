@@ -10,6 +10,7 @@ from . import SqlProcessorException
 
 if TYPE_CHECKING:
     import pandas as pd
+    from sqlalchemy.engine import Connection
 
     from .backend import Backend
     from .backend.rdb import RdbBackend
@@ -376,8 +377,9 @@ class AnalyticsFuncs:
         condition_sql = "where " + query if query else ""
         sql = f"select * from {table} {condition_sql} order by {rand_func}() limit {max_count}"
         with backend.engine.connect().execution_options(autocommit=True) as conn:
-            query = conn.execute(text(sql))
-        return pd.DataFrame(query.fetchall())
+            conn: Connection = conn
+            query_result = conn.execute(text(sql))
+        return pd.DataFrame(query_result.fetchall())
 
     def _read_data_spark(self, backend: Backend, table: str, query: str, max_count: int) -> Optional[pd.DataFrame]:
         from pyspark.sql.functions import expr

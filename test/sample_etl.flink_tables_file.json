@@ -83,6 +83,20 @@
                         "val VARCHAR",
                         "PRIMARY KEY (id) NOT ENFORCED"
                     ]
+                },
+                {
+                    "name": "target_agg",
+                    "connector": {
+                        "name": "connector_1",
+                        "options": {
+                            "table-name": "output_table_agg"
+                        }
+                    },
+                    "schema": [
+                        "val VARCHAR",
+                        "count_val BIGINT",
+                        "PRIMARY KEY (val) NOT ENFORCED"
+                    ]
                 }
             ]
         },

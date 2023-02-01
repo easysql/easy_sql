@@ -1,6 +1,6 @@
 from typing import Callable, Dict, Optional
 
-from .backend import Backend, SparkBackend
+from .backend import Backend, FlinkBackend, SparkBackend
 from .backend.rdb import RdbBackend
 from .common import SqlProcessorException, VarsReplacer
 
@@ -58,6 +58,8 @@ class FuncRunner:
             all_funcs.update(FuncRunner._get_spark_funcs(backend))
         elif isinstance(backend, (RdbBackend,)):
             all_funcs.update(FuncRunner._get_rdb_funcs(backend))
+        elif isinstance(backend, (FlinkBackend,)):
+            all_funcs.update(FuncRunner._get_flink_funcs(backend))
 
         FuncRunner._instance = FuncRunner(all_funcs)
         return FuncRunner._instance
@@ -104,6 +106,32 @@ class FuncRunner:
             "all_cols_prefixed_with_exclusion_expr": col_funcs.all_cols_prefixed_with_exclusion_expr,
             "move_file": io_funcs.move_file,
             "data_profiling_report": ana_funcs.data_profiling_report,
+        }
+
+    @staticmethod
+    def _get_flink_funcs(backend) -> Dict[str, Callable]:
+        from easy_sql.sql_processor.funcs_flink import (
+            AnalyticsFuncs,
+            ColumnFuncs,
+            ParallelismFuncs,
+            StreamingFuncs,
+            TableFuncs,
+        )
+
+        parallelism_funcs = ParallelismFuncs(backend)
+        col_funcs = ColumnFuncs(backend)
+        table_funcs = TableFuncs(backend)
+        ana_funcs = AnalyticsFuncs(backend)
+        streaming_funcs = StreamingFuncs(backend)
+        return {
+            "all_cols_without_one_expr": col_funcs.all_cols_without_one_expr,
+            "all_cols_with_exclusion_expr": col_funcs.all_cols_with_exclusion_expr,
+            "all_cols_prefixed_with_exclusion_expr": col_funcs.all_cols_prefixed_with_exclusion_expr,
+            "ensure_no_null_data_in_table": table_funcs.ensure_no_null_data_in_table,
+            "check_not_null_column_in_table": table_funcs.check_not_null_column_in_table,
+            "data_profiling_report": ana_funcs.data_profiling_report,
+            "set_parallelism": parallelism_funcs.set_parallelism,
+            "execute_streaming_inserts": streaming_funcs.execute_streaming_inserts,
         }
 
     @staticmethod
