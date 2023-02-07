@@ -73,6 +73,8 @@ class EasySqlConfig:
         self.udf_file_path, self.func_file_path = udf_file_path, func_file_path
         self.scala_udf_initializer = scala_udf_initializer
         self.input_tables, self.output_tables = input_tables, output_tables
+        self.resolved_udf_file_path = self._resolve_file(udf_file_path) if udf_file_path else None
+        self.resolved_func_file_path = self._resolve_file(func_file_path) if func_file_path else None
 
     @staticmethod
     def from_sql(

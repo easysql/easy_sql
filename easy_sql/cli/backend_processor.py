@@ -67,10 +67,10 @@ class BackendProcessor:
         sql_processor = SqlProcessor(
             backend, config.sql, variables=variables, scala_udf_initializer=config.scala_udf_initializer
         )
-        if config.udf_file_path:
-            sql_processor.register_udfs_from_pyfile(config.udf_file_path)
-        if config.func_file_path:
-            sql_processor.register_funcs_from_pyfile(config.func_file_path)
+        if config.resolved_udf_file_path:
+            sql_processor.register_udfs_from_pyfile(config.resolved_udf_file_path)
+        if config.resolved_func_file_path:
+            sql_processor.register_funcs_from_pyfile(config.resolved_func_file_path)
 
         sql_processor.run(dry_run=dry_run)
 
