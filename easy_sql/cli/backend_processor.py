@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any, Dict, List, Optional
 
-from easy_sql.cli.sql_config import (
+from easy_sql.config.sql_config import (
     EasySqlConfig,
     FlinkBackendConfig,
     SparkBackendConfig,

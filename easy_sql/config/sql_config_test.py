@@ -1,7 +1,7 @@
 import re
 import unittest
 
-from easy_sql.cli.sql_config import (
+from easy_sql.config.sql_config import (
     EasySqlConfig,
     FlinkBackendConfig,
     SparkBackendConfig,

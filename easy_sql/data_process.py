@@ -30,11 +30,11 @@ class EasySqlProcessor:
             raise Exception(f"sql_file must ends with .sql, found `{sql_file}`")
 
         try:
-            from easy_sql.cli.sql_config import EasySqlConfig
+            from easy_sql.config.sql_config import EasySqlConfig
         except ModuleNotFoundError:
             assert python_path is not None
             sys.path.insert(0, python_path)
-            from easy_sql.cli.sql_config import EasySqlConfig
+            from easy_sql.config.sql_config import EasySqlConfig
 
         self.sql_file = sql_file
         self.vars_arg = vars
