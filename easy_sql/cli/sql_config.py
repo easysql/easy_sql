@@ -5,10 +5,15 @@ import re
 import urllib.parse
 from datetime import datetime
 from os import path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from easy_sql.logger import logger
 from easy_sql.utils.io_utils import read_sql, resolve_file
+from easy_sql.utils.kv import (
+    KV,
+    get_key_by_splitter_and_strip,
+    get_value_by_splitter_and_strip,
+)
 
 
 def _parse_backend(sql: str):
@@ -32,15 +37,6 @@ def _parse_tables(sql: str, table_type: str) -> List[str]:
         if re.match(rf"^-- \s*{table_type}:.*$", line):
             tables += get_value_by_splitter_and_strip(line, table_type + ":").split(",")
     return tables
-
-
-def get_key_by_splitter_and_strip(source: str, splitter: Optional[str] = "=", strip: Optional[str] = None):
-    return source.strip()[: source.strip().index(splitter or "=")].strip(strip)
-
-
-def get_value_by_splitter_and_strip(source: str, splitter: Optional[str] = "=", strip: Optional[str] = None):
-    splitter = splitter or "="
-    return source.strip()[source.strip().index(splitter) + len(splitter) :].strip(strip)
 
 
 def parse_vars(vars: Optional[str]) -> Dict[str, Any]:
@@ -347,23 +343,3 @@ class FlinkBackendConfig:
         cmd_args = [f"{arg} {args[arg]}" for arg in args]
 
         return cmd_args
-
-
-class KV:
-    def __init__(self, k: str, v: str) -> None:
-        self.k, self.v = k, v
-
-    @staticmethod
-    def from_config(config_line: str, splitter: Optional[str] = "=", strip: Optional[str] = None) -> KV:
-        return KV(
-            get_key_by_splitter_and_strip(config_line, splitter, strip),
-            get_value_by_splitter_and_strip(config_line, splitter, strip),
-        )
-
-    def as_tuple(
-        self, k_convert: Optional[Callable[[str], Any]] = None, v_convert: Optional[Callable[[str], Any]] = None
-    ) -> Tuple[Any, Any]:
-        return (k_convert(self.k) if k_convert else self.k, v_convert(self.v) if v_convert else self.v)
-
-    def as_dict(self) -> Dict[str, str]:
-        return {self.k: self.v}

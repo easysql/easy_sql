@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from easy_sql.cli.sql_config import (
-    KV,
     EasySqlConfig,
     FlinkBackendConfig,
     SparkBackendConfig,
@@ -13,9 +12,6 @@ from easy_sql.cli.sql_config import (
 from easy_sql.logger import logger
 from easy_sql.sql_processor import SqlProcessor
 from easy_sql.sql_processor.backend import Backend
-
-if TYPE_CHECKING:
-    from sqlalchemy.engine.base import Connection, Engine
 
 
 class BackendProcessor:
@@ -128,26 +124,29 @@ class FlinkBackendProcessor(BackendProcessor):
         )
 
     def _create_backend(self, backend_config: Optional[List[str]]) -> Backend:
-        from easy_sql.sql_processor.backend import FlinkBackend
+        from easy_sql.sql_processor.backend import FlinkBackend, FlinkTablesConfig
 
-        backend = FlinkBackend(self.config.is_batch)
         config = FlinkBackendConfig(self.config, backend_config)
+        backend = FlinkBackend(
+            self.config.is_batch, flink_tables_config=FlinkTablesConfig.from_config_file(config.flink_tables_file_path)
+        )
 
         logger.info(f"Using flink configurations: {config.flink_configurations}")
         backend.set_configurations(config.flink_configurations)
 
-        if config.flink_tables_file_path:
-            backend.register_tables(config.flink_tables_file_path, self.config.tables)
-            if self.config.tables:
-                conn = None
-                for table in self.config.tables:
-                    conn = self.get_conn_from(config.flink_tables_file_path, backend, table)
-                    if conn:
-                        break
-                if conn:
-                    from easy_sql.sql_processor.backend.rdb import _exec_sql
+        backend.register_tables(self.config.tables)
+        if self.config.tables:
+            conn = None
+            for table in self.config.tables:
+                from easy_sql.utils import db_connection_utils
 
-                    self._exec_sql = lambda sql: _exec_sql(conn, sql)
+                conn = db_connection_utils.get_table_raw_conn_for_flink_backend(backend, table)
+                if conn:
+                    break
+            if conn:
+                from easy_sql.sql_processor.backend.rdb import _exec_sql
+
+                self._exec_sql = lambda sql: _exec_sql(conn, sql)
 
         return backend
 
@@ -156,35 +155,6 @@ class FlinkBackendProcessor(BackendProcessor):
             self._exec_sql(prepare_sql)
         else:
             logger.warn("Cannot execute prepare-sql: the connector is not configured or not supported. Will skip this.")
-
-    def get_conn_from(self, flink_tables_file_path: str, backend: Backend, table: str):
-        from easy_sql.sql_processor.backend import FlinkBackend
-
-        def retrieve_jdbc_url_from(flink_tables_file_path: str, backend: FlinkBackend, table: str):
-            if table and flink_tables_file_path and os.path.exists(flink_tables_file_path):
-                with open(flink_tables_file_path, "r") as f:
-                    import json
-
-                    config = json.loads(f.read())
-                    _, _, connector = backend.get_table_config_and_connector(config, table)
-                    if connector and connector["options"]["connector"] == "jdbc":
-                        base_url = connector["options"]["url"]
-                        username = connector["options"]["username"]
-                        password = connector["options"]["password"]
-                        split_expr = "://"
-                        split_expr_index = base_url.index(split_expr)
-                        db_type = base_url[len("jdbc:") : split_expr_index]
-                        url = f"{db_type}{split_expr}{username}:{password}@{KV.from_config(base_url, split_expr).v}"
-                        return url
-
-        assert isinstance(backend, FlinkBackend)
-        db_url = retrieve_jdbc_url_from(flink_tables_file_path, backend, table)
-        if db_url:
-            from sqlalchemy import create_engine
-
-            engine: Engine = create_engine(db_url, isolation_level="AUTOCOMMIT", pool_size=1)
-            conn: Connection = engine.connect()
-            return conn
 
 
 class PostgresBackendProcessor(BackendProcessor):

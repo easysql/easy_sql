@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from pyflink.table import Table as PyFlinkTable
     from pyflink.table import TableResult
 
-__all__ = ["FlinkRow", "FlinkTable", "FlinkBackend"]
+__all__ = ["FlinkRow", "FlinkTable", "FlinkBackend", "FlinkTablesConfig"]
 
 
 class FlinkRow(Row):
@@ -81,9 +81,10 @@ class FlinkTable(Table):
 
 class FlinkBackend(Backend):
     # todo: 考虑是否需要在外面实例化flink: TableEnvironment
-    def __init__(self, is_batch: Optional[bool] = True):
+    def __init__(self, is_batch: Optional[bool] = True, flink_tables_config: Optional[FlinkTablesConfig] = None):
         from pyflink.table import EnvironmentSettings, TableEnvironment
 
+        self.flink_tables_config = flink_tables_config or FlinkTablesConfig({})
         self.flink: TableEnvironment = TableEnvironment.create(
             EnvironmentSettings.in_batch_mode() if is_batch else EnvironmentSettings.in_streaming_mode()
         )
@@ -191,56 +192,64 @@ class FlinkBackend(Backend):
         # flink无法从`desc table`中解析出partition字段，但是可以在flink_source_file中配置table的partition字段
         pass
 
-    def _register_catalog(self, flink_config):
-        if "catalogs" in flink_config:
-            for catalog in flink_config["catalogs"]:
-                catalog_name = catalog["name"]
-                del catalog["name"]
-                catalog_expr = " , ".join([f"'{option}' = '{catalog[option]}'" for option in catalog])
-                try:  # noqa: SIM105
-                    self.exec_native_sql(
-                        f"""
-                            CREATE CATALOG {catalog_name}
-                            WITH (
-                                {catalog_expr}
-                            );
-                        """
-                    )
-                except Exception:
-                    logger.warn(f"create hive catalog {catalog_name} failed.")
+    def _register_catalog(self):
+        for catalog in self.flink_tables_config.catalogs:
+            catalog_name = catalog["name"]
+            del catalog["name"]
+            catalog_expr = " , ".join([f"'{option}' = '{catalog[option]}'" for option in catalog])
+            try:  # noqa: SIM105
+                self.exec_native_sql(
+                    f"""
+                        CREATE CATALOG {catalog_name}
+                        WITH (
+                            {catalog_expr}
+                        );
+                    """
+                )
+            except Exception:
+                logger.warn(f"create hive catalog {catalog_name} failed.")
 
-    def _register_tables(self, flink_config, tables: List[str]):
+    def _register_tables(self, tables: List[str]):
         if len(tables) == 0:
             return
         for table in tables:
-            db_name, table_config, connector = self.get_table_config_and_connector(flink_config, table)
+            db_name, table_config, connector = self.get_table_config_and_connector(table)
             if db_name and table_config and connector:
                 self.exec_native_sql(f"create database if not exists {db_name}")
                 self._create_table(table, table_config, connector)
             else:
                 logger.warn(f"register table {table} failed, no configuration found")
 
-    def get_table_config_and_connector(
-        self, flink_config, table: str
-    ) -> Tuple[Optional[str], Optional[Dict], Optional[Dict]]:
+    def get_table_config_and_connector(self, table: str) -> Tuple[Optional[str], Optional[Dict], Optional[Dict]]:
         db_name = table.strip().split(".")[0]
-        database = next(filter(lambda t: t["name"] == db_name, flink_config["databases"]), None)
+        database = self.flink_tables_config.database(db_name)
         if not database:
             logger.warn(f"database {db_name} does not exist in flink tables config file")
             return None, None, None
 
-        table_config = next(filter(lambda t: t["name"] == table.strip().split(".")[1], database["tables"]), None)
+        table_name = table.strip().split(".")[1]
+        table_config = self.flink_tables_config.table(database, table_name)
         if not table_config:
             logger.warn(f"table {table} does not exist in flink tables config file")
             return None, None, None
 
-        connectors = database["connectors"]
         connector_name = table_config["connector"]["name"]
-        connector = next(filter(lambda conn: conn["name"] == connector_name, connectors), None)
+        connector = self.flink_tables_config.connector(database, connector_name)
         if not connector:
             logger.warn(f"connector {connector_name} does not exist in flink tables config file")
             return None, None, None
         return db_name, table_config, connector
+
+    def get_db_connector(self, db_name: str, connector_name: str) -> Optional[Dict]:
+        database = self.flink_tables_config.database(db_name)
+        if not database:
+            logger.warn(f"database {db_name} does not exist in flink tables config file")
+            return None
+        connector_config = self.flink_tables_config.connector(database, connector_name)
+        if not connector_config:
+            logger.warn(f"connector {connector_name} does not exist in flink tables config file")
+            return None
+        return connector_config
 
     def _create_table(self, table: str, table_config, connector):
         schema = table_config["schema"]
@@ -265,12 +274,10 @@ class FlinkBackend(Backend):
         """
         self.exec_native_sql(create_sql)
 
-    def register_tables(self, flink_tables_file_path: str, tables: List[str]):
-        if flink_tables_file_path and os.path.exists(flink_tables_file_path):
-            with open(flink_tables_file_path, "r") as f:
-                config = json.loads(f.read())
-                self._register_catalog(config)
-                self._register_tables(config, tables)
+    def register_tables(self, tables: List[str]):
+        if self.flink_tables_config:
+            self._register_catalog()
+            self._register_tables(tables)
 
     def add_jars(self, jars_path: List[str]):
         self.flink.get_config().set("pipeline.jars", f'{";".join([f"file://{path}" for path in jars_path])}')
@@ -278,3 +285,44 @@ class FlinkBackend(Backend):
     def set_configurations(self, configs: dict):
         for c in configs:
             self.flink.get_config().set(c, configs[c])
+
+
+class FlinkTablesConfig:
+    def __init__(self, config: Dict[str, Any]) -> None:
+        self.config = config
+
+    @staticmethod
+    def from_config_file(config_file_path: Optional[str] = None) -> FlinkTablesConfig:
+        if not config_file_path or not os.path.exists(config_file_path) or not os.path.isfile(config_file_path):
+            logger.warn(
+                "config file '{config_file_path}' does not exist or is not a file, will create an empty"
+                " FlinkTablesConfig"
+            )
+            return FlinkTablesConfig({})
+        with open(config_file_path, "r") as f:
+            config = json.loads(f.read())
+            return FlinkTablesConfig(config)
+
+    @property
+    def catalogs(self) -> List[Dict]:
+        if "catalogs" in self.config:
+            return self.config["catalogs"]
+        else:
+            return []
+
+    @property
+    def databases(self) -> List[Dict]:
+        if "databases" in self.config:
+            return self.config["databases"]
+        else:
+            return []
+
+    def database(self, name: str) -> Optional[Dict]:
+        return next(filter(lambda t: t["name"] == name, self.databases), None)
+
+    def table(self, database_config: Dict, table_name: str) -> Optional[Dict]:
+        return next(filter(lambda t: t["name"] == table_name, database_config["tables"]), None)
+
+    def connector(self, database_config: Dict, connector_name: str) -> Optional[Dict]:
+        connectors = database_config.get("connectors", [])
+        return next(filter(lambda conn: conn["name"] == connector_name, connectors), None)
