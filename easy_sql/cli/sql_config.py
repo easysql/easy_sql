@@ -7,6 +7,7 @@ from datetime import datetime
 from os import path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from easy_sql.logger import logger
 from easy_sql.utils.io_utils import read_sql, resolve_file
 
 
@@ -82,7 +83,9 @@ class EasySqlConfig:
         sql_file: Optional[str] = None, sql: Optional[str] = None, system_config_prefix: str = "easy_sql."  # type: ignore
     ) -> EasySqlConfig:
         assert sql_file is not None or sql is not None, "sql_file or sql must be set"
-        sql: str = read_sql(sql_file) if sql_file else sql  # type: ignore
+        if sql and sql_file:
+            logger.info("both sql and sql_file set, will use sql as file content")
+        sql: str = sql if sql else read_sql(sql_file)  # type: ignore
         sql_lines = sql.split("\n")  # type: ignore
 
         backend = _parse_backend(sql)
@@ -152,6 +155,14 @@ class EasySqlConfig:
                 prepare_sql_list.append(get_value_by_splitter_and_strip(line, "prepare-sql:"))
         return prepare_sql_list
 
+    @property
+    def abs_sql_file_path(self) -> str:
+        assert self.sql_file is not None
+        return resolve_file(self.sql_file, abs_path=True)
+
+    def _resolve_file(self, file_path: str, *, prefix: str = "") -> str:
+        return resolve_file(file_path, abs_path=True, prefix=prefix, relative_to=self.abs_sql_file_path)
+
     def _build_conf_command_args(
         self,
         default_conf: List[str],
@@ -168,9 +179,7 @@ class EasySqlConfig:
         customized_confs = customized_confs.copy()
 
         files = lambda files_str: [f.strip() for f in files_str.strip('"').split(",") if f.strip()]
-        resolved_files = lambda _files, prefix: [
-            resolve_file(f.strip(), abs_path=True, prefix=prefix) for f in files(_files)
-        ]
+        resolved_files = lambda _files, prefix: [self._resolve_file(f.strip(), prefix=prefix) for f in files(_files)]
 
         args: dict[str, str] = {}
         for conf in default_conf:
@@ -216,9 +225,9 @@ class SparkBackendConfig:
                 ' -Dderby.stream.error.file=/tmp/spark-warehouse-metastore.log"'
             ),
             (
-                f'spark.files="{resolve_file(config.sql_file, abs_path=True)}'
-                f'{"," + resolve_file(config.udf_file_path, abs_path=True) if config.udf_file_path else ""}'
-                f'{"," + resolve_file(config.func_file_path, abs_path=True) if config.func_file_path else ""}'
+                f'spark.files="{self.config.abs_sql_file_path}'
+                f'{"," + self.config._resolve_file(config.udf_file_path) if config.udf_file_path else ""}'
+                f'{"," + self.config._resolve_file(config.func_file_path) if config.func_file_path else ""}'
                 '"'
             ),
         ]
@@ -261,9 +270,7 @@ class FlinkBackendConfig:
         for k in file_keys:
             if k in configs:
                 splitter = "," if k.startswith("python.") else ";"
-                configs[k] = splitter.join(
-                    {resolve_file(f, True, "file://") for f in configs[k].split(splitter) if f.strip()}
-                )
+                configs[k] = splitter.join({self._resolve_file(f) for f in configs[k].split(splitter) if f.strip()})
                 configs[k] = f"{configs[k]}"
 
         return configs
@@ -295,19 +302,21 @@ class FlinkBackendConfig:
         if flink_tables_file_path is None:
             return None
         else:
-            return resolve_file(get_value_by_splitter_and_strip(flink_tables_file_path), abs_path=True)
+            return self.config._resolve_file(get_value_by_splitter_and_strip(flink_tables_file_path))
+
+    def _resolve_file(self, file_path: str) -> str:
+        return self.config._resolve_file(file_path, prefix="file://")
 
     def flink_conf_command_args(self) -> List[str]:
         # config 的优先级：1. sql 代码里的 config 优先级高于这里的 default 配置
         # 对于数组类的 config，sql 代码里的 config 会添加进来，而不是覆盖默认配置
         config = self.config
-        assert config.sql_file is not None
         default_conf = [
             "--parallelism=1",
             (
-                f"--pyFiles={resolve_file(config.sql_file, abs_path=True, prefix='file://')}"
-                f'{"," + resolve_file(config.udf_file_path, abs_path=True, prefix="file://") if config.udf_file_path else ""}'
-                f'{"," + resolve_file(config.func_file_path, abs_path=True, prefix="file://") if config.func_file_path else ""}'
+                f"--pyFiles={'file://' + self.config.abs_sql_file_path}"
+                f'{"," + self._resolve_file(config.udf_file_path) if config.udf_file_path else ""}'
+                f'{"," + self._resolve_file(config.func_file_path) if config.func_file_path else ""}'
             ),
         ]
 
@@ -328,11 +337,7 @@ class FlinkBackendConfig:
                 key = get_key_by_splitter_and_strip(get_value_by_splitter_and_strip(c), " ")
                 value = get_value_by_splitter_and_strip(get_value_by_splitter_and_strip(c), " ")
                 if key in file_keys:
-                    resolve_files = [
-                        f'{resolve_file(val.strip(), abs_path=True, prefix="file://")}'
-                        for val in value.split(",")
-                        if val.strip()
-                    ]
+                    resolve_files = [f"{self._resolve_file(val.strip())}" for val in value.split(",") if val.strip()]
                     value = f'"{",".join(set(resolve_files))}"'
                 cmd_value_args.append(f"{key}={value}")
 
