@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from easy_sql.logger import logger
 
@@ -71,7 +71,8 @@ class TestFuncs(BaseTestFuncs):
                     conn.execute(sql)
             conn.close()
 
-    def test_run_etl(self, etl_file: str):
+    def test_run_etl(self, config: Any, etl_file: str):
+        from easy_sql.config.sql_config import EasySqlConfig
         from easy_sql.utils.flink_test_cluster import FlinkTestClusterManager
         from easy_sql.utils.io_utils import resolve_file
 
@@ -84,7 +85,15 @@ class TestFuncs(BaseTestFuncs):
             logger.info(f"will exec command: {command}")
             subprocess.check_call(["bash", "-c", command])
 
-        etl_file = resolve_file(etl_file, abs_path=True)
+        if config:
+            if not isinstance(config, EasySqlConfig):
+                raise Exception("config must be an instance of EasySqlConfig")
+            relative_to = config.abs_sql_file_path
+            print("relative to: ", relative_to)
+        else:
+            relative_to = ""
+
+        etl_file = resolve_file(etl_file, abs_path=True, relative_to=relative_to)
         with open(etl_file, "r") as f:
             etl_content = f.readlines()
         is_streaming = any(
@@ -93,11 +102,16 @@ class TestFuncs(BaseTestFuncs):
 
         if is_streaming:
             fm = FlinkTestClusterManager()
+
+            originally_started = True
             if fm.is_not_started():
+                originally_started = False
                 fm.start_cluster()
+
             try:
                 run_etl(etl_file)
             finally:
-                fm.stop_cluster()
+                if not originally_started:
+                    fm.stop_cluster()
         else:
             run_etl(etl_file)
