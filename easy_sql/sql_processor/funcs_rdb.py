@@ -13,9 +13,18 @@ from .backend.rdb import RdbBackend
 from .common import is_int_type
 from .funcs_common import AlertFunc, AnalyticsFuncs, ColumnFuncs, IOFuncs
 from .funcs_common import PartitionFuncs as PartitionFuncsBase
-from .funcs_common import TableFuncs
+from .funcs_common import TableFuncs, TestFuncs
 
-__all__ = ["PartitionFuncs", "ColumnFuncs", "AlertFunc", "TableFuncs", "ModelFuncs", "IOFuncs", "AnalyticsFuncs"]
+__all__ = [
+    "PartitionFuncs",
+    "ColumnFuncs",
+    "AlertFunc",
+    "TableFuncs",
+    "ModelFuncs",
+    "IOFuncs",
+    "AnalyticsFuncs",
+    "TestFuncs",
+]
 
 
 class Settings:

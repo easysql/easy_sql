@@ -73,6 +73,7 @@ class FuncRunner:
             ModelFuncs,
             PartitionFuncs,
             TableFuncs,
+            TestFuncs,
         )
 
         partition_funcs = PartitionFuncs(backend)
@@ -81,6 +82,7 @@ class FuncRunner:
         model_funcs = ModelFuncs(backend)
         io_funcs = IOFuncs()
         ana_funcs = AnalyticsFuncs(backend)
+        test_funcs = TestFuncs(backend)
         return {
             "partition_exists": partition_funcs.partition_exists,
             "partition_not_exists": partition_funcs.partition_not_exists,
@@ -106,6 +108,7 @@ class FuncRunner:
             "all_cols_prefixed_with_exclusion_expr": col_funcs.all_cols_prefixed_with_exclusion_expr,
             "move_file": io_funcs.move_file,
             "data_profiling_report": ana_funcs.data_profiling_report,
+            "sleep": test_funcs.sleep,
         }
 
     @staticmethod
@@ -116,6 +119,7 @@ class FuncRunner:
             ParallelismFuncs,
             StreamingFuncs,
             TableFuncs,
+            TestFuncs,
         )
 
         parallelism_funcs = ParallelismFuncs(backend)
@@ -123,6 +127,7 @@ class FuncRunner:
         table_funcs = TableFuncs(backend)
         ana_funcs = AnalyticsFuncs(backend)
         streaming_funcs = StreamingFuncs(backend)
+        test_funcs = TestFuncs(backend)
         return {
             "all_cols_without_one_expr": col_funcs.all_cols_without_one_expr,
             "all_cols_with_exclusion_expr": col_funcs.all_cols_with_exclusion_expr,
@@ -132,6 +137,9 @@ class FuncRunner:
             "data_profiling_report": ana_funcs.data_profiling_report,
             "set_parallelism": parallelism_funcs.set_parallelism,
             "execute_streaming_inserts": streaming_funcs.execute_streaming_inserts,
+            "sleep": test_funcs.sleep,
+            "test_run_etl": test_funcs.test_run_etl,
+            "exec_sql_in_source": test_funcs.exec_sql_in_source,
         }
 
     @staticmethod
@@ -145,6 +153,7 @@ class FuncRunner:
             ParallelismFuncs,
             PartitionFuncs,
             TableFuncs,
+            TestFuncs,
         )
 
         spark = backend.spark
@@ -156,6 +165,7 @@ class FuncRunner:
         io_funcs = IOFuncs(spark)
         model_funcs = ModelFuncs(spark)
         ana_funcs = AnalyticsFuncs(backend)
+        test_funcs = TestFuncs(backend)
         return {
             "repartition": parallelism_funcs.repartition,
             "repartition_by_column": parallelism_funcs.repartition_by_column,
@@ -189,6 +199,7 @@ class FuncRunner:
             "update_json_local": io_funcs.update_json_local,
             "model_predict": model_funcs.model_predict,
             "data_profiling_report": ana_funcs.data_profiling_report,
+            "sleep": test_funcs.sleep,
         }
 
     def run_func(self, func_def: str, vars_replacer: VarsReplacer) -> bool:

@@ -408,3 +408,17 @@ class AnalyticsFuncs:
 
         df = spark_df.toPandas()
         return df
+
+
+class TestFuncs:
+    def __init__(self, backend: Backend) -> None:
+        self.backend = backend
+
+    def sleep(self, secs: str):
+        try:
+            _secs = float(secs)
+        except ValueError:
+            raise Exception(f"secs must be an float when sleep, got `{secs}`")
+        import time
+
+        time.sleep(_secs)
