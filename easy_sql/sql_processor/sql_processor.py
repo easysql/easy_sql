@@ -42,6 +42,7 @@ class SqlProcessor:
         scala_udf_initializer: Optional[str] = None,
         templates: Optional[dict] = None,
         includes: Optional[Dict[str, str]] = None,
+        config: Any = None,
     ):
         backend = backend if isinstance(backend, (Backend,)) else SparkBackend(spark=backend)
         self.backend = backend
@@ -65,6 +66,7 @@ class SqlProcessor:
         self.step_list = self.step_factory.create_from_sql(self.sql, includes)
         self.reporter.init(self.step_list)
         self.backend.init_udfs(scala_udf_initializer=scala_udf_initializer)
+        self.config = config
 
     @property
     def variables(self) -> Dict[str, Any]:
@@ -111,6 +113,7 @@ class SqlProcessor:
             self.context.add_vars({"__step__": step})
             self.context.add_vars({"__context__": self.context})
             self.context.add_vars({"__backend__": self.backend})
+            self.context.add_vars({"__config__": self.config})
             if not step.should_run(self.context):
                 self.reporter.collect_report(step, status=StepStatus.SKIPPED)
                 return

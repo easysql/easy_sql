@@ -65,7 +65,7 @@ class BackendProcessor:
     def _run_with_vars(self, backend: Backend, variables: Dict[str, Any], dry_run: bool):
         config = self.config
         sql_processor = SqlProcessor(
-            backend, config.sql, variables=variables, scala_udf_initializer=config.scala_udf_initializer
+            backend, config.sql, variables=variables, scala_udf_initializer=config.scala_udf_initializer, config=config
         )
         if config.resolved_udf_file_path:
             sql_processor.register_udfs_from_pyfile(config.resolved_udf_file_path)
