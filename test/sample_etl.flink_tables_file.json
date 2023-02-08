@@ -124,6 +124,16 @@
                         "id INT NOT NULL PRIMARY KEY NOT ENFORCED",
                         "val VARCHAR"
                     ]
+                },
+                {
+                    "name": "target_hudi_agg",
+                    "connector": {
+                        "name": "connector_hudi"
+                    },
+                    "schema": [
+                        "val VARCHAR NOT NULL PRIMARY KEY NOT ENFORCED",
+                        "val_count BIGINT NOT NULL"
+                    ]
                 }
             ]
         }

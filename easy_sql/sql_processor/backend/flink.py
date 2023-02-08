@@ -207,7 +207,7 @@ class FlinkBackend(Backend):
                     """
                 )
             except Exception:
-                logger.warn(f"create hive catalog {catalog_name} failed.")
+                logger.warn(f"create catalog {catalog_name} failed.", exc_info=True)
 
     def _register_tables(self, tables: List[str]):
         if len(tables) == 0:
@@ -262,6 +262,12 @@ class FlinkBackend(Backend):
         )
         options = connector.get("options", {})
         options.update(table_config.get("connector", {}).get("options", {}))
+        if "path" in options:
+            db = table.split(".")[0].strip() if "." in table else None
+            pure_table_name = table.split(".")[1].strip() if "." in table else table.strip()
+            options["path"] = (
+                options["path"].rstrip("/") + "/" + (f"{db}.db/{pure_table_name}" if db else pure_table_name)
+            )
         options_expr = " , ".join([f"'{option}' = '{options[option]}'" for option in options])
         create_sql = f"""
             create table if not exists {table.strip()} (

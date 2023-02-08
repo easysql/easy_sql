@@ -7,7 +7,7 @@
 --
 -- Verification:
 -- 1. verify there are two rows in hudi table /tmp/hudi-flink-test:
---     echo 'drop table if exists hudi_table;create table hudi_table using hudi location "/tmp/hudi-flink-test/";select * from hudi_table;' | \
+--     echo 'drop table if exists hudi_table;create table hudi_table using hudi location "/tmp/hudi-flink-test/db_hudi.db/target_hudi";select * from hudi_table;' | \
 --     spark-sql --packages org.apache.hudi:hudi-spark3.3-bundle_2.12:0.12.2 \
 --         --conf 'spark.serializer=org.apache.spark.serializer.KryoSerializer' \
 --         --conf 'spark.sql.extensions=org.apache.spark.sql.hudi.HoodieSparkSessionExtension' \
