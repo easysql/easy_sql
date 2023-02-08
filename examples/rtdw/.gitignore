@@ -1,0 +1,4 @@
+lib/
+workflow/**/jars
+*.jar
+*.log
