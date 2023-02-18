@@ -300,8 +300,8 @@ jobs:
         path: |
             .venv
             test/flink/jars
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-all-v1 # if flink related dependency version changed, increase the version here
-    - run: poetry install --no-interaction -E "clickhouse pg spark cli linter" && poetry run pip install apache-flink==1.15.1 pandas_profiling==3.2.0 && poetry run make download-flink-jars
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-all-v2 # if flink related dependency version changed, increase the version here
+    - run: poetry install --no-interaction -E "clickhouse pg spark cli linter" && poetry run pip install apache-flink==1.15.1 ydata-profiling==4.0.0 && poetry run make download-flink-jars
       if: steps.cached-dependencies.outputs.cache-hit != 'true'
     - run: poetry run make test-coverage-all
       env:

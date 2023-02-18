@@ -341,7 +341,10 @@ class AnalyticsFuncs:
     def data_profiling_report(
         self, table: str, query: str, output_folder: str, max_count: str = "50000", include_correlations: str = "true"
     ):
-        from ydata_profiling import ProfileReport
+        try:
+            from ydata_profiling import ProfileReport
+        except ModuleNotFoundError:
+            from pandas_profiling import ProfileReport
 
         from easy_sql.sql_processor.backend.rdb import RdbBackend
 
