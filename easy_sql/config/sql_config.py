@@ -322,12 +322,8 @@ class FlinkBackendConfig:
         file_keys = [
             "-pyarch",
             "--pyArchives",
-            "-pyreq",
-            "--pyRequirements",
             "-pyfs",
             "--pyFiles",
-            "-s",
-            "--fromSavepoint",
         ]
         cmd_value_args = []
         for c in config.customized_backend_conf:
