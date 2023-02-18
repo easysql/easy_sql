@@ -602,6 +602,10 @@ class RdbBackend(Backend):
             save_partitions_list.append(target_table.partitions)
         return save_partitions_list
 
+    def save_table_sql(self, source_table: TableMeta, source_table_sql: str, target_table: TableMeta) -> str:
+        source_col_names = self.get_column_names(source_table.pure_table_name, source_table.dbname or self.temp_schema)
+        return f'insert into {target_table.table_name} select {",".join(source_col_names)} from ({source_table_sql})'
+
     def save_table(
         self, source_table: TableMeta, target_table: TableMeta, save_mode: SaveMode, create_target_table: bool
     ):

@@ -214,6 +214,7 @@ class TableColumnTypes:
         col_type: Optional[str] = None,
     ) -> Tuple[str, Any]:
         col_type = self.get_col_type(table_name, col_name) if col_type is None else col_type
+        col_type = col_type.strip()
         if self.backend == "clickhouse":
             if "Nested" in col_type:
                 raise AssertionError("clickhouse backend can not support Nested col type")
@@ -253,7 +254,7 @@ class TableColumnTypes:
                     f"map type not supported right now when parsing value `{col_value}` for column:"
                     f" {table_name}.{col_name}"
                 )
-            if col_type.startswith("decimal(") or col_type == "double":
+            if col_type.startswith("decimal(") or col_type == "double" or col_type == "float":
                 return col_type, float(col_value)
             if col_type in ["bigint", "int", "tinyint", "Int32", "Int64", "UInt32", "UInt64"]:
                 return col_type, int(col_value)
@@ -665,9 +666,11 @@ class TestResult:
     def __init__(self, test_data_file: str):
         self.test_data_file = test_data_file
         self.case_results = []
+        self.cases: List[TestCase] = []
 
-    def collect_case_result(self, case_name: str, result: str):
-        self.case_results.append({"case_name": case_name, "result": result})
+    def collect_case_result(self, case: TestCase, result: str):
+        self.cases.append(case)
+        self.case_results.append({"case_name": case.name, "result": result})
 
     @property
     def failed_cases(self):
@@ -721,6 +724,7 @@ class TestCaseRunner:
         self.env, self.dry_run, self.backend_creator = env, dry_run, backend_creator
         self.sql_processor_creator = sql_processor_creator
         self.table_column_types = table_column_types
+        self.collected_sql = None
 
     def run_test(self, case: TestCase):
         sql = case.read_sql_content()
@@ -733,6 +737,8 @@ class TestCaseRunner:
             sql_processor = self.create_sql_processor(backend, case, sql)
 
             sql_processor.run(self.dry_run)
+
+            self.collected_sql = sql_processor.sql_collector.collected_sql()
 
             self.verify_outputs(backend, case)
         finally:
@@ -874,6 +880,7 @@ class SqlTester:
         self.dry_run = dry_run
         self.env = env
         self.sql_reader = sql_reader_creator() if sql_reader_creator else SqlReader()
+        self.collected_sql = None
         if backend_creator:
             self.test_case_runner = TestCaseRunner(
                 self.env,
@@ -909,7 +916,7 @@ class SqlTester:
         tr = TestResult(test_data_file)
         for case in cases:
             passed = self.run_case(case)
-            tr.collect_case_result(case.name, TestResult.PASSED if passed else TestResult.FAILED)  # type: ignore
+            tr.collect_case_result(case, TestResult.PASSED if passed else TestResult.FAILED)  # type: ignore
         return tr
 
     def parse_test_cases(self, test_data_file, table_column_types: TableColumnTypes) -> List[TestCase]:
@@ -928,6 +935,7 @@ class SqlTester:
     def run_case(self, case: TestCase) -> bool:
         try:
             self.test_case_runner.run_test(case)
+            self.collected_sql = self.test_case_runner.collected_sql
             return True
         except Exception:
             import traceback

@@ -147,6 +147,7 @@ class Step:
         self.debug_var_tmpl_replace = debug_var_tmpl_replace
         self.reporter_collector = reporter_collector
         self.func_runner = func_runner
+        self.executed_sql: Optional[str] = None
 
     def __str__(self):
         return str(self.target_config).replace("StepConfig(", "Step(", 1)
@@ -187,6 +188,13 @@ class Step:
         self.select_sql = context.replace_templates(self.select_sql)
         self.select_sql = context.replace_variables(self.select_sql)
 
+    def get_executed_sql(self) -> str:
+        return self.executed_sql or ""
+
+    def _create_view_sql(self) -> str:
+        assert self.target_config is not None
+        return f"create view {self.target_config.name} as\n{self.select_sql};"
+
     def write(self, backend: Backend, table: Optional[BackendTable], context: ProcessorContext, dry_run: bool = False):
         assert self.target_config is not None
         variables: dict = context.vars_context.vars
@@ -221,6 +229,7 @@ class Step:
         elif StepType.TEMP == self.target_config.step_type:
             assert self.target_config.name is not None
             backend.create_temp_table(table, self.target_config.name)
+            self.executed_sql = self._create_view_sql()
 
         elif StepType.CACHE == self.target_config.step_type:
             assert self.target_config.name is not None
@@ -228,10 +237,12 @@ class Step:
                 backend.create_temp_table(table, self.target_config.name)
             else:
                 backend.create_cache_table(table, self.target_config.name)
+            self.executed_sql = self._create_view_sql()
 
         elif StepType.BROADCAST == self.target_config.step_type:
             assert self.target_config.name is not None
             backend.broadcast_table(table, self.target_config.name)
+            self.executed_sql = self._create_view_sql()
 
         elif StepType.LOG == self.target_config.step_type:
             if "__no_log__" in variables and variables["__no_log__"] in ["TRUE", True, 1, "True", "true"]:
@@ -240,7 +251,7 @@ class Step:
 
         elif StepType.FUNC == self.target_config.step_type:
             assert self.target_config.name is not None
-            self.func_runner.run_func(self.target_config.name, context.vars_context)
+            self.executed_sql = self.func_runner.run_func(self.target_config.name, context.vars_context)
 
         elif StepType.CHECK == self.target_config.step_type:
             if self._should_skip_check(variables):
@@ -327,6 +338,9 @@ class Step:
                     )
             backend.create_temp_table(table, temp_table_name + "_output")  # type: ignore
             self.collect_report(message="will not save data to data warehouse, since we are in dry run mode")
+            # may need to provide a more accurate sql
+            assert self.select_sql is not None
+            self.executed_sql = backend.save_table_sql(source_table, self.select_sql, target_table)
             return
 
         target_table_exists = backend.table_exists(target_table)
@@ -336,6 +350,9 @@ class Step:
             raise Exception(message)
 
         backend.save_table(source_table, target_table, save_mode, create_target_table=create_output_table)
+        # may need to provide a more accurate sql
+        assert self.select_sql is not None
+        self.executed_sql = backend.save_table_sql(source_table, self.select_sql, target_table)
 
     def _write_for_log_step(self, df: BackendTable):
         assert self.target_config is not None

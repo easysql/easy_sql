@@ -202,7 +202,7 @@ class FuncRunner:
             "sleep": test_funcs.sleep,
         }
 
-    def run_func(self, func_def: str, vars_replacer: VarsReplacer) -> bool:
+    def run_func(self, func_def: str, vars_replacer: VarsReplacer) -> Optional[str]:
         func_name = func_def[: func_def.index("(")]
         if func_name not in self.funcs:
             raise SqlProcessorException(f"no function found for {func_def} in sql_processor: {func_def}")

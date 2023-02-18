@@ -28,6 +28,17 @@ def extract_funcs_from_pyfile(funcs_py_file):
     return funcs
 
 
+class SqlCollector:
+    def __init__(self) -> None:
+        self.sql_lines = []
+
+    def collect_sql(self, sql_lines: str):
+        self.sql_lines.append(sql_lines)
+
+    def collected_sql(self) -> str:
+        return "\n\n".join(self.sql_lines)
+
+
 class SqlProcessor:
     def __init__(
         self,
@@ -67,6 +78,7 @@ class SqlProcessor:
         self.reporter.init(self.step_list)
         self.backend.init_udfs(scala_udf_initializer=scala_udf_initializer)
         self.config = config
+        self.sql_collector = SqlCollector()
 
     @property
     def variables(self) -> Dict[str, Any]:
@@ -120,6 +132,7 @@ class SqlProcessor:
             self.reporter.collect_report(step, status=StepStatus.RUNNING)
             df = step.read(self.backend, self.context)
             step.write(self.backend, df, self.context, dry_run)
+            self.sql_collector.collect_sql(step.get_executed_sql())
             self.reporter.collect_report(step, status=StepStatus.SUCCEEDED)
         except Exception as e:
             import traceback

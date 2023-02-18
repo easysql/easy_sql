@@ -179,6 +179,10 @@ class SparkBackend(Backend):
         self.exec_native_sql(create_table_stmt)
         return self
 
+    def save_table_sql(self, source_table: TableMeta, source_table_sql: str, target_table: TableMeta) -> str:
+        columns = self.exec_native_sql(f"select * from {source_table.table_name}").limit(0).columns
+        return f'insert into {target_table.table_name} select {",".join(columns)} from ({source_table_sql})'
+
     def save_table(
         self,
         source_table_meta: TableMeta,

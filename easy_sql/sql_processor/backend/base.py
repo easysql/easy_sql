@@ -85,6 +85,9 @@ class Backend:
     def refresh_table_partitions(self, table: TableMeta):
         raise NotImplementedError()
 
+    def save_table_sql(self, source_table: TableMeta, source_table_sql: str, target_table: TableMeta) -> str:
+        raise NotImplementedError()
+
     def save_table(
         self, source_table: TableMeta, target_table: TableMeta, save_mode: SaveMode, create_target_table: bool
     ):
