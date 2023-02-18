@@ -46,7 +46,7 @@ class SparkTable(Table):
         self.df: DataFrame = df
 
     def is_empty(self) -> bool:
-        return self.df.rdd.isEmpty()
+        return self.df.count() == 0
 
     def field_names(self) -> List[str]:
         return self.df.schema.fieldNames()
