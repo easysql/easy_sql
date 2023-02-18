@@ -5,7 +5,7 @@ from .flink_test_cluster import FlinkTestClusterManager
 
 class FlinkTestClusterManagerTest(unittest.TestCase):
     def test_cluster_manager(self):
-        fm = FlinkTestClusterManager()
+        fm = FlinkTestClusterManager(10)
         if fm.is_started():
             fm.stop_cluster()
         fm.start_cluster()
