@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 
 from ...logger import logger
@@ -82,12 +83,18 @@ class FlinkTable(Table):
 class FlinkBackend(Backend):
     # todo: 考虑是否需要在外面实例化flink: TableEnvironment
     def __init__(self, is_batch: Optional[bool] = True, flink_tables_config: Optional[FlinkTablesConfig] = None):
-        from pyflink.table import EnvironmentSettings, TableEnvironment
+        from pyflink.datastream import StreamExecutionEnvironment
+        from pyflink.table import EnvironmentSettings, StreamTableEnvironment
 
         self.flink_tables_config = flink_tables_config or FlinkTablesConfig({})
-        self.flink: TableEnvironment = TableEnvironment.create(
-            EnvironmentSettings.in_batch_mode() if is_batch else EnvironmentSettings.in_streaming_mode()
+
+        self.flink_stream_env = None if is_batch else StreamExecutionEnvironment.get_execution_environment()
+        env_settings = EnvironmentSettings.in_batch_mode() if is_batch else EnvironmentSettings.in_streaming_mode()
+        self.flink: StreamTableEnvironment = StreamTableEnvironment.create(
+            stream_execution_environment=self.flink_stream_env,  # type: ignore
+            environment_settings=env_settings,
         )
+
         self.streaming_insert_stmts = self.flink.create_statement_set() if not is_batch else None
         self.has_streaming_insert_stmts = False
 
@@ -133,7 +140,6 @@ class FlinkBackend(Backend):
         return self.flink.sql_query(sql)
 
     def exec_sql(self, sql: str) -> Table:
-        logger.info(f"will exec sql: {sql}")
         return FlinkTable(self.exec_native_sql_query(sql))
 
     def create_empty_table(self):
@@ -194,6 +200,7 @@ class FlinkBackend(Backend):
 
     def _register_catalog(self):
         for catalog in self.flink_tables_config.catalogs:
+            catalog = catalog.copy()
             catalog_name = catalog["name"]
             del catalog["name"]
             catalog_expr = " , ".join([f"'{option}' = '{catalog[option]}'" for option in catalog])
@@ -251,7 +258,7 @@ class FlinkBackend(Backend):
             return None
         return connector_config
 
-    def _create_table(self, table: str, table_config, connector):
+    def _create_table(self, table: str, table_config: Dict, connector: Dict):
         schema = table_config["schema"]
         schema_expr = " , ".join(schema)
         partition_by_expr = (
@@ -260,17 +267,10 @@ class FlinkBackend(Backend):
             if "partition_by" in table_config
             else ""
         )
-        options = connector.get("options", {})
-        options.update(table_config.get("connector", {}).get("options", {}))
-        if "path" in options:
-            db = table.split(".")[0].strip() if "." in table else None
-            pure_table_name = table.split(".")[1].strip() if "." in table else table.strip()
-            options["path"] = (
-                options["path"].rstrip("/") + "/" + (f"{db}.db/{pure_table_name}" if db else pure_table_name)
-            )
+        options = self.flink_tables_config.table_options(connector, table_config)
         options_expr = " , ".join([f"'{option}' = '{options[option]}'" for option in options])
         create_sql = f"""
-            create table if not exists {table.strip()} (
+            create table {table.strip()} (
                 {schema_expr}
             )
             {partition_by_expr}
@@ -280,9 +280,10 @@ class FlinkBackend(Backend):
         """
         self.exec_native_sql(create_sql)
 
-    def register_tables(self, tables: List[str]):
+    def register_tables(self, tables: List[str], include_catalog: bool = True):
         if self.flink_tables_config:
-            self._register_catalog()
+            if include_catalog:
+                self._register_catalog()
             self._register_tables(tables)
 
     def add_jars(self, jars_path: List[str]):
@@ -332,3 +333,29 @@ class FlinkTablesConfig:
     def connector(self, database_config: Dict, connector_name: str) -> Optional[Dict]:
         connectors = database_config.get("connectors", [])
         return next(filter(lambda conn: conn["name"] == connector_name, connectors), None)
+
+    def table_options(self, connector: Dict, table: Dict) -> Dict[str, str]:
+        options = connector.get("options", {}).copy()
+        tableOptions = table.get("connector", {}).get("options", {})
+        options.update(tableOptions)
+        if "path" in options and "path" not in tableOptions:
+            assert "." not in table["name"], "Table name in configuration must not contains db, found " + table["name"]
+            options["path"] = options["path"].rstrip("/") + f"/{table['name']}"
+        return options
+
+    def table_fields(self, full_table_name: str, exclude_fields: Optional[List[str]] = None) -> List[str]:
+        exclude_fields = exclude_fields or []
+        assert full_table_name.count(".") == 1, 'full_table_name must in format "db.table", found: ' + full_table_name
+        db, table = tuple(full_table_name.split("."))
+        db_config = self.database(db)
+        if not db_config:
+            raise Exception("db configuration not found for " + db)
+        table_config = self.table(db_config, table)
+        if not table_config:
+            raise Exception("table configuration not found for " + full_table_name)
+        if "schema" not in table_config:
+            raise Exception("schema not found in table configuration for " + full_table_name)
+        field_expr_list: List[str] = table_config["schema"]
+        extract_field_name = lambda field_expr: re.split(r"\s", field_expr)[0].strip("'\"`")
+        fields = [extract_field_name(field_expr) for field_expr in field_expr_list]
+        return [f for f in fields if f not in exclude_fields]
