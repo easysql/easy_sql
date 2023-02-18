@@ -100,6 +100,8 @@ class FuncsTest(unittest.TestCase):
         f = AnalyticsFuncs(backend)
         f.data_profiling_report(self.test_table_name, "1=1", "/tmp/easysql-ut/ana-test/")
         self.assertTrue(os.path.exists("/tmp/easysql-ut/ana-test/t/func_test.html"))
+        f.data_profiling_report(self.test_table_name, "1=1", "/tmp/easysql-ut/ana-test/", include_correlations="false")
+        self.assertTrue(os.path.exists("/tmp/easysql-ut/ana-test/t/func_test.html"))
 
     def run_test(self, backend: Backend, types: Tuple[str, str, str]):
         try:

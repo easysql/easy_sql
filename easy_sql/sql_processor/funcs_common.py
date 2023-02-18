@@ -338,26 +338,40 @@ class AnalyticsFuncs:
     def __init__(self, backend: Backend) -> None:
         self.backend = backend
 
-    def data_profiling_report(self, table: str, query: str, output_folder: str, max_count=50000):
-        from pandas_profiling import ProfileReport
+    def data_profiling_report(
+        self, table: str, query: str, output_folder: str, max_count: str = "50000", include_correlations: str = "true"
+    ):
+        from ydata_profiling import ProfileReport
 
         from easy_sql.sql_processor.backend.rdb import RdbBackend
+
+        _max_count = int(max_count)
 
         backend = self.backend
         if backend.is_rdb_backend:
             if backend.is_bigquery_backend:
                 raise Exception(f"Not supported backend: {backend.__class__}")
             assert isinstance(backend, RdbBackend)
-            df = self._read_data_rdb(backend, table, query, max_count)
+            df = self._read_data_rdb(backend, table, query, _max_count)
         elif backend.is_spark_backend:
-            df = self._read_data_spark(backend, table, query, max_count)
+            df = self._read_data_spark(backend, table, query, _max_count)
         else:
             raise Exception(f"Not supported backend: {backend.__class__}")
 
         if df is None:
             return
 
-        profile = ProfileReport(df, title=f"Profiling Report for {table}")
+        _include_correlations = include_correlations.lower() in ["1", "true", "y", "yes"]
+        if _include_correlations:
+            profile = ProfileReport(df, title=f"Profiling Report for {table}")
+        else:
+            logger.info("profiling with no correlations...")
+            profile = ProfileReport(
+                df,
+                title=f"Profiling Report for {table}",
+                correlations=None,
+                interactions={"targets": [], "continuous": False},
+            )
 
         if "." in table:
             db, table = tuple(table.split("."))
