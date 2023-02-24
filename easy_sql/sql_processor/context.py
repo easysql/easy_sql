@@ -4,6 +4,8 @@ import copy
 import re
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+from easy_sql.utils.sql_expr import CommentSubstitutor
+
 from ..logger import logger
 
 if TYPE_CHECKING:
@@ -12,113 +14,6 @@ if TYPE_CHECKING:
 from .common import Column, SqlProcessorException, VarsReplacer
 
 __all__ = ["VarsContext", "TemplatesContext", "ProcessorContext"]
-
-
-class CommentSubstitutor:
-    COMMENT_IDENTIFIABLE_NAME = "__COMMENT_SUBSTITUTED__"
-
-    def __init__(self):
-        self.recognized_comment = []
-
-    def substitute(self, sql_expr: str) -> str:
-        if CommentSubstitutor.COMMENT_IDENTIFIABLE_NAME in sql_expr:
-            raise Exception(
-                "Cannot handle sql expression with "
-                f"comment identifiable name({CommentSubstitutor.COMMENT_IDENTIFIABLE_NAME}) inside: {sql_expr}"
-            )
-        lines = []
-        recognized_comment = []
-
-        # TODO: support of comment pattern: /* ... */
-        for line in sql_expr.split("\n"):
-            if line.startswith("-- "):
-                lines.append(CommentSubstitutor.COMMENT_IDENTIFIABLE_NAME + str(len(recognized_comment)) + "__")
-                recognized_comment.append(line)
-                continue
-
-            current_index = 0
-            while True:
-                m = re.match(r".*?([^a-zA-Z0-9_]-- ).*", line[current_index:])
-                if m:
-                    comment_start = m.start(1) + 1
-                    left_of_comment = line[: current_index + comment_start]
-                    if CommentSubstitutor.is_quote_closed(left_of_comment):
-                        lines.append(
-                            left_of_comment
-                            + CommentSubstitutor.COMMENT_IDENTIFIABLE_NAME
-                            + str(len(recognized_comment))
-                            + "__"
-                        )
-                        recognized_comment.append(line[current_index + comment_start :])
-                        break
-                    else:
-                        current_index += comment_start
-                else:
-                    lines.append(line)
-                    break
-
-        self.recognized_comment = recognized_comment
-        return "\n".join(lines)
-
-    @staticmethod
-    def is_quote_closed(sql_expr: str) -> bool:
-        sql_expr = sql_expr.replace("\\\\", "")
-
-        def find_char_without_escape(text: str, char: str) -> int:
-            start = 0
-            while True:
-                idx = text.find(char, start)
-                if idx != -1:
-                    if idx > 0 and text[idx - 1] == "\\":
-                        start = idx + 1
-                    else:
-                        return idx
-                else:
-                    return -1
-
-        def _is_quote_closed(quote_index: int, quote_char: str) -> bool:
-            start_index = quote_index + 1
-            char_without_escape_idx = find_char_without_escape(sql_expr[start_index:], quote_char)
-            if char_without_escape_idx == -1:
-                return False
-            else:
-                return CommentSubstitutor.is_quote_closed(sql_expr[start_index + char_without_escape_idx + 1 :])
-
-        # a valid sql_expr should not starts with \' or \", so we don't need to check \\ when find quote start point
-        single_quote_index = sql_expr.find("'")
-        double_quote_index = sql_expr.find('"')
-        if single_quote_index != -1 and double_quote_index == -1:
-            return _is_quote_closed(single_quote_index, "'")
-        elif single_quote_index != -1 and double_quote_index != -1:
-            if single_quote_index < double_quote_index:
-                return _is_quote_closed(single_quote_index, "'")
-            else:
-                return _is_quote_closed(double_quote_index, '"')
-        elif single_quote_index == -1 and double_quote_index == -1:
-            return True
-        elif single_quote_index == -1 and double_quote_index != -1:
-            return _is_quote_closed(double_quote_index, '"')
-        else:
-            raise Exception("should not happen")
-
-    def recover(self, substituted_sql_expr: str) -> str:
-        lines = []
-        comment_index = 0
-        for line in substituted_sql_expr.split("\n"):
-            identifiable_name = f"{CommentSubstitutor.COMMENT_IDENTIFIABLE_NAME}{comment_index}__"
-            identifiable_name_count = line.count(identifiable_name)
-            if identifiable_name_count > 1:
-                raise Exception(f"found multiple comment identifiable name {identifiable_name} in line: {line}")
-            if identifiable_name_count == 1 and not line.endswith(identifiable_name):
-                raise Exception(
-                    f"found comment identifiable name {identifiable_name}, but is not at end in line: {line}"
-                )
-            if identifiable_name_count == 1:
-                lines.append(line.replace(identifiable_name, self.recognized_comment[comment_index]))
-                comment_index += 1
-            else:
-                lines.append(line)
-        return "\n".join(lines)
 
 
 class VarsContext(VarsReplacer):
