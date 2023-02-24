@@ -373,6 +373,7 @@ class AnalyticsFuncs:
                 df,
                 title=f"Profiling Report for {table}",
                 correlations=None,
+                vars={"num": {"chi_squared_threshold": False}, "cat": {"chi_squared_threshold": False}},
                 interactions={"targets": [], "continuous": False},
             )
 
