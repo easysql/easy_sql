@@ -6,6 +6,7 @@ from os import path
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from easy_sql.sql_processor.backend.rdb import RdbBackend
+from easy_sql.utils.sql_expr import CommentSubstitutor
 
 from ..logger import logger
 from .backend import Backend, Partition, SaveMode
@@ -17,12 +18,49 @@ if TYPE_CHECKING:
     from .context import ProcessorContext
     from .funcs import FuncRunner
 
-__all__ = ["StepConfig", "Step", "StepType", "ReportCollector", "StepFactory"]
+__all__ = ["StepConfig", "Step", "StepType", "ReportCollector", "StepFactory", "ExecutedSqlTransformer", "SqlCleaner"]
 
 
 class ReportCollector:
     def collect_report(self, step: Step, status: Optional[str] = None, message: Optional[str] = None):
         raise NotImplementedError()
+
+
+class EmptyReportCollector(ReportCollector):
+    def collect_report(self, step: Step, status: Optional[str] = None, message: Optional[str] = None):
+        logger.info(f"collect report for step: {str(step)}, status: {status}, message: {message}")
+
+
+class SqlCleaner:
+    def __init__(self) -> None:
+        self.comment_substituter = CommentSubstitutor()
+
+    def clean_sql(self, sql: str) -> str:
+        """
+        Clean a sql with comments and semicolon to form a clean select sql, in order to be used to construct a new sql.
+        It works as below:
+        - remove leading comments
+        - remove tail comments
+        - remove the last semicolon
+        """
+        sql_lines = sql.split("\n")
+        for i, sql_line in enumerate(sql_lines):
+            sql_line = sql_line.strip()
+            if sql_line and not sql_line.startswith("--"):
+                sql_lines = sql_lines[i:]
+                sql_lines[0] = sql_line
+                break
+        sql_lines.reverse()
+        for i, sql_line in enumerate(sql_lines):
+            sql_line = sql_line.strip()
+            if sql_line and not sql_line.startswith("--") and not sql_line.startswith(";"):
+                sql_lines = sql_lines[i:]
+                sql_lines[0] = sql_line
+                break
+        sql_lines.reverse()
+        sql_lines[-1] = self.comment_substituter.remove(sql_lines[-1]).rstrip().rstrip(";")
+        clean_sql = "\n".join(sql_lines)
+        return clean_sql
 
 
 class StepConfig:
@@ -80,8 +118,8 @@ class StepConfig:
             reg_exp = r"[a-zA-Z0-9_]*\([^()]*\)"
             if not re.compile(reg_exp).match(target_condition):
                 raise SqlProcessorException(
-                    f"parse step config failed. condition must be like {reg_exp}, "
-                    f"but got {target_condition}. config_line={config_line}"
+                    f"parse step config failed. condition must be like {reg_exp}, but got {target_condition}."
+                    f" config_line={config_line}"
                 )
 
         return StepConfig(
@@ -131,6 +169,37 @@ class StepType:
         ]
 
 
+class ExecutedSqlTransformer:
+    def transform_create_view_sql(self, view_name: str, select_sql: str):
+        raise NotImplementedError()
+
+    def transform_save_table_sql(self, table_name: str, select_sql: str):
+        raise NotImplementedError()
+
+
+class SimpleExecutedSqlTransformer(ExecutedSqlTransformer):
+    def __init__(self) -> None:
+        self._sql_cleaner = SqlCleaner()
+        super().__init__()
+
+    def cleaned_select_sql(self, sql: str) -> Optional[str]:
+        return self._sql_cleaner.clean_sql(sql)
+
+    def transform_create_view_sql(self, view_name: str, select_sql: str):
+        clean_sql = self._sql_cleaner.clean_sql(select_sql)
+        assert clean_sql is not None
+        if re.match(r"^with\s", clean_sql, re.I):
+            return f"create view {view_name} as (\n{clean_sql}\n);"
+        return f"insert overwrite {view_name} \n{clean_sql}\n;"
+
+    def transform_save_table_sql(self, table_name: str, select_sql: str):
+        clean_sql = self._sql_cleaner.clean_sql(select_sql)
+        assert clean_sql is not None
+        if re.match(r"^with\s", clean_sql, re.I):
+            return f"insert overwrite {table_name} (\n{clean_sql}\n);"
+        return f"insert overwrite {table_name} \n{clean_sql}\n;"
+
+
 class Step:
     def __init__(
         self,
@@ -140,6 +209,8 @@ class Step:
         target_config: Optional[StepConfig] = None,
         select_sql: Optional[str] = None,
         debug_var_tmpl_replace: bool = False,
+        *,
+        executed_sql_transformer: Optional[ExecutedSqlTransformer] = None,
     ):
         self.id = id
         self.target_config = target_config
@@ -148,6 +219,7 @@ class Step:
         self.reporter_collector = reporter_collector
         self.func_runner = func_runner
         self.executed_sql: Optional[str] = None
+        self.executed_sql_transformer = executed_sql_transformer or SimpleExecutedSqlTransformer()
 
     def __str__(self):
         return str(self.target_config).replace("StepConfig(", "Step(", 1)
@@ -193,7 +265,9 @@ class Step:
 
     def _create_view_sql(self) -> str:
         assert self.target_config is not None
-        return f"create view {self.target_config.name} as\n{self.select_sql};"
+        assert self.target_config.name is not None
+        assert self.select_sql is not None
+        return self.executed_sql_transformer.transform_create_view_sql(self.target_config.name, self.select_sql)
 
     def write(self, backend: Backend, table: Optional[BackendTable], context: ProcessorContext, dry_run: bool = False):
         assert self.target_config is not None
@@ -333,14 +407,15 @@ class Step:
                     table = table.with_column(static_partition_name, lit(static_partition_value))
                 else:
                     assert isinstance(backend, RdbBackend)
-                    table = table.with_column(
-                        static_partition_name, backend.sql_expr.for_value(static_partition_value)  # type: ignore
-                    )
+                    partition_value = backend.sql_expr.for_value(static_partition_value)  # type: ignore
+                    table = table.with_column(static_partition_name, partition_value)
             backend.create_temp_table(table, temp_table_name + "_output")  # type: ignore
             self.collect_report(message="will not save data to data warehouse, since we are in dry run mode")
             # may need to provide a more accurate sql
             assert self.select_sql is not None
-            self.executed_sql = backend.save_table_sql(source_table, self.select_sql, target_table)
+            self.executed_sql = self.executed_sql_transformer.transform_save_table_sql(
+                target_table.table_name, self.select_sql
+            )
             return
 
         target_table_exists = backend.table_exists(target_table)
@@ -352,7 +427,9 @@ class Step:
         backend.save_table(source_table, target_table, save_mode, create_target_table=create_output_table)
         # may need to provide a more accurate sql
         assert self.select_sql is not None
-        self.executed_sql = backend.save_table_sql(source_table, self.select_sql, target_table)
+        self.executed_sql = self.executed_sql_transformer.transform_save_table_sql(
+            target_table.table_name, self.select_sql
+        )
 
     def _write_for_log_step(self, df: BackendTable):
         assert self.target_config is not None
@@ -415,9 +492,15 @@ class Step:
 
 
 class StepFactory:
-    def __init__(self, reporter: ReportCollector, func_runner: FuncRunner):
+    def __init__(
+        self,
+        reporter: ReportCollector,
+        func_runner: FuncRunner,
+        executed_sql_transformer: Optional[ExecutedSqlTransformer] = None,
+    ):
         self.reporter = reporter
         self.func_runner = func_runner
+        self.executed_sql_transformer = executed_sql_transformer
 
     def create_from_sql(self, sql: str, includes: Optional[Dict[str, str]] = None) -> List[Step]:
         includes = includes or {}
@@ -427,7 +510,12 @@ class StepFactory:
         index = 0
         sql_parts = []
         step_list = []
-        step = Step(f"step-{len(step_list) + 1}", self.reporter, self.func_runner)
+        step = Step(
+            f"step-{len(step_list) + 1}",
+            self.reporter,
+            self.func_runner,
+            executed_sql_transformer=self.executed_sql_transformer,
+        )
         while index < len(lines):
             line = lines[index].replace(";", "")
             line_stripped = line.strip()
@@ -436,7 +524,12 @@ class StepFactory:
                     step.select_sql = "\n".join(sql_parts)
                 if step.target_config is not None:
                     step_list.append(step)
-                step = Step(f"step-{len(step_list) + 1}", self.reporter, self.func_runner)
+                step = Step(
+                    f"step-{len(step_list) + 1}",
+                    self.reporter,
+                    self.func_runner,
+                    executed_sql_transformer=self.executed_sql_transformer,
+                )
                 sql_parts = []
                 target_config = StepConfig.from_config_line(line_stripped, index + 1)
                 step.target_config = target_config
