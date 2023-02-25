@@ -116,3 +116,21 @@ bbb --${a} in comment
    aaa --some comment
         """,
         )
+
+    def test_remove_comment(self):
+        sql = """--comment
+        with--other comment
+        a as (--comment)
+        )
+        '"'--comment
+        """
+        print(CommentSubstitutor().remove(sql))
+        self.assertEqual(
+            """
+        with
+        a as (
+        )
+        '"'
+        """,
+            CommentSubstitutor().remove(sql),
+        )

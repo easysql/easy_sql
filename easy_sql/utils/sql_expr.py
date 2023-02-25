@@ -37,7 +37,7 @@ class CommentSubstitutor:
 
             current_index = 0
             while True:
-                m = re.match(r".*?([^a-zA-Z0-9_]--).*", line[current_index:])
+                m = re.match(r".*?([^-]--).*", line[current_index:])
                 if m:
                     comment_start = m.start(1) + 1
                     left_of_comment = line[: current_index + comment_start]
