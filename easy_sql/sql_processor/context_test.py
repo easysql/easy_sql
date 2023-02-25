@@ -29,15 +29,15 @@ class TemplateContextTest(unittest.TestCase):
 class VarsContextTest(unittest.TestCase):
     def test_should_replace_vars(self):
         vc = VarsContext(vars={"a": "##A##", "aa": "##${a}##"}, debug_log=True)
-        self.assertEqual("---##A##, ===####A####===", vc.replace_variables("---${a}, ===${aa}==="))
+        self.assertEqual("-##A##, ===####A####===", vc.replace_variables("-${a}, ===${aa}==="))
         # if this is a comment, do not replace
         self.assertEqual("-- -${a}, ===${aa}===", vc.replace_variables("-- -${a}, ===${aa}==="))
-        self.assertEqual("---##A##, ==-- =${aa}===", vc.replace_variables("---${a}, ==-- =${aa}==="))
-        self.assertEqual("---\\##A##, ===####A####===", vc.replace_variables("---\\${a}, ===${aa}==="))
+        self.assertEqual("-##A##, ==-- =${aa}===", vc.replace_variables("-${a}, ==-- =${aa}==="))
+        self.assertEqual("-\\##A##, ===####A####===", vc.replace_variables("-\\${a}, ===${aa}==="))
 
         vc = VarsContext(vars={"a": "##A##", "aa": "##${a}##", "b": "1"}, debug_log=True)
         vc.init(func_runner=FuncRunner({"f": lambda x: int(x) + 1}))
-        self.assertEqual("---6, ===####A####===", vc.replace_variables("---${f(5)}, ===${aa}==="))
-        self.assertEqual("---2, ===####A####===", vc.replace_variables("---${f(${b})}, ===${aa}==="))
+        self.assertEqual("-6, ===####A####===", vc.replace_variables("-${f(5)}, ===${aa}==="))
+        self.assertEqual("-2, ===####A####===", vc.replace_variables("-${f(${b})}, ===${aa}==="))
 
         # TODO: support for confliction detection
