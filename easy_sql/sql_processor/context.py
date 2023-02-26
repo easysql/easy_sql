@@ -32,6 +32,15 @@ class VarsContext(VarsReplacer):
     def init(self, func_runner: FuncRunner):
         self.func_runner = func_runner
 
+    def _get_var_value(self, var_name: str, original_text: str) -> Any:
+        variables = self.vars
+        if var_name in variables:
+            return variables[var_name]
+        elif var_name.upper() in variables:
+            return variables[var_name.upper()]
+        else:
+            raise SqlProcessorException(f"unknown variable `{var_name}`. text={original_text}, known_vars={variables}")
+
     def replace_variables(self, text: str, include_funcs: bool = True) -> str:
         m = re.match(r"^\${([^}]+)}$", text.strip())
         if m:
@@ -66,14 +75,8 @@ class VarsContext(VarsReplacer):
             if var_name_is_func:
                 assert self.func_runner is not None
                 var_value = self.func_runner.run_func(var_name, self)
-            elif var_name in variables:
-                var_value = variables[var_name]
-            elif var_name.upper() in variables:
-                var_value = variables[var_name.upper()]
             else:
-                raise SqlProcessorException(
-                    f"unknown variable `{var_name}`. text={original_text}, known_vars={variables}"
-                )
+                var_value = self._get_var_value(var_name, original_text)
 
             text_parts.append(str(var_value))
             self._log_replace_process(f"var_value: {var_value}")
