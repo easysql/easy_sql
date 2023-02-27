@@ -8,7 +8,7 @@ from .backend import Backend, SparkBackend
 from .context import ProcessorContext, TemplatesContext, VarsContext
 from .funcs import FuncRunner
 from .report import SqlProcessorReporter, StepStatus
-from .step import Step, StepFactory
+from .step import ExecutedSqlTransformer, Step, StepFactory
 
 if TYPE_CHECKING:
     from pyspark.sql import SparkSession
@@ -54,6 +54,7 @@ class SqlProcessor:
         templates: Optional[dict] = None,
         includes: Optional[Dict[str, str]] = None,
         config: Any = None,
+        executed_sql_transformer: Optional[ExecutedSqlTransformer] = None,
     ):
         backend = backend if isinstance(backend, (Backend,)) else SparkBackend(spark=backend)
         self.backend = backend
@@ -72,7 +73,9 @@ class SqlProcessor:
         self.context = ProcessorContext(
             vars_context, TemplatesContext(debug_log=log_var_tmpl_replace, templates=templates), extra_cols=extra_cols
         )
-        self.step_factory = StepFactory(self.reporter, self.func_runner)
+        self.step_factory = StepFactory(
+            self.reporter, self.func_runner, executed_sql_transformer=executed_sql_transformer
+        )
 
         self.step_list = self.step_factory.create_from_sql(self.sql, includes)
         self.reporter.init(self.step_list)
