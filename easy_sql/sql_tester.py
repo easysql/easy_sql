@@ -474,6 +474,8 @@ class TestCase:
                 columns.append(column_name)
                 if "." in table_name:
                     column_types.append(table_column_types.get_col_type(table_name, columns[-1]))
+                else:
+                    raise Exception(f"Unable to resolve types for table: {table_name}")
 
         values, value_descriptions = [], []
         for row_idx, cells in enumerate(rows[1:]):
@@ -821,7 +823,7 @@ class TestCaseRunner:
                 pt_col = input.pt_col(list(self.table_column_types.partition_col_types.keys()))
                 backend.create_table_with_data(input.name, input.values, schema, [Partition(pt_col)] if pt_col else [])
             else:
-                print(f"creating temp table: {input.name}")
+                print(f"creating temp table: {input.name}", input.columns, input.column_types)
                 backend.create_temp_table_with_data(input.name, input.values, schema)
 
     def clean(self, case: TestCase, backend: Backend):
