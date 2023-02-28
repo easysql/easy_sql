@@ -339,7 +339,13 @@ class AnalyticsFuncs:
         self.backend = backend
 
     def data_profiling_report(
-        self, table: str, query: str, output_folder: str, max_count: str = "50000", include_correlations: str = "true"
+        self,
+        table: str,
+        query: str,
+        output_folder: str,
+        max_count: str = "50000",
+        include_correlations: str = "true",
+        types: Union[str, List[str]] = "html",
     ):
         try:
             from ydata_profiling import ProfileReport
@@ -347,6 +353,12 @@ class AnalyticsFuncs:
             from pandas_profiling import ProfileReport
 
         from easy_sql.sql_processor.backend.rdb import RdbBackend
+
+        if isinstance(types, str):
+            types = [t.strip() for t in types.split(",") if t.strip()]
+        for type in types:
+            if type not in ["html", "json"]:
+                raise Exception(f"Found unknown type {type}, all supported are: html/json")
 
         _max_count = int(max_count)
 
@@ -384,8 +396,14 @@ class AnalyticsFuncs:
             profiling_file = f"{output_folder}/{table}.html"
         os.makedirs(os.path.dirname(profiling_file), exist_ok=True)
 
-        profile.to_file(profiling_file)
-        logger.info(f"generated file: {profiling_file}")
+        if "html" in types:
+            profile.to_file(profiling_file)
+            logger.info(f"generated file: {profiling_file}")
+        if "json" in types:
+            profiling_file = profiling_file[: profiling_file.rindex(".")] + ".json"
+            with open(profiling_file, "w") as f:
+                f.write(profile.to_json())
+            logger.info(f"generated file: {profiling_file}")
 
     def _read_data_rdb(self, backend: RdbBackend, table: str, query: str, max_count: int) -> pd.DataFrame:
         import pandas as pd
