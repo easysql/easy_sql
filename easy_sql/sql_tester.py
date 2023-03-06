@@ -968,8 +968,15 @@ class SqlTester:
                 {
                     "py_file_tpl": f"""import os
 import unittest
+import sys
+import importlib
 
-from {self.__module__} import SqlTester
+try:
+    sys.path.insert(0, 'common')
+    SqlTester = importlib.import_module('sql_test').SqlTester  # type: ignore
+except ModuleNotFoundError as e:
+    print('using SqlTester from dataplat.')
+    from {self.__module__} import SqlTester
 
 
 class SqlTest(unittest.TestCase):
