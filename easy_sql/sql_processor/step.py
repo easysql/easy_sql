@@ -444,7 +444,7 @@ class Step:
         else:
             logger.info(f"log for [{self.target_config.name}]: ")
             df.show(20)
-            self.collect_report(message=f"{str(log_data[0])}")
+            self.collect_report(message="\n".join([str(row) for row in log_data]))
 
     def _write_for_check_step(self, df: BackendTable, context: ProcessorContext):
         assert self.target_config is not None
