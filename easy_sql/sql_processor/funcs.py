@@ -149,6 +149,7 @@ class FuncRunner:
             CacheFuncs,
             ColumnFuncs,
             IOFuncs,
+            LangFuncs,
             ModelFuncs,
             ParallelismFuncs,
             PartitionFuncs,
@@ -166,6 +167,7 @@ class FuncRunner:
         model_funcs = ModelFuncs(spark)
         ana_funcs = AnalyticsFuncs(backend)
         test_funcs = TestFuncs(backend)
+        lang_funcs = LangFuncs(backend)
         return {
             "repartition": parallelism_funcs.repartition,
             "repartition_by_column": parallelism_funcs.repartition_by_column,
@@ -199,6 +201,7 @@ class FuncRunner:
             "update_json_local": io_funcs.update_json_local,
             "model_predict": model_funcs.model_predict,
             "data_profiling_report": ana_funcs.data_profiling_report,
+            "call_java": lang_funcs.call_java,
             "sleep": test_funcs.sleep,
         }
 

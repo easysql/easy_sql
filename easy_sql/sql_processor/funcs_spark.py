@@ -28,6 +28,7 @@ __all__ = [
     "TableFuncs",
     "ModelFuncs",
     "AnalyticsFuncs",
+    "LangFuncs",
     "TestFuncs",
 ]
 
@@ -191,3 +192,17 @@ class PartitionFuncs(PartitionFuncsBase):
             if col[0].strip() == "# col_name":
                 pt_col_start = True
         return pt_cols
+
+
+class LangFuncs:
+    def __init__(self, backend: SparkBackend) -> None:
+        self.backend = backend
+
+    def call_java(self, cls: str, func_name: str, *args) -> str:
+        spark = self.backend.spark
+        gw = spark.sparkContext._gateway  # type: ignore
+        from py4j.java_gateway import java_import
+
+        java_import(gw.jvm, cls)
+        func = eval(f"gw.jvm.{cls}.{func_name}", {"gw": gw})
+        return func(spark._jsparkSession, *args)  # type: ignore
