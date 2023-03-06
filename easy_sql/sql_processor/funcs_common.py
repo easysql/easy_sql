@@ -330,7 +330,14 @@ class IOFuncs:
         if not os.path.exists(source_file):
             raise FileNotFoundError(source_file)
         os.makedirs(os.path.dirname(target_file), exist_ok=True)
-        os.rename(source_file, target_file)
+        if os.path.exists(target_file):
+            os.remove(target_file)
+        try:
+            os.rename(source_file, target_file)
+        except OSError:
+            with open(target_file, "w") as fw, open(source_file, "r") as fr:
+                fw.write(fr.read())
+            os.remove(source_file)
         logger.info(f"file moved: {source_file} -> {target_file}")
 
 
