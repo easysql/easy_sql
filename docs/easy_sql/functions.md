@@ -218,7 +218,17 @@ Below are a list of them for referencing.
 
 #### Analytics functions
 
-- [`data_profiling_report(table: str, query: str, output_folder: str, max_count=50000)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.AnalyticsFuncs.data_profiling_report)
+- [`data_profiling_report(table: str, query: str, output_folder: str, max_count: str = 50000, include_correlations: str = true, types: Union[str, List[str]] = html)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.AnalyticsFuncs.data_profiling_report)
+
+
+#### Lang functions
+
+- [`call_java(cls: str, func_name: str, *args) -> str`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_spark/index.html#easy_sql.sql_processor.funcs_spark.LangFuncs.call_java)
+
+
+#### Test functions
+
+- [`sleep(secs: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.TestFuncs.sleep)
 
 
 
@@ -281,4 +291,9 @@ Below are a list of them for referencing.
 
 #### Analytics functions
 
-- [`data_profiling_report(table: str, query: str, output_folder: str, max_count=50000)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.AnalyticsFuncs.data_profiling_report)
+- [`data_profiling_report(table: str, query: str, output_folder: str, max_count: str = 50000, include_correlations: str = true, types: Union[str, List[str]] = html)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.AnalyticsFuncs.data_profiling_report)
+
+
+#### Test functions
+
+- [`sleep(secs: str)`](https://easy-sql.readthedocs.io/en/latest/autoapi/easy_sql/sql_processor/funcs_common/index.html#easy_sql.sql_processor.funcs_common.TestFuncs.sleep)
