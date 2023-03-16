@@ -80,7 +80,7 @@ select a, """hh""" as ab, "" as ac from ${temp_db}.table
 select
     translate('${data_date}', '-', '')  as data_date_no_ds
     , true                              as __create_hive_table__
-    
+
 -- target=temp.model_data
 select * from sales_model_demo_with_label where date='${data_date_no_ds}'
 
@@ -92,7 +92,7 @@ select *
 
         sql_linter = SqlLinter(sql, include_rules=None, exclude_rules=None)
         result = sql_linter.lint("bigquery")
-        self.assertEqual(len(result), 7)
+        self.assertEqual(len(result), 8)
         fixed = sql_linter.fix("bigquery")
         expected = """-- backend: bigquery
 -- target=variables
@@ -127,7 +127,7 @@ select @{dim_cols} from sales_amount
 @{transited_with_fk_inc_template(
     source_table_name=transited, source_table_biz_key=product_id, result_col_name=product_id_key,
     fk_table_name=dwd_sales.sales_dim_product_h, pk=product_key, fk_table_biz_key=id,
-    update_time_col_name=update_time, partition_col_name=di)} 
+    update_time_col_name=update_time, partition_col_name=di)}
 """
         sql_linter = SqlLinter(sql, exclude_rules=["L025"])
         result = sql_linter.lint("bigquery")
@@ -148,7 +148,7 @@ select @{dim_cols} from ${temp_db}.sales_amount
 @{transited_with_fk_inc_template(
     source_table_name=transited, source_table_biz_key=product_id, result_col_name=product_id_key,
     fk_table_name=dwd_sales.sales_dim_product_h, pk=product_key, fk_table_biz_key=id,
-    update_time_col_name=update_time, partition_col_name=di)} """
+    update_time_col_name=update_time, partition_col_name=di)}"""
         self.assertEqual(expected, fixed)
 
     def test_should_work_when_given_diff_backend(self):
@@ -173,12 +173,12 @@ product_name
 
 -- target=temp.dims
 select @{dim_cols} from order_count
-union 
+union
 select @{dim_cols} from sales_amount
 """
         sql_linter = SqlLinter(sql)
         result = sql_linter.lint("spark", True)
-        self.assertEqual(len(result), 1)
+        self.assertEqual(len(result), 0)
         fixed = sql_linter.fix("spark")
         expected = """-- backend: spark
 -- --------------------
@@ -211,7 +211,7 @@ select @{dim_cols} from sales_amount
 -- target=variables
 select ${plus(1, 2)} as a
 , flag as b
-from data_table 
+from data_table
 
 -- target=temp.dims
 select * from order_count where value < ${a}
@@ -225,7 +225,7 @@ select * from order_count where value < ${a}
         print(len(result))
         fixed = sql_linter.fix("bigquery")
         print(fixed)
-        self.assertEqual(len(result), 4)
+        self.assertEqual(len(result), 3)
         expected = """-- backend: bigquery
 
 -- target=variables

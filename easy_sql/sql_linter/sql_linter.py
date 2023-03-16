@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
+from typing import TYPE_CHECKING, List, Optional, Sequence
 
 import regex
 from sqlfluff.core import Lexer, Linter, Parser, SQLBaseError
@@ -70,23 +70,23 @@ class SqlLinter:
         raise Exception("backend type so far is not supported for lint check")
 
     @staticmethod
-    def _update_included_rule_for_config(config: Dict[str, Any], dialect: Optional[str] = None, rules=None):
+    def _included_rule_config(dialect: Optional[str] = None, rules=None) -> str:
         if rules is None:
             rules = []
         if len(rules) > 0:
-            config["core"]["rules"] = ",".join(rules)
+            return ",".join(rules)
         else:
             if dialect in ["bigquery"]:
-                config["core"]["rules"] = "core," + dialect
+                return "core,L019," + dialect
             else:
-                config["core"]["rules"] = "core"
+                return "core,L019"
 
     @staticmethod
-    def _update_excluded_rule_for_config(config: Dict[str, Any], rules: Optional[List[str]] = None):
+    def _excluded_rule_config(rules: Optional[List[str]] = None) -> Optional[str]:
         if rules is not None:
-            config["core"]["exclude_rules"] = ",".join(rules)
+            return ",".join(rules)
         else:
-            config["core"]["exclude_rules"] = None
+            return None
 
     def _check_parsable(self, root_segment: BaseSegment) -> bool:
         segment_list = [root_segment]
@@ -210,13 +210,16 @@ class SqlLinter:
         if config_path:
             config = FluffConfig.from_path(config_path)
         else:
-            default_config_dict = FluffConfig(require_dialect=False)._configs
-            default_config_dict["rules"]["L019"] = {"comma_style": "leading"}
-            default_config_dict["rules"]["L014"] = {"extended_capitalisation_policy": "lower"}
-            default_config_dict["core"]["dialect"] = dialect
-            self._update_included_rule_for_config(default_config_dict, dialect=dialect, rules=self.include_rules)
-            self._update_excluded_rule_for_config(default_config_dict, rules=self.exclude_rules)
-            config = FluffConfig(configs=default_config_dict)
+            config = {
+                "core": {
+                    "dialect": dialect,
+                    "rules": self._included_rule_config(dialect=dialect, rules=self.include_rules),
+                    "exclude_rules": self._excluded_rule_config(rules=self.exclude_rules),
+                },
+                "layout": {"type": {"comma": {"line_position": "leading"}}},
+                "rules": {"L014": {"extended_capitalisation_policy": "lower"}},
+            }
+            config = FluffConfig(configs=config)
         linter = Linter(config=config, user_rules=all_rules)  # type: ignore
         return linter
 

@@ -1,5 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from sqlfluff.core.parser import CodeSegment
-from sqlfluff.core.rules.base import BaseRule, LintFix, LintResult, RuleContext
+from sqlfluff.core.rules.base import BaseRule, LintFix, LintResult
+from sqlfluff.core.rules.crawlers import SegmentSeekerCrawler
+
+if TYPE_CHECKING:
+    from sqlfluff.core.rules.context import RuleContext
 
 
 class Rule_BigQuery_L001(BaseRule):
@@ -22,6 +30,7 @@ class Rule_BigQuery_L001(BaseRule):
     """
 
     groups = ("all", "bigquery")
+    crawl_behaviour = SegmentSeekerCrawler({"table_reference"})
 
     def __init__(self, *args, **kwargs):
         """Overwrite __init__ to set config."""
@@ -29,7 +38,7 @@ class Rule_BigQuery_L001(BaseRule):
 
     def _eval(self, context: RuleContext):
         """check from table have schema"""
-        if context.segment.is_type("table_reference") and len(context.segment.segments) != 3:
+        if len(context.segment.segments) != 3:
             return LintResult(
                 anchor=context.segment,
                 fixes=[
