@@ -16,7 +16,7 @@ from easy_sql.utils.kv import (
 )
 
 
-def _parse_backend(sql: str):
+def parse_backend(sql: str):
     sql_lines = sql.split("\n")
 
     backend = "spark"
@@ -86,7 +86,7 @@ class EasySqlConfig:
         sql: str = sql if sql else read_sql(sql_file)  # type: ignore
         sql_lines = sql.split("\n")  # type: ignore
 
-        backend = _parse_backend(sql)
+        backend = parse_backend(sql)
         input_tables, output_tables = _parse_tables(sql, "inputs"), _parse_tables(sql, "outputs")
 
         customized_backend_conf: List[str] = []
