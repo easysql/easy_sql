@@ -1,4 +1,4 @@
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, List, Optional, Tuple
 
 from .backend import Backend, FlinkBackend, SparkBackend
 from .backend.rdb import RdbBackend
@@ -206,6 +206,20 @@ class FuncRunner:
         }
 
     def run_func(self, func_def: str, vars_replacer: VarsReplacer) -> Optional[str]:
+        func_name, func, params = self._parse(func_def, vars_replacer)
+        ret_val = func(*params)
+        return self._ref_sql(func_name, func, ret_val, *params)
+
+    def _ref_sql(self, func_name, func, func_call_ret: str, *params) -> str:
+        if hasattr(func, "ref_sql"):
+            assert callable(
+                func.ref_sql
+            ), f"Ref_sql of {func_name} should be a function to calculate the reference sql. But it is a {func.ref_sql}"
+            return func.ref_sql(*params) + "\n;"
+        else:
+            return func_call_ret
+
+    def _parse(self, func_def: str, vars_replacer: VarsReplacer) -> Tuple[str, Callable, List[str]]:
         func_name = func_def[: func_def.index("(")]
         if func_name not in self.funcs:
             raise SqlProcessorException(f"no function found for {func_def} in sql_processor: {func_def}")
@@ -218,4 +232,4 @@ class FuncRunner:
         if original_params:
             params = original_params.split(",")
             params = [vars_replacer.replace_variables(p.strip(), False) for p in params]
-        return func(*params)
+        return func_name, func, params
