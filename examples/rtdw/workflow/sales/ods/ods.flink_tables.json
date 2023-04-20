@@ -1,0 +1,126 @@
+{
+    "catalogs": [
+        {
+            "name": "myhiveCatalog",
+            "type": "hive",
+            "hive-conf-dir": "test/flink/flink_hive_conf"
+        },
+        {
+            "name": "myhiveCatalog_1",
+            "type": "hive",
+            "hive-conf-dir": "test/flink/flink_hive_conf"
+        },
+        {
+            "name": "testpg",
+            "type": "jdbc",
+            "default-database": "postgres",
+            "username": "postgres",
+            "password": "123456",
+            "base-url": "jdbc:postgresql://testpg:15432"
+        }
+    ],
+    "databases": [
+        {
+            "name": "db_pg",
+            "connectors": [
+                {
+                    "name": "connector_jdbc",
+                    "options": {
+                        "connector": "jdbc",
+                        "url": "jdbc:postgresql://testpg:15432/postgres",
+                        "username": "postgres",
+                        "password": "123456"
+                    }
+                },
+                {
+                    "name": "connector_cdc",
+                    "options": {
+                        "connector": "postgres-cdc",
+                        "hostname": "testpg",
+                        "port": "15432",
+                        "database-name": "postgres",
+                        "slot.name": "cdc_slot",
+                        "decoding.plugin.name": "pgoutput",
+                        "slot.drop.on.stop": "true",
+                        "schema-name": "sample",
+                        "username": "postgres",
+                        "password": "123456"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "ods_sales",
+            "connectors": [
+                {
+                    "name": "connector_hudi",
+                    "options": {
+                        "connector": "hudi",
+                        "path": "/tmp/hudi-flink-test/ods_sales.db",
+                        "table.type": "COPY_ON_WRITE",
+                        "precombine.field": "_op_ts",
+                        "changelog.enabled": true,
+                        "compaction.async.enabled": false
+                    }
+                }
+            ],
+            "tables": [
+                {
+                    "name": "sales_user",
+                    "connector": {
+                        "name": "connector_hudi"
+                    },
+                    "partition_by": ["_di"],
+                    "schema": [
+                        "id INT NOT NULL PRIMARY KEY NOT ENFORCED",
+                        "name VARCHAR",
+                        "device_model VARCHAR",
+                        "email VARCHAR",
+                        "phone VARCHAR",
+                        "create_time  timestamp",
+                        "modify_time  timestamp",
+                        "_di INT",
+                        "_op_ts BIGINT"
+                    ]
+                },
+                {
+                    "name": "sales_product",
+                    "connector": {
+                        "name": "connector_hudi"
+                    },
+                    "partition_by": ["_di"],
+                    "schema": [
+                        "pid INT NOT NULL PRIMARY KEY NOT ENFORCED",
+                        "pname VARCHAR",
+                        "pprice decimal",
+                        "phone VARCHAR",
+                        "create_time  timestamp",
+                        "modify_time  timestamp",
+                        "_di INT",
+                        "_op_ts BIGINT"
+                    ]
+                },
+                {
+                    "name": "sales_user_order",
+                    "connector": {
+                        "name": "connector_hudi"
+                    },
+                    "partition_by": ["_di"],
+                    "schema": [
+                        "id INT NOT NULL PRIMARY KEY NOT ENFORCED",
+                        "oid VARCHAR",
+                        "uid INT",
+                        "pid INT",
+                        "onum INT",
+                        "create_time  timestamp",
+                        "modify_time  timestamp",
+                        "_di INT",
+                        "_op_ts BIGINT"
+                    ]
+                }
+            ]
+        }
+    ],
+    "table_list": ["a"],
+    "schema_list": ["a"]
+}

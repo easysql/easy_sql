@@ -1,0 +1,14 @@
+{
+    "name": "inventory-connector",
+    "config": {
+        "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+        "tasks.max": "1",
+        "database.hostname": "testpg",
+        "database.port": "15432",
+        "database.user": "postgres",
+        "database.password": "123456",
+        "database.dbname": "postgres",
+        "database.server.name": "dbserver1",
+        "schema.include.list": "inventory"
+    }
+}

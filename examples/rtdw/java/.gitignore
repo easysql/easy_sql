@@ -1,0 +1,5 @@
+build/
+out/
+.gradle/
+src/**/generated/
+src/test/.local/
