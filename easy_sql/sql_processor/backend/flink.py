@@ -283,7 +283,7 @@ class FlinkBackend(Backend):
         options = self.flink_tables_config.table_options(connector, table_config)
         options_expr = " , ".join([f"'{option}' = '{options[option]}'" for option in options])
         create_sql = f"""
-            create table {table.strip()} (
+            create table if not exists {table.strip()} (
                 {schema_expr}
             )
             {partition_by_expr}

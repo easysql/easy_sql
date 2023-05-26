@@ -5,8 +5,8 @@ import re
 import unittest
 from typing import TYPE_CHECKING
 
-from pyflink.common import Configuration, Row
-from pyflink.table import DataTypes, EnvironmentSettings, TableEnvironment
+from pyflink.common import Row
+from pyflink.table import DataTypes
 from pyflink.table.schema import Schema
 from pyflink.table.table_descriptor import TableDescriptor
 
@@ -423,9 +423,11 @@ def test_filed_alignment():
 
     assert schema.get_field_names() == ["user", "product", "amount", "ts"]
 
-    # # print the schema
-    # dr = t1.execute_sql("desc Orders")
-    # dr.print()
+
+def test_idempotency_of_create_table():
+    bk = FlinkBackend(is_batch=False)
+    bk._create_table("a", {"schema": ["amount INT", "id INT"], "connector": {"options": {"connector": "print"}}}, {})
+    bk._create_table("a", {"schema": ["amount INT"], "connector": {"options": {"connector": "print"}}}, {})
 
 
 if __name__ == "__main__":
