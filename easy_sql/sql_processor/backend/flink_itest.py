@@ -5,8 +5,8 @@ import re
 import unittest
 from typing import TYPE_CHECKING
 
-from pyflink.common import Row
-from pyflink.table import DataTypes
+from pyflink.common import Configuration, Row
+from pyflink.table import DataTypes, EnvironmentSettings, TableEnvironment
 from pyflink.table.schema import Schema
 from pyflink.table.table_descriptor import TableDescriptor
 
@@ -65,8 +65,7 @@ class FlinkTest(unittest.TestCase):
             )
         """,
         )
-        backend.exec_native_sql(
-            f"""
+        backend.exec_native_sql(f"""
             CREATE TABLE out_put_table (
                 id INT,
                 val VARCHAR,
@@ -78,8 +77,7 @@ class FlinkTest(unittest.TestCase):
                 'username' = '{TEST_PG_JDBC_USER}',
                 'password' = '{TEST_PG_JDBC_PASSWD}',
                 'table-name' = 'out_put_table');
-        """
-        )
+        """)
 
         from pyflink.java_gateway import get_gateway
         from pyflink.table.catalog import CatalogBaseTable
@@ -112,14 +110,12 @@ class FlinkTest(unittest.TestCase):
 
         catalog_name = "hive"
         hive_conf_dir = "/ops/apache-hive/conf"
-        backend.exec_native_sql(
-            f"""
+        backend.exec_native_sql(f"""
             CREATE CATALOG testHiveCatalog WITH (
                 'type' = '{catalog_name}',
                 'hive-conf-dir' = '{hive_conf_dir}'
             );
-        """
-        )
+        """)
 
         schema = DataTypes.ROW([DataTypes.FIELD("id", DataTypes.INT()), DataTypes.FIELD("val", DataTypes.STRING())])
         table = backend.flink.from_elements([(1, "1"), (2, "2"), (3, "3")], schema=schema)
@@ -389,6 +385,43 @@ class FlinkTest(unittest.TestCase):
                 FlinkRow(Row(6, "6", mock_dt_2), ["id", "val", "dt"]),
             ],
         )
+
+
+def test_filed_alignment():
+    bk = FlinkBackend(is_batch=False)
+    bk.exec_native_sql(
+        "CREATE TABLE source ("
+        " amount INT,"
+        " ts TIMESTAMP(3),"
+        " `user` BIGINT NOT NULl,"
+        " product VARCHAR(32),"
+        " WATERMARK FOR ts AS ts - INTERVAL '1' SECONDS"
+        ") with ('connector' = 'datagen')"
+    )
+
+    bk.exec_native_sql(
+        "CREATE TABLE sink ("
+        " `user` BIGINT NOT NULl,"
+        " product VARCHAR(32),"
+        " amount INT,"
+        " ts TIMESTAMP(3),"
+        " computed_field AS `user` * amount,"
+        " ptime AS PROCTIME(),"
+        " from_mata_fields TIMESTAMP_LTZ(3) METADATA FROM 'op_ts' VIRTUAL,"
+        " PRIMARY KEY(`user`) NOT ENFORCED,"
+        " WATERMARK FOR ts AS ts - INTERVAL '1' SECONDS"
+        ") with ('connector' = 'print')"
+    )
+
+    aligned_table = bk._align_fields(TableMeta("source"), TableMeta("sink"))
+
+    schema = aligned_table.get_schema()
+
+    assert schema.get_field_names() == ["user", "product", "amount", "ts"]
+
+    # # print the schema
+    # dr = t1.execute_sql("desc Orders")
+    # dr.print()
 
 
 if __name__ == "__main__":

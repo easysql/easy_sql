@@ -171,32 +171,41 @@ class FlinkBackend(Backend):
         save_mode: SaveMode,
         create_target_table: bool = False,
     ):
-        from pyflink.table.expressions import col, lit
-
+        source_table_name = source_table_meta.table_name
+        sink_table_name = target_table_meta.table_name
         if not self.table_exists(target_table_meta):
             raise Exception(
-                f"target table {target_table_meta.table_name} does not exist, "
-                f"cannot save table {target_table_meta.table_name} to {target_table_meta.table_name}"
+                f"target table {sink_table_name} does not exist, "
+                f"cannot save table {source_table_name} to {sink_table_name}"
             )
 
-        temp_res = self.exec_native_sql_query(f"select * from {source_table_meta.table_name}")
-        # 纯动态分区时，如果当日没有新增数据，则不会创建 partition。而我们希望对于静态分区，总是应该创建分区，即使当日没有数据
-        static_partitions = list(filter(lambda p: p.value, target_table_meta.partitions))
-        table_description = list(self.exec_native_sql(f"desc {target_table_meta.table_name}").collect())
-        columns: List[str] = [f[0] for f in table_description]  # type: ignore
-        for p in static_partitions:
-            temp_res = temp_res.add_columns(lit(p.value).alias(p.field))
-        temp_res = temp_res.select(*[col(column) for column in columns])
+        source_table = self._align_fields(source_table_meta, target_table_meta)
 
-        logger.info(f"save table {source_table_meta.table_name} to {target_table_meta.table_name}")
+        override_insert = save_mode == SaveMode.overwrite
         if self.streaming_insert_stmts is not None:
-            logger.info("add insert to streaming_insert_stmts.")
-            self.streaming_insert_stmts.add_insert(
-                target_table_meta.table_name, temp_res, save_mode == SaveMode.overwrite
-            )
+            logger.info(f"prepare insert into streaming_insert_stmts: from {source_table_name} to {sink_table_name}.")
+            self.streaming_insert_stmts.add_insert(sink_table_name, source_table, overwrite=override_insert)
             self.has_streaming_insert_stmts = True
         else:
-            temp_res.execute_insert(target_table_meta.table_name, save_mode == SaveMode.overwrite)
+            logger.info(f"save table {source_table_name} to {sink_table_name}")
+            source_table.execute_insert(sink_table_name, overwrite=override_insert)
+
+    def _align_fields(self, source_table_meta: TableMeta, target_table_meta: TableMeta):
+        from pyflink.table.expressions import col, lit
+
+        source_table = self.flink.from_path(source_table_meta.table_name)
+
+        # 纯动态分区时，如果当日没有新增数据，则不会创建 partition。而我们希望对于静态分区，总是应该创建分区，即使当日没有数据
+        static_partitions = list(filter(lambda p: p.value, target_table_meta.partitions))
+        for p in static_partitions:
+            source_table = source_table.add_columns(lit(p.value).alias(p.field))
+
+        target_table_schema = list(self.exec_native_sql(f"desc {target_table_meta.table_name}").collect())
+        # <Row('computed_field', 'BIGINT', True, None, 'AS `user` * `amount`', None)>
+        target_needed_columns: List[str] = [f[0] for f in target_table_schema if f[4] is None]  # type: ignore
+
+        source_table = source_table.select(*[col(column) for column in target_needed_columns])
+        return source_table
 
     def refresh_table_partitions(self, table: TableMeta):
         # flink无法从`desc table`中解析出partition字段，但是可以在flink_source_file中配置table的partition字段
@@ -209,14 +218,12 @@ class FlinkBackend(Backend):
             del catalog["name"]
             catalog_expr = " , ".join([f"'{option}' = '{catalog[option]}'" for option in catalog])
             try:  # noqa: SIM105
-                self.exec_native_sql(
-                    f"""
+                self.exec_native_sql(f"""
                         CREATE CATALOG {catalog_name}
                         WITH (
                             {catalog_expr}
                         );
-                    """
-                )
+                    """)
             except Exception:
                 logger.warn(f"create catalog {catalog_name} failed.", exc_info=True)
 
@@ -265,12 +272,8 @@ class FlinkBackend(Backend):
     def _create_table(self, table: str, table_config: Dict, connector: Dict):
         schema = table_config["schema"]
         schema_expr = " , ".join(schema)
-        partition_by_expr = (
-            f"""
-                PARTITIONED BY ({','.join(table_config['partition_by'])})"""
-            if "partition_by" in table_config
-            else ""
-        )
+        partition_by_expr = f"""
+                PARTITIONED BY ({','.join(table_config['partition_by'])})""" if "partition_by" in table_config else ""
         options = self.flink_tables_config.table_options(connector, table_config)
         options_expr = " , ".join([f"'{option}' = '{options[option]}'" for option in options])
         create_sql = f"""
