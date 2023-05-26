@@ -218,12 +218,14 @@ class FlinkBackend(Backend):
             del catalog["name"]
             catalog_expr = " , ".join([f"'{option}' = '{catalog[option]}'" for option in catalog])
             try:  # noqa: SIM105
-                self.exec_native_sql(f"""
+                self.exec_native_sql(
+                    f"""
                         CREATE CATALOG {catalog_name}
                         WITH (
                             {catalog_expr}
                         );
-                    """)
+                    """
+                )
             except Exception:
                 logger.warn(f"create catalog {catalog_name} failed.", exc_info=True)
 
@@ -272,8 +274,12 @@ class FlinkBackend(Backend):
     def _create_table(self, table: str, table_config: Dict, connector: Dict):
         schema = table_config["schema"]
         schema_expr = " , ".join(schema)
-        partition_by_expr = f"""
-                PARTITIONED BY ({','.join(table_config['partition_by'])})""" if "partition_by" in table_config else ""
+        partition_by_expr = (
+            f"""
+                PARTITIONED BY ({','.join(table_config['partition_by'])})"""
+            if "partition_by" in table_config
+            else ""
+        )
         options = self.flink_tables_config.table_options(connector, table_config)
         options_expr = " , ".join([f"'{option}' = '{options[option]}'" for option in options])
         create_sql = f"""
