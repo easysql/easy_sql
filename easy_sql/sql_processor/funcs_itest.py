@@ -9,6 +9,7 @@ from easy_sql.local_spark import LocalSpark
 from easy_sql.sql_processor import FuncRunner, Step
 from easy_sql.sql_processor.backend import Partition, SparkTable
 from easy_sql.sql_processor.backend.base import Backend, Col
+from easy_sql.sql_processor.backend.flink import FlinkBackend
 from easy_sql.sql_processor.backend.rdb import RdbBackend
 from easy_sql.sql_processor.context import (
     ProcessorContext,
@@ -207,3 +208,9 @@ class FuncsTest(unittest.TestCase):
         f.move_file(test_file, test_file_moved)
         self.assertFalse(os.path.exists(test_file))
         self.assertTrue(os.path.exists(test_file_moved))
+
+
+def test_flink_func_set_config():
+    cf = FuncRunner.create(FlinkBackend()).run_func("set_config(a.b.c, 10 s)", VarsContext())
+    actural = cf.get("a.b.c", "666")
+    assert actural == "10 s"

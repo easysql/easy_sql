@@ -25,6 +25,15 @@ __all__ = [
 ]
 
 
+class SetConfigFuncs:
+    def __init__(self, bkd: FlinkBackend) -> None:
+        self.bkd = bkd
+        pass
+
+    def set_config(self, key: str, value: str):
+        return self.bkd.flink.get_config().set(key, value)
+
+
 class ParallelismFuncs:
     def __init__(self, flink: FlinkBackend):
         self.flink = flink
