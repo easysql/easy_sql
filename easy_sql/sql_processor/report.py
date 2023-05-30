@@ -44,9 +44,7 @@ config: {self.step.target_config} {verbose_parts}
 status: {self.status}
 start time: {start_time_str}, end time: {end_time_str}, execution time: {self.execution_time}s - {self.execution_time / total_execution_time * 100:.2f}%
 messages:
-""" + "\n".join(
-            self.messages
-        )
+""" + "\n".join(self.messages)
 
 
 class SqlProcessorReporter(ReportCollector):

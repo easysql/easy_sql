@@ -28,21 +28,17 @@ TEST_PG_JDBC_PASSWD = os.environ.get("PG_JDBC_PASSWD", "123456")
 TEST_CH_URL = os.environ.get("CLICKHOUSE_URL", "clickhouse+native://default@testch:30123")
 TEST_BQ_URL = os.environ.get("BQ_URL", "bigquery://")
 
-__partition_col_converter__ = (
-    lambda col: f"PARSE_DATE('%Y-%m', {col}) as {col}"
-    if col in ["data_month", ":data_month"]
-    else f"CAST({col} as DATE)"
+__partition_col_converter__ = lambda col: (
+    f"PARSE_DATE('%Y-%m', {col}) as {col}" if col in ["data_month", ":data_month"] else f"CAST({col} as DATE)"
 )
-__partition_value_converter__ = (
-    lambda col, value: datetime.strptime(value, "%Y-%m").date()
-    if col == "data_month"
-    else datetime.strptime(value, "%Y-%m-%d").date()
+__partition_value_converter__ = lambda col, value: (
+    datetime.strptime(value, "%Y-%m").date() if col == "data_month" else datetime.strptime(value, "%Y-%m-%d").date()
 )
-__column_sql_type_converter__ = (
-    lambda backend_type, col_name, col_type: "DATE" if col_name in ["di", "dt", "data_date", "data_month"] else None
+__column_sql_type_converter__ = lambda backend_type, col_name, col_type: (
+    "DATE" if col_name in ["di", "dt", "data_date", "data_month"] else None
 )
-__partition_expr__ = (
-    lambda backend_type, partition_col: f"DATE_TRUNC({partition_col}, MONTH)"
+__partition_expr__ = lambda backend_type, partition_col: (
+    f"DATE_TRUNC({partition_col}, MONTH)"
     if backend_type == "bigqiery" and partition_col == "data_month"
     else partition_col
 )

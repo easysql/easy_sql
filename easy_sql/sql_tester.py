@@ -240,8 +240,8 @@ class TableColumnTypes:
                 else:
                     try:
                         # try convert partition column to int to remove possible float values
-                        return col_type, str(round(float(col_value))) if col_type == "string" else round(
-                            float(col_value)
+                        return col_type, (
+                            str(round(float(col_value))) if col_type == "string" else round(float(col_value))
                         )
                     except ValueError as e:
                         if col_type == "string":
@@ -963,10 +963,7 @@ class SqlTester:
         )
         import jinja2
 
-        env = jinja2.Environment(
-            loader=jinja2.DictLoader(
-                {
-                    "py_file_tpl": f"""import os
+        env = jinja2.Environment(loader=jinja2.DictLoader({"py_file_tpl": f"""import os
 import unittest
 import sys
 import importlib
@@ -997,10 +994,7 @@ class SqlTest(unittest.TestCase):
 {{% endfor %}}
 if __name__ == '__main__':
     unittest.main()
-"""
-                }
-            )
-        )
+"""}))
         with open(py_file, "wb") as f:
             env.get_template("py_file_tpl").stream(cases=cases).dump(f, encoding="utf8")
             logger.info(f"created file: {py_file}")

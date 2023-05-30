@@ -184,7 +184,7 @@ class ModelFuncs:
         else:
             msg = (
                 "Backend of type"
-                f' {type(self.backend)}-{self.backend.backend_type if isinstance(self.backend, RdbBackend) else ""} is'
+                f" {type(self.backend)}-{self.backend.backend_type if isinstance(self.backend, RdbBackend) else ''} is"
                 " not supported yet"
             )
             raise Exception(msg)
@@ -195,7 +195,7 @@ class PartitionFuncs(PartitionFuncsBase):
         if not isinstance(self.backend, RdbBackend):
             msg = (
                 "Backend of type"
-                f' {type(self.backend)}-{self.backend.backend_type if isinstance(self.backend, RdbBackend) else ""} is'
+                f" {type(self.backend)}-{self.backend.backend_type if isinstance(self.backend, RdbBackend) else ''} is"
                 " not supported yet"
             )
             raise Exception(msg)
@@ -254,7 +254,7 @@ class PartitionFuncs(PartitionFuncsBase):
         else:
             msg = (
                 "Backend of type"
-                f' {type(backend)}-{backend.backend_type if isinstance(backend, RdbBackend) else ""} is'
+                f" {type(backend)}-{backend.backend_type if isinstance(backend, RdbBackend) else ''} is"
                 " not supported yet"
             )
             raise Exception(msg)

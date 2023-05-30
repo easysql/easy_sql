@@ -169,9 +169,11 @@ class SqlDialect:
                 )
             # the format of pt_col may be :{pt_col}, which is transferred by method create_table_with_data
             return [
-                col
-                if col not in [partition_cols[0], f":{partition_cols[0]}"]
-                else self.sql_expr.convert_partition_col(col)
+                (
+                    col
+                    if col not in [partition_cols[0], f":{partition_cols[0]}"]
+                    else self.sql_expr.convert_partition_col(col)
+                )
                 for col in all_cols
             ]
 
