@@ -53,16 +53,16 @@ The template looks like below:
 There are two concepts which are popular in testing domain. Easy SQL also adopted them:
 
 - Test case: A single test used to test your code in some specific scenario.
-- Test suit: A bundle of a few unit test cases. Could be used to run them together.
+- Test suite: A bundle of a few unit test cases. Could be used to run them together.
 
-#### Test suit
+#### Test suite
 
-In the screenshot above, we see two test suits, named 'Suit 1' and 'Suit 2'.
-They are put in different sheets. In Easy SQL, if there is any sheet with a name starting with word 'Suit', the sheet is considered to be a test suit.
+In the screenshot above, we see two test suites, named 'Suite 1' and 'Suite 2'.
+They are put in different sheets. In Easy SQL, if there is any sheet with a name starting with word 'Suite', the sheet is considered to be a test suite.
 
 #### Test case
 
-In test suit 'Suit 1', we can see two test cases.
+In test suite 'Suite 1', we can see two test cases.
 One case is 'A test for ETL abc.sql', and the other is 'Another test for ETL abc.sql'.
 Test case is recognized by an uppercase keyword 'CASE' in column 'A'.
 There should be a name of the test case in column 'B', and be next to the 'CASE' keyword.
