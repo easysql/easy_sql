@@ -66,7 +66,8 @@ class FlinkTest(unittest.TestCase):
             )
         """,
         )
-        backend.exec_native_sql(f"""
+        backend.exec_native_sql(
+            f"""
             CREATE TABLE out_put_table (
                 id INT,
                 val VARCHAR,
@@ -78,7 +79,8 @@ class FlinkTest(unittest.TestCase):
                 'username' = '{TEST_PG_JDBC_USER}',
                 'password' = '{TEST_PG_JDBC_PASSWD}',
                 'table-name' = 'out_put_table');
-        """)
+        """
+        )
 
         from pyflink.java_gateway import get_gateway
         from pyflink.table.catalog import CatalogBaseTable
@@ -111,12 +113,14 @@ class FlinkTest(unittest.TestCase):
 
         catalog_name = "hive"
         hive_conf_dir = "/ops/apache-hive/conf"
-        backend.exec_native_sql(f"""
+        backend.exec_native_sql(
+            f"""
             CREATE CATALOG testHiveCatalog WITH (
                 'type' = '{catalog_name}',
                 'hive-conf-dir' = '{hive_conf_dir}'
             );
-        """)
+        """
+        )
 
         schema = DataTypes.ROW([DataTypes.FIELD("id", DataTypes.INT()), DataTypes.FIELD("val", DataTypes.STRING())])
         table = backend.flink.from_elements([(1, "1"), (2, "2"), (3, "3")], schema=schema)
