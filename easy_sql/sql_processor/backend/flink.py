@@ -3,7 +3,11 @@ from __future__ import annotations
 import json
 import os
 import re
+from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
+
+import yaml
 
 from ...logger import logger
 from .base import Backend, Row, SaveMode, Table, TableMeta
@@ -218,14 +222,12 @@ class FlinkBackend(Backend):
             del catalog["name"]
             catalog_expr = " , ".join([f"'{option}' = '{catalog[option]}'" for option in catalog])
             try:  # noqa: SIM105
-                self.exec_native_sql(
-                    f"""
+                self.exec_native_sql(f"""
                         CREATE CATALOG {catalog_name}
                         WITH (
                             {catalog_expr}
                         );
-                    """
-                )
+                    """)
             except Exception:
                 logger.warn(f"create catalog {catalog_name} failed.", exc_info=True)
 
@@ -274,12 +276,8 @@ class FlinkBackend(Backend):
     def _create_table(self, table: str, table_config: Dict, connector: Dict):
         schema = table_config["schema"]
         schema_expr = " , ".join(schema)
-        partition_by_expr = (
-            f"""
-                PARTITIONED BY ({','.join(table_config['partition_by'])})"""
-            if "partition_by" in table_config
-            else ""
-        )
+        partition_by_expr = f"""
+                PARTITIONED BY ({','.join(table_config['partition_by'])})""" if "partition_by" in table_config else ""
         options = self.flink_tables_config.table_options(connector, table_config)
         options_expr = " , ".join([f"'{option}' = '{options[option]}'" for option in options])
         create_sql = f"""
@@ -305,6 +303,70 @@ class FlinkBackend(Backend):
     def set_configurations(self, configs: dict):
         for c in configs:
             self.flink.get_config().set(c, configs[c])
+
+
+@dataclass
+class FlinkConfig:
+    connectors: Dict[str, Connector]
+    catalogs: Dict[str, Catalog]
+
+    @dataclass
+    class Connector:
+        options: str
+
+        @staticmethod
+        def from_dict(data: dict) -> FlinkConfig.Connector:
+            return FlinkConfig.Connector(data.get("options", ""))
+
+    @dataclass
+    class Catalog:
+        databases: Dict[str, FlinkConfig.Database]
+        temporary_tables: Dict[str, FlinkConfig.Table]
+        options: str | None = None
+
+        @staticmethod
+        def from_dict(data: dict) -> FlinkConfig.Catalog:
+            options = data.get("options", "")
+            databases = {key: FlinkConfig.Database.from_dict(item) for key, item in data.get("databases", {}).items()}
+            temporary_tables = {
+                key: FlinkConfig.Table.from_dict(item) for key, item in data.get("temporary_tables", {}).items()
+            }
+
+            return FlinkConfig.Catalog(options=options, databases=databases, temporary_tables=temporary_tables)
+
+    @dataclass
+    class Database:
+        tables: Dict[str, FlinkConfig.Table]
+
+        @staticmethod
+        def from_dict(data: dict) -> FlinkConfig.Database:
+            tables = {key: FlinkConfig.Table.from_dict(item) for key, item in data.get("tables", {}).items()}
+
+            return FlinkConfig.Database(tables=tables)
+
+    @dataclass
+    class Table:
+        schema: str
+        options: str | None = None
+        partition_by: str | None = None
+        connector: str | None = None
+
+        @staticmethod
+        def from_dict(data: dict) -> FlinkConfig.Table:
+            return FlinkConfig.Table(**data)
+
+    @staticmethod
+    def from_yml(file_path: str) -> FlinkConfig:
+        with Path(file_path).open() as f:
+            res: dict = yaml.safe_load(f)
+            return FlinkConfig.from_dict(res)
+
+    @staticmethod
+    def from_dict(data: dict) -> FlinkConfig:
+        connectors = {key: FlinkConfig.Connector.from_dict(item) for key, item in data.get("connectors", {}).items()}
+        catalogs = {key: FlinkConfig.Catalog.from_dict(item) for key, item in data.get("catalogs", {}).items()}
+
+        return FlinkConfig(connectors=connectors, catalogs=catalogs)
 
 
 class FlinkTablesConfig:
