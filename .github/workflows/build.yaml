@@ -153,8 +153,8 @@ jobs:
             .venv
             test/flink/jars
             test/flink/tools
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-flink-v1
-    - run: poetry install --no-interaction -E "pg cli linter" && poetry run pip install apache-flink==1.15.1 && poetry run make download-flink-jars && poetry run make prepare-flink-hadoop
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-flink-v2
+    - run: poetry install --no-interaction -E "pg cli linter flink" && poetry run make download-flink-jars && poetry run make prepare-flink-hadoop
       if: steps.cached-dependencies.outputs.cache-hit != 'true'
     - run: export HADOOP_CLASSPATH=$($(pwd)/test/flink/tools/hadoop/hadoop-3.3.4/bin/hadoop classpath) && bash $(poetry run python3 -c 'import pyflink; print(pyflink.__file__.replace("__init__.py", "bin/start-cluster.sh"))') && sleep 5
     - run: export HADOOP_CLASSPATH=$($(pwd)/test/flink/tools/hadoop/hadoop-3.3.4/bin/hadoop classpath) && poetry run make e2e-test-flink-postgres e2e-test-flink-streaming
@@ -300,8 +300,8 @@ jobs:
         path: |
             .venv
             test/flink/jars
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-all-v2 # if flink related dependency version changed, increase the version here
-    - run: poetry install --no-interaction -E "clickhouse pg spark cli linter" && poetry run pip install apache-flink==1.15.1 ydata-profiling==4.0.0 && poetry run make download-flink-jars
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-all-v3 # if flink related dependency version changed, increase the version here
+    - run: poetry install --no-interaction -E "clickhouse pg spark cli linter flink" && poetry run make download-flink-jars
       if: steps.cached-dependencies.outputs.cache-hit != 'true'
     - run: poetry run make test-coverage-all
       env:
