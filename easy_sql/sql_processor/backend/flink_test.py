@@ -1,52 +1,11 @@
-import unittest
-from pathlib import Path
-
+import pytest
 import yaml
 
-from easy_sql.sql_processor.backend.flink import FlinkConfig, FlinkTablesConfig
-
-tc = FlinkTablesConfig(
-    {
-        "databases": [
-            {
-                "name": "a",
-                "tables": [
-                    {"name": "a", "schema": ["a int", "b\tvarchar", "`c` char", "'d' int"]},
-                    {"name": "b"},
-                ],
-            }
-        ]
-    }
-)
+from easy_sql.sql_processor.backend.flink import FlinkTablesConfig
 
 
-class FlinkTablesConfigTest(unittest.TestCase):
-    def test_table_fields(self):
-        self.assertEquals(tc.table_fields("a.a", ["b"]), ["a", "c", "d"])
-        self.assertRaises(Exception, lambda: tc.table_fields("b"))
-        self.assertRaises(Exception, lambda: tc.table_fields("a.c"))
-        self.assertRaises(Exception, lambda: tc.table_fields("a.b"))
-
-    def test_table_options(self):
-        self.assertEquals(tc.table_options({"options": {"a": 1}}, {"name": "a"}), {"a": 1})
-        self.assertEquals(
-            tc.table_options({"options": {"a": 1}}, {"name": "a", "connector": {"options": {"b": 1}}}), {"a": 1, "b": 1}
-        )
-        self.assertEquals(
-            tc.table_options({"options": {"path": "/a/"}}, {"name": "b"}),
-            {"path": "/a/b"},
-        )
-        self.assertEquals(
-            tc.table_options({"options": {"path": "/a"}}, {"name": "b"}),
-            {"path": "/a/b"},
-        )
-        self.assertEquals(
-            tc.table_options({"options": {"path": "/a/"}}, {"name": "a", "connector": {"options": {"path": "c"}}}),
-            {"path": "c"},
-        )
-
-
-def test_parse_flink_config_from_yml():
+@pytest.fixture
+def config() -> FlinkTablesConfig:
     yml = """
 connectors:
   pg_cdc:
@@ -63,13 +22,13 @@ catalogs:
   paimon:
     options: |
       'type' = 'paimon',
-      'warehouse' = 'file: ///opt/flink/paimon'
+      'warehouse' = 'file:///opt/flink/paimon'
     databases:
       ods:
         tables:
           orders:
             options: |
-              'changelog-producer' = 'input'
+              'changelog-producer'   =   'input'
             partition_by: "dd, hh"
             schema: |
               order_id STRING,
@@ -95,8 +54,13 @@ catalogs:
           purchase_timestamp TIMESTAMP_LTZ,
           PRIMARY KEY (order_id) NOT ENFORCED
     """
+
     res: dict = yaml.safe_load(yml)
-    config = FlinkConfig.from_dict(res)
+    config = FlinkTablesConfig.from_dict(res)
+    return config
+
+
+def test_parse_flink_config_from_yml(config: FlinkTablesConfig):
     assert "postgres" in config.connectors["pg_cdc"].options
 
     paimon = config.catalogs["paimon"]
@@ -111,3 +75,45 @@ catalogs:
     assert "purchase_timestamp" in cdc_orders.schema
     assert "slot.name" in (cdc_orders.options or "")
     assert cdc_orders.connector == "pg_cdc"
+
+
+def test_generate_catalog_ddl(config: FlinkTablesConfig):
+    ddl = list(config.generate_catalog_ddl())
+    assert len(ddl) == 1
+    assert ddl[0][0] == "paimon"
+    assert ddl[0][1] == "CREATE CATALOG paimon with ('type' = 'paimon',\n'warehouse' = 'file:///opt/flink/paimon'\n)"
+
+
+def test_generate_db_ddl(config: FlinkTablesConfig):
+    ddl = config.generate_db_ddl()
+    assert list(ddl) == ["CREATE database if not exists paimon.ods"]
+
+
+def test_generate_table_ddl(config: FlinkTablesConfig):
+    ddl = list(config.generate_table_ddl())
+
+    assert len(ddl) == 2
+
+    assert (
+        ddl[0]
+        == "create  table if not exists paimon.ods.orders (order_id STRING,\nproduct_id STRING,\ncustomer_id"
+        " STRING,\npurchase_timestamp TIMESTAMP_LTZ,\ndd STRING,\nhh INT,\npts as PROCTIME(),\nts as"
+        " cast(purchase_timestamp as TIMESTAMP_LTZ(3)),\nWATERMARK FOR ts AS ts - INTERVAL '5' SECOND,\nPRIMARY KEY"
+        " (order_id, dd, hh) NOT ENFORCED\n) partitioned by (dd, hh) with ('changelog-producer' = 'input')"
+    )
+
+    assert (
+        ddl[1]
+        == "create temporary table if not exists cdc_orders (order_id STRING,\nproduct_id STRING,\ncustomer_id"
+        " STRING,\npurchase_timestamp TIMESTAMP_LTZ,\nPRIMARY KEY (order_id) NOT ENFORCED\n)  with ('connector' ="
+        " 'postgres-cdc' , 'hostname' = 'postgres' , 'port' = '5432' , 'username' = 'postgres' , 'password' ="
+        " 'postgres' , 'database-name' = 'postgres' , 'schema-name' = 'public' , 'decoding.plugin.name' = 'pgoutput'"
+        " , 'table-name' = 'orders' , 'slot.name' = 'orders')"
+    )
+
+
+def test_from_none_yml():
+    cf = FlinkTablesConfig.from_yml(None)
+    assert cf is not None
+    assert cf.catalogs == {}
+    assert cf.connectors == {}

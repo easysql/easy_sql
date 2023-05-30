@@ -29,7 +29,7 @@ def ingest_cdc_pg(backend: FlinkBackend, db: str, connector: str, table_list: st
         for table, target_table in target_tables.items()
     ]
 
-    backend.register_tables(list(target_tables.values()), False)
+    backend.register_tables()
 
     from py4j.java_gateway import java_import
     from pyflink.java_gateway import get_gateway

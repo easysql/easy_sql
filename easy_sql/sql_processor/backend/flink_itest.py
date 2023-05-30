@@ -5,6 +5,7 @@ import re
 import unittest
 from typing import TYPE_CHECKING
 
+import yaml
 from pyflink.common import Row
 from pyflink.table import DataTypes
 from pyflink.table.schema import Schema
@@ -18,7 +19,7 @@ from easy_sql.base_test import (
     TEST_PG_URL,
 )
 from easy_sql.sql_processor.backend import FlinkBackend, Partition, SaveMode, TableMeta
-from easy_sql.sql_processor.backend.flink import FlinkRow
+from easy_sql.sql_processor.backend.flink import FlinkRow, FlinkTablesConfig
 from easy_sql.sql_processor.backend.rdb import _exec_sql
 
 from .sql_dialect import SqlExpr
@@ -65,8 +66,7 @@ class FlinkTest(unittest.TestCase):
             )
         """,
         )
-        backend.exec_native_sql(
-            f"""
+        backend.exec_native_sql(f"""
             CREATE TABLE out_put_table (
                 id INT,
                 val VARCHAR,
@@ -78,8 +78,7 @@ class FlinkTest(unittest.TestCase):
                 'username' = '{TEST_PG_JDBC_USER}',
                 'password' = '{TEST_PG_JDBC_PASSWD}',
                 'table-name' = 'out_put_table');
-        """
-        )
+        """)
 
         from pyflink.java_gateway import get_gateway
         from pyflink.table.catalog import CatalogBaseTable
@@ -112,14 +111,12 @@ class FlinkTest(unittest.TestCase):
 
         catalog_name = "hive"
         hive_conf_dir = "/ops/apache-hive/conf"
-        backend.exec_native_sql(
-            f"""
+        backend.exec_native_sql(f"""
             CREATE CATALOG testHiveCatalog WITH (
                 'type' = '{catalog_name}',
                 'hive-conf-dir' = '{hive_conf_dir}'
             );
-        """
-        )
+        """)
 
         schema = DataTypes.ROW([DataTypes.FIELD("id", DataTypes.INT()), DataTypes.FIELD("val", DataTypes.STRING())])
         table = backend.flink.from_elements([(1, "1"), (2, "2"), (3, "3")], schema=schema)
@@ -425,9 +422,34 @@ def test_filed_alignment():
 
 
 def test_idempotency_of_create_table():
-    bk = FlinkBackend(is_batch=False)
-    bk._create_table("a", {"schema": ["amount INT", "id INT"], "connector": {"options": {"connector": "print"}}}, {})
-    bk._create_table("a", {"schema": ["amount INT"], "connector": {"options": {"connector": "print"}}}, {})
+    yml = """
+connectors:
+  print:
+    options: |
+      'connector' = 'print'
+catalogs:
+  paimon:
+    options: |
+      'type' = 'generic_in_memory'
+    databases:
+      ods:
+        tables:
+          orders:
+            connector: print
+            schema: |
+              order_id STRING
+    temporary_tables:
+      cdc_orders:
+        connector: print
+        schema: |
+          order_id STRING
+    """
+
+    res: dict = yaml.safe_load(yml)
+    config = FlinkTablesConfig.from_dict(res)
+    bk = FlinkBackend(is_batch=False, flink_tables_config=config)
+    bk.register_tables()
+    bk.register_tables()
 
 
 if __name__ == "__main__":

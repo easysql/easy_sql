@@ -12,6 +12,7 @@ from easy_sql.config.sql_config import (
 from easy_sql.logger import logger
 from easy_sql.sql_processor import SqlProcessor
 from easy_sql.sql_processor.backend import Backend
+from easy_sql.utils import db_connection_utils
 
 
 class BackendProcessor:
@@ -128,21 +129,17 @@ class FlinkBackendProcessor(BackendProcessor):
 
         config = FlinkBackendConfig(self.config, backend_config)
         backend = FlinkBackend(
-            self.config.is_batch, flink_tables_config=FlinkTablesConfig.from_config_file(config.flink_tables_file_path)
+            self.config.is_batch, flink_tables_config=FlinkTablesConfig.from_yml(config.flink_tables_file_path)
         )
 
         logger.info(f"Using flink configurations: {config.flink_configurations}")
         backend.set_configurations(config.flink_configurations)
 
-        backend.register_tables(self.config.tables)
-        if self.config.tables:
-            conn = None
-            for table in self.config.tables:
-                from easy_sql.utils import db_connection_utils
+        backend.register_tables()
 
-                conn = db_connection_utils.get_table_raw_conn_for_flink_backend(backend, table)
-                if conn:
-                    break
+        connector_name = self.config.get("prepare_sql_connector")
+        if connector_name:
+            conn = db_connection_utils.get_connector_raw_conn_for_flink_backend(backend, connector_name)
             if conn:
                 from easy_sql.sql_processor.backend.rdb import _exec_sql
 

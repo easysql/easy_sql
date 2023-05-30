@@ -158,6 +158,15 @@ class EasySqlConfig:
         assert self.sql_file is not None
         return resolve_file(self.sql_file, abs_path=True)
 
+    def get(self, key: str, splitter: Optional[str] = "=", strip: Optional[str] = None) -> str | None:
+        config = next(
+            filter(lambda c: get_key_by_splitter_and_strip(c, splitter, strip) == key, self.customized_easy_sql_conf),
+            None,
+        )
+        if config is None:
+            return None
+        return get_value_by_splitter_and_strip(config, splitter, strip)
+
     def _resolve_file(self, file_path: str, *, prefix: str = "") -> str:
         return resolve_file(file_path, abs_path=True, prefix=prefix, relative_to=self.abs_sql_file_path)
 
@@ -313,8 +322,8 @@ class FlinkBackendConfig:
             "--parallelism=1",
             (
                 f"--pyFiles={'file://' + self.config.abs_sql_file_path}"
-                f'{"," + self._resolve_file(config.udf_file_path) if config.udf_file_path else ""}'
-                f'{"," + self._resolve_file(config.func_file_path) if config.func_file_path else ""}'
+                f"{',' + self._resolve_file(config.udf_file_path) if config.udf_file_path else ''}"
+                f"{',' + self._resolve_file(config.func_file_path) if config.func_file_path else ''}"
             ),
         ]
 

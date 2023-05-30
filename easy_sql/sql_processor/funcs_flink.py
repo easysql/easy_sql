@@ -65,7 +65,7 @@ class TestFuncs(BaseTestFuncs):
         )
 
         if step.select_sql:
-            conn = get_connector_raw_conn_for_flink_backend(self.flink, db, connector)
+            conn = get_connector_raw_conn_for_flink_backend(self.flink, connector)
             if not conn:
                 raise Exception(
                     f"Cannot build a suitable coonnection for db {db} and connector {connector}. Please ensure it is"
