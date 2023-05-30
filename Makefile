@@ -1,6 +1,6 @@
 test-coverage:
 	export PYSPARK_PYTHON=python3 && export PYSPARK_DRIVER_PYTHON=python3 && \
- 		python3 -m coverage run -m pytest
+ 		python3 -m coverage run -m pytest -o python_files=*_test.py
 	python3 -m coverage report -m
 	- mkdir build
 	- rm -r build/coverage
