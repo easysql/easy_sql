@@ -151,7 +151,9 @@ class FlinkBackendProcessor(BackendProcessor):
         if self._exec_sql:
             self._exec_sql(prepare_sql)
         else:
-            logger.warn("Cannot execute prepare-sql: the connector is not configured or not supported. Will skip this.")
+            logger.warning(
+                "Cannot execute prepare-sql: the connector is not configured or not supported. Will skip this."
+            )
 
 
 class PostgresBackendProcessor(BackendProcessor):

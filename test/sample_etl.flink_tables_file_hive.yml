@@ -19,11 +19,14 @@ connectors:
     options: |
       'connector' = 'hudi',
       'path' = '/tmp/hudi-flink-test',
-      'table.type' = 'MERGE_ON_READ',
-      'changelog.enabled' = 'true',
-      'compaction.async.enabled' = 'false'
+      'table.type': 'MERGE_ON_READ',
+      'changelog.enabled': 'true',
+      'compaction.async.enabled': 'false'
 catalogs:
-  default_catalog:
+  myhiveCatalog:
+    options: |
+      'type' = 'hive',
+      'hive-conf-dir' = 'test/flink/flink_hive_conf'
     databases:
       db_pg:
         tables:
@@ -49,6 +52,7 @@ catalogs:
             connector: connector_1
             options: |
               'table-name'   =   'output_table'
+            partition_by: "id, val"
             schema: |
               `id` INT,
               val VARCHAR,
