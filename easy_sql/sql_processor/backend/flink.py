@@ -128,9 +128,10 @@ class FlinkBackend(Backend):
                 logger.info("no insert statements to commit.")
 
     def clean(self):
+        self.execute_streaming_inserts()
+
         for temp_view in self.flink.list_temporary_views():
             self.flink.drop_temporary_view(temp_view)
-        self.execute_streaming_inserts()
 
     def exec_native_sql(self, sql: str) -> TableResult:
         logger.info(f"will exec sql: {sql}")
