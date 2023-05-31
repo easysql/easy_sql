@@ -84,7 +84,6 @@ class EasySqlConfigTest(unittest.TestCase):
             sql="""
 -- config: easy_sql.udf_file_path=sample_data_process.py
 -- config: easy_sql.func_file_path=sample_data_process.py
--- config: easy_sql.flink_tables_file_path=sample_etl.flink_tables_file.json
 -- config: flink.cmd=--pyFiles sample_etl.postgres.sql
 -- config: flink.cmd=-pyarch sample_etl.spark.sql,test/sample_etl.postgres.sql,
         """,

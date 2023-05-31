@@ -1,5 +1,5 @@
 -- backend: flink
--- config: easy_sql.flink_tables_file_path=sample_etl.flink_tables_file.json
+-- config: easy_sql.flink_tables_file_path=sample_etl.flink_tables_file.yml
 -- config: flink.cmd=-t local
 -- config: flink.cmd=--parallelism 2
 -- config: flink.python.fn-execution.bundle.size=1000

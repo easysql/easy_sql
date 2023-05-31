@@ -1,5 +1,5 @@
 -- backend: flink
--- config: easy_sql.flink_tables_file_path=sample_etl.flink_tables_file.json
+-- config: easy_sql.flink_tables_file_path=sample_etl.flink_tables_file.yml
 -- inputs: db_pg.source_1
 
 -- target=variables
