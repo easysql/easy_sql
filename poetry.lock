@@ -2444,7 +2444,7 @@ plugins = ["importlib-metadata"]
 name = "pymongo"
 version = "3.13.0"
 description = "Python driver for MongoDB <http://www.mongodb.org>"
-optional = true
+optional = false
 python-versions = "*"
 files = [
     {file = "pymongo-3.13.0-cp27-cp27m-macosx_10_14_intel.whl", hash = "sha256:3ad3a3df830f7df7e0856c2bdb54d19f5bf188bd7420985e18643b8e4d2a075f"},
@@ -3654,4 +3654,4 @@ ydata-profiling = ["ydata-profiling"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "320cb653e5443e909ffb77082dd69cdb6044be0574aac66ab25a68e06379df54"
+content-hash = "d9b85f34afba0396cbb75fdc99faae0c6f3d80ae86b8561e845fbad658a80730"

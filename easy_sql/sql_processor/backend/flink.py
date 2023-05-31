@@ -4,8 +4,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, Tuple
 
-import yaml
-
 from ...logger import logger
 from .base import Backend, Row, SaveMode, Table, TableMeta
 
@@ -285,6 +283,8 @@ class FlinkTablesConfig:
 
     @staticmethod
     def from_yml(file_path: str | None) -> FlinkTablesConfig:
+        import yaml
+
         if file_path is None:
             return FlinkTablesConfig({}, {})
 
