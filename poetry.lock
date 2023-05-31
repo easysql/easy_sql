@@ -3652,8 +3652,9 @@ linter = ["colorlog", "regex", "sqlfluff"]
 maxcompute = ["pyodps"]
 pg = ["SQLAlchemy", "psycopg2"]
 spark = ["pyspark"]
+ydata-profiling = ["ydata-profiling"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.7"
-content-hash = "0d2b5ef64eb0bc30edba5a1a57e529b5c2af5cb47d81111cf4cde67f0cefd7a4"
+content-hash = "ae5265619540a888a60686b8dab565d261f4d883b5fe2fb4637f5495b40cbbbc"
