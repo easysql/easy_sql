@@ -302,7 +302,7 @@ jobs:
             .venv
             test/flink/jars
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-all-v3 # if flink related dependency version changed, increase the version here
-    - run: poetry install --no-interaction -E "clickhouse pg spark cli linter flink" && poetry run make download-flink-jars
+    - run: poetry install --no-interaction -E "clickhouse pg spark cli linter flink ydata-profiling" && poetry run make download-flink-jars
       if: steps.cached-dependencies.outputs.cache-hit != 'true'
     - run: poetry run make test-coverage-all
       env:
