@@ -28,7 +28,7 @@
 -- config: flink.cmd=-pyclientexec python3
 -- config: flink.cmd=-t remote
 -- config: flink.execution.checkpointing.interval=3s
--- config: flink.pipeline.jars=test/flink/jars/flink-sql-connector-postgres-cdc-2.3.0.jar;test/flink/jars/hudi-flink1.15-bundle-0.12.2.jar
+-- config: flink.pipeline.jars=test/flink/jars/flink-sql-connector-postgres-cdc-2.3.0.jar;test/flink/jars/hudi-flink1.15-bundle-0.12.2.jar;test/flink/jars/flink-sql-connector-hive-3.1.2_2.12-1.15.1.jar;test/flink/jars/postgresql-42.2.14.jar;test/flink/jars/flink-connector-jdbc-1.15.1.jar
 
 -- inputs: db_pg.source_cdc
 -- add db_pg.target_1 below to allow the prepare-sql command to execute against.
