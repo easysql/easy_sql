@@ -14,7 +14,7 @@ def _exec_sql(spark: SparkSession, sql: str) -> DataFrame:
 
 
 def is_int_type(type_name):
-    return any([type_name.startswith(t) for t in ["integer", "long", "decimal", "short"]])
+    return any(type_name.startswith(t) for t in ["integer", "long", "decimal", "short"])
 
 
 class Column:

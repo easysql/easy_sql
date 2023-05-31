@@ -324,7 +324,7 @@ class TestCase:
 
     @staticmethod
     def from_dict(data: Dict) -> TestCase:
-        case = TestCase(data["sql_file_path"], data.get("sql_file_content", None))
+        case = TestCase(data["sql_file_path"], data.get("sql_file_content"))
         case.name = data["name"]
         case.vars = data["vars"]
         case.includes = data["includes"] if "includes" in data else {}
@@ -480,7 +480,7 @@ class TestCase:
         values, value_descriptions = [], []
         for row_idx, cells in enumerate(rows[1:]):
             value_cells = cells[2:]
-            has_values = any([value_cells[i].value not in [None, ""] for i in range(len(columns))])
+            has_values = any(value_cells[i].value not in [None, ""] for i in range(len(columns)))
             if cells[1].value and str(cells[1].value).strip():
                 value_descriptions.append(str(cells[1].value).strip())
                 values.append(
@@ -496,7 +496,7 @@ class TestCase:
                         f"no description for table({table_name}) data at row {row_start_idx + 1 + row_idx + 1}"
                     )
             elif label == "OUTPUT":
-                has_values = any([value_cells[i].value not in [None, ""] for i in range(len(columns))])
+                has_values = any(value_cells[i].value not in [None, ""] for i in range(len(columns)))
                 if has_values:
                     values.append(
                         self._parse_table_row_values(
@@ -680,7 +680,7 @@ class TestResult:
 
     @property
     def is_fail(self) -> bool:
-        return any([r["result"] == TestResult.FAILED for r in self.case_results])
+        return any(r["result"] == TestResult.FAILED for r in self.case_results)
 
     @property
     def is_success(self) -> bool:

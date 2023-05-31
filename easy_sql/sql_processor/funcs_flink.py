@@ -105,9 +105,7 @@ class TestFuncs(BaseTestFuncs):
         etl_file = resolve_file(etl_file, abs_path=True, relative_to=relative_to)
         with open(etl_file, "r") as f:
             etl_content = f.readlines()
-        is_streaming = any(
-            [re.match(r"^-- config:\s*easy_sql\.etl_type\s*=\s*streaming", line) for line in etl_content]
-        )
+        is_streaming = any(re.match(r"^-- config:\s*easy_sql\.etl_type\s*=\s*streaming", line) for line in etl_content)
 
         if is_streaming:
             fm = FlinkTestClusterManager()
