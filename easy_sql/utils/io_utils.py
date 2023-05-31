@@ -20,7 +20,7 @@ def resolve_file(file_path: str, abs_path: bool = False, prefix: str = "", relat
         elif relative_to and path.isdir(relative_to) and path.exists(path.join(relative_to, file_path)):
             path.join(relative_to, file_path)
         else:
-            raise Exception(f"file not found: {file_path}")
+            raise Exception(f"file not found: {file_path}, curdir: {base_path}")
     if abs_path:
         file_path = path.abspath(file_path)
     if " " in file_path:
