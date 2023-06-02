@@ -35,16 +35,14 @@ class StepConfigTest(unittest.TestCase):
         --comment
 select * from a
         """.strip(),
-            SqlCleaner().clean_sql(
-                """
+            SqlCleaner().clean_sql("""
         -- comment
         with a as (select 1 as a) -- comment
         --comment
         select * from a -- comment
         ;
         --comment
-        """
-            ),
+        """),
         )
 
     def test_should_clean_sql_with_semicolon_before_comment(self):
@@ -54,16 +52,14 @@ select * from a
         --comment
 select * from a
         """.strip(),
-            SqlCleaner().clean_sql(
-                """
+            SqlCleaner().clean_sql("""
         -- comment
         with a as (select 1 as a) -- comment
         --comment
         select * from a; -- comment
         ;
         --comment
-        """
-            ),
+        """),
         )
 
 

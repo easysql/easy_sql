@@ -178,14 +178,12 @@ class MaxComputeTable(Table):
 
         temp_res = self.backend.exec_sql(f"select {', '.join(target_cols)} from {temp_res.table_name}")
 
-        self.backend.exec_native_sql(
-            f"""
+        self.backend.exec_native_sql(f"""
             insert {'into' if save_mode == SaveMode.append else save_mode.name}
             table {target_table_meta.table_name}
             {partition_expr}
             select * from {temp_res.table_name}
-        """
-        )
+        """)
 
 
 class MaxComputeBackend(Backend):

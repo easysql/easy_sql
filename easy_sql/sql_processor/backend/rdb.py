@@ -174,7 +174,7 @@ class RdbTable(Table):
         return list(result.keys())
 
     def first(self) -> RdbRow:
-        all_action_are_limit = all([action[0] == "limit" for action in self._actions])
+        all_action_are_limit = all(action[0] == "limit" for action in self._actions)
         if all_action_are_limit:
             min_limit = min([action[1] for action in self._actions]) if len(self._actions) > 0 else 1
 

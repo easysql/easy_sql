@@ -37,7 +37,7 @@ def lint_process(
     config_path: Optional[str] = None,
 ):
     if not check_sql_file_path.endswith(".sql"):
-        warnings.warn("file name:" + check_sql_file_path + " must end with .sql")
+        warnings.warn("file name:" + check_sql_file_path + " must end with .sql", stacklevel=2)
 
     with open(check_sql_file_path, "r") as file:
         sql = file.read()

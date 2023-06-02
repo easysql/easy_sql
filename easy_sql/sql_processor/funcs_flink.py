@@ -25,6 +25,15 @@ __all__ = [
 ]
 
 
+class SetConfigFuncs:
+    def __init__(self, bkd: FlinkBackend) -> None:
+        self.bkd = bkd
+        pass
+
+    def set_config(self, key: str, value: str):
+        return self.bkd.flink.get_config().set(key, value)
+
+
 class ParallelismFuncs:
     def __init__(self, flink: FlinkBackend):
         self.flink = flink
@@ -56,7 +65,7 @@ class TestFuncs(BaseTestFuncs):
         )
 
         if step.select_sql:
-            conn = get_connector_raw_conn_for_flink_backend(self.flink, db, connector)
+            conn = get_connector_raw_conn_for_flink_backend(self.flink, connector)
             if not conn:
                 raise Exception(
                     f"Cannot build a suitable coonnection for db {db} and connector {connector}. Please ensure it is"
@@ -96,9 +105,7 @@ class TestFuncs(BaseTestFuncs):
         etl_file = resolve_file(etl_file, abs_path=True, relative_to=relative_to)
         with open(etl_file, "r") as f:
             etl_content = f.readlines()
-        is_streaming = any(
-            [re.match(r"^-- config:\s*easy_sql\.etl_type\s*=\s*streaming", line) for line in etl_content]
-        )
+        is_streaming = any(re.match(r"^-- config:\s*easy_sql\.etl_type\s*=\s*streaming", line) for line in etl_content)
 
         if is_streaming:
             fm = FlinkTestClusterManager()

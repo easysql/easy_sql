@@ -196,7 +196,7 @@ class ChSqlDialect(SqlDialect):
         return drop_pt_metadata_if_exist, insert_pt_metadata
 
     def _check_no_none_in_partition_values(self, partitions: List[Partition]):
-        if any([pt.value is None for pt in partitions]):
+        if any(pt.value is None for pt in partitions):
             raise SqlProcessorAssertionError(
                 f"cannot insert data when partition value is None, partitions: {partitions}, there maybe some bug,"
                 " please check"

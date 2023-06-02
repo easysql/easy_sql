@@ -178,7 +178,7 @@ class TableMeta:
         return len(self.partitions) > 0
 
     def has_dynamic_partition(self):
-        return any([pt.value is None for pt in self.partitions])
+        return any(pt.value is None for pt in self.partitions)
 
     def get_full_table_name(self, temp_db: Optional[str] = None):
         return (

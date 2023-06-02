@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import json
-import os
-import re
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, Tuple
 
 from ...logger import logger
 from .base import Backend, Row, SaveMode, Table, TableMeta
@@ -86,7 +85,7 @@ class FlinkBackend(Backend):
         from pyflink.datastream import StreamExecutionEnvironment
         from pyflink.table import EnvironmentSettings, StreamTableEnvironment
 
-        self.flink_tables_config = flink_tables_config or FlinkTablesConfig({})
+        self.flink_tables_config = flink_tables_config or FlinkTablesConfig({}, {})
 
         self.flink_stream_env = None if is_batch else StreamExecutionEnvironment.get_execution_environment()
         env_settings = EnvironmentSettings.in_batch_mode() if is_batch else EnvironmentSettings.in_streaming_mode()
@@ -127,9 +126,10 @@ class FlinkBackend(Backend):
                 logger.info("no insert statements to commit.")
 
     def clean(self):
+        self.execute_streaming_inserts()
+
         for temp_view in self.flink.list_temporary_views():
             self.flink.drop_temporary_view(temp_view)
-        self.execute_streaming_inserts()
 
     def exec_native_sql(self, sql: str) -> TableResult:
         logger.info(f"will exec sql: {sql}")
@@ -171,124 +171,55 @@ class FlinkBackend(Backend):
         save_mode: SaveMode,
         create_target_table: bool = False,
     ):
-        from pyflink.table.expressions import col, lit
-
+        source_table_name = source_table_meta.table_name
+        sink_table_name = target_table_meta.table_name
         if not self.table_exists(target_table_meta):
             raise Exception(
-                f"target table {target_table_meta.table_name} does not exist, "
-                f"cannot save table {target_table_meta.table_name} to {target_table_meta.table_name}"
+                f"target table {sink_table_name} does not exist, "
+                f"cannot save table {source_table_name} to {sink_table_name}"
             )
 
-        temp_res = self.exec_native_sql_query(f"select * from {source_table_meta.table_name}")
-        # 纯动态分区时，如果当日没有新增数据，则不会创建 partition。而我们希望对于静态分区，总是应该创建分区，即使当日没有数据
-        static_partitions = list(filter(lambda p: p.value, target_table_meta.partitions))
-        table_description = list(self.exec_native_sql(f"desc {target_table_meta.table_name}").collect())
-        columns: List[str] = [f[0] for f in table_description]  # type: ignore
-        for p in static_partitions:
-            temp_res = temp_res.add_columns(lit(p.value).alias(p.field))
-        temp_res = temp_res.select(*[col(column) for column in columns])
+        source_table = self._align_fields(source_table_meta, target_table_meta)
 
-        logger.info(f"save table {source_table_meta.table_name} to {target_table_meta.table_name}")
+        override_insert = save_mode == SaveMode.overwrite
         if self.streaming_insert_stmts is not None:
-            logger.info("add insert to streaming_insert_stmts.")
-            self.streaming_insert_stmts.add_insert(
-                target_table_meta.table_name, temp_res, save_mode == SaveMode.overwrite
-            )
+            logger.info(f"prepare insert into streaming_insert_stmts: from {source_table_name} to {sink_table_name}.")
+            self.streaming_insert_stmts.add_insert(sink_table_name, source_table, overwrite=override_insert)
             self.has_streaming_insert_stmts = True
         else:
-            temp_res.execute_insert(target_table_meta.table_name, save_mode == SaveMode.overwrite)
+            logger.info(f"save table {source_table_name} to {sink_table_name}")
+            source_table.execute_insert(sink_table_name, overwrite=override_insert)
+
+    def _align_fields(self, source_table_meta: TableMeta, target_table_meta: TableMeta):
+        from pyflink.table.expressions import col, lit
+
+        source_table = self.flink.from_path(source_table_meta.table_name)
+
+        # 纯动态分区时，如果当日没有新增数据，则不会创建 partition。而我们希望对于静态分区，总是应该创建分区，即使当日没有数据
+        static_partitions = list(filter(lambda p: p.value, target_table_meta.partitions))
+        for p in static_partitions:
+            source_table = source_table.add_columns(lit(p.value).alias(p.field))
+
+        target_table_schema = list(self.exec_native_sql(f"desc {target_table_meta.table_name}").collect())
+        # <Row('computed_field', 'BIGINT', True, None, 'AS `user` * `amount`', None)>
+        target_needed_columns: List[str] = [f[0] for f in target_table_schema if f[4] is None]  # type: ignore
+
+        source_table = source_table.select(*[col(column) for column in target_needed_columns])
+        return source_table
 
     def refresh_table_partitions(self, table: TableMeta):
         # flink无法从`desc table`中解析出partition字段，但是可以在flink_source_file中配置table的partition字段
         pass
 
-    def _register_catalog(self):
-        for catalog in self.flink_tables_config.catalogs:
-            catalog = catalog.copy()
-            catalog_name = catalog["name"]
-            del catalog["name"]
-            catalog_expr = " , ".join([f"'{option}' = '{catalog[option]}'" for option in catalog])
-            try:  # noqa: SIM105
-                self.exec_native_sql(
-                    f"""
-                        CREATE CATALOG {catalog_name}
-                        WITH (
-                            {catalog_expr}
-                        );
-                    """
-                )
-            except Exception:
-                logger.warn(f"create catalog {catalog_name} failed.", exc_info=True)
-
-    def _register_tables(self, tables: List[str]):
-        if len(tables) == 0:
-            return
-        for table in tables:
-            db_name, table_config, connector = self.get_table_config_and_connector(table)
-            if db_name and table_config and connector:
-                self.exec_native_sql(f"create database if not exists {db_name}")
-                self._create_table(table, table_config, connector)
-            else:
-                logger.warn(f"register table {table} failed, no configuration found")
-
-    def get_table_config_and_connector(self, table: str) -> Tuple[Optional[str], Optional[Dict], Optional[Dict]]:
-        db_name = table.strip().split(".")[0]
-        database = self.flink_tables_config.database(db_name)
-        if not database:
-            logger.warn(f"database {db_name} does not exist in flink tables config file")
-            return None, None, None
-
-        table_name = table.strip().split(".")[1]
-        table_config = self.flink_tables_config.table(database, table_name)
-        if not table_config:
-            logger.warn(f"table {table} does not exist in flink tables config file")
-            return None, None, None
-
-        connector_name = table_config["connector"]["name"]
-        connector = self.flink_tables_config.connector(database, connector_name)
-        if not connector:
-            logger.warn(f"connector {connector_name} does not exist in flink tables config file")
-            return None, None, None
-        return db_name, table_config, connector
-
-    def get_db_connector(self, db_name: str, connector_name: str) -> Optional[Dict]:
-        database = self.flink_tables_config.database(db_name)
-        if not database:
-            logger.warn(f"database {db_name} does not exist in flink tables config file")
-            return None
-        connector_config = self.flink_tables_config.connector(database, connector_name)
-        if not connector_config:
-            logger.warn(f"connector {connector_name} does not exist in flink tables config file")
-            return None
-        return connector_config
-
-    def _create_table(self, table: str, table_config: Dict, connector: Dict):
-        schema = table_config["schema"]
-        schema_expr = " , ".join(schema)
-        partition_by_expr = (
-            f"""
-                PARTITIONED BY ({','.join(table_config['partition_by'])})"""
-            if "partition_by" in table_config
-            else ""
-        )
-        options = self.flink_tables_config.table_options(connector, table_config)
-        options_expr = " , ".join([f"'{option}' = '{options[option]}'" for option in options])
-        create_sql = f"""
-            create table {table.strip()} (
-                {schema_expr}
-            )
-            {partition_by_expr}
-            WITH (
-                {options_expr}
-            );
-        """
-        self.exec_native_sql(create_sql)
-
-    def register_tables(self, tables: List[str], include_catalog: bool = True):
-        if self.flink_tables_config:
-            if include_catalog:
-                self._register_catalog()
-            self._register_tables(tables)
+    def register_tables(self):
+        for name, ddl in self.flink_tables_config.generate_catalog_ddl():
+            exists = self.flink.get_catalog(name)
+            if not exists:
+                self.exec_native_sql(ddl)
+        for ddl in self.flink_tables_config.generate_db_ddl():
+            self.exec_native_sql(ddl)
+        for ddl in self.flink_tables_config.generate_table_ddl():
+            self.exec_native_sql(ddl)
 
     def add_jars(self, jars_path: List[str]):
         self.flink.get_config().set("pipeline.jars", f'{";".join([f"file://{path}" for path in jars_path])}')
@@ -298,68 +229,137 @@ class FlinkBackend(Backend):
             self.flink.get_config().set(c, configs[c])
 
 
+@dataclass
 class FlinkTablesConfig:
-    def __init__(self, config: Dict[str, Any]) -> None:
-        self.config = config
+    connectors: Dict[str, Connector]
+    catalogs: Dict[str, Catalog]
+
+    @dataclass
+    class Connector:
+        options: str
+
+        @staticmethod
+        def from_dict(data: dict) -> FlinkTablesConfig.Connector:
+            return FlinkTablesConfig.Connector(data.get("options", ""))
+
+    @dataclass
+    class Catalog:
+        databases: Dict[str, FlinkTablesConfig.Database]
+        temporary_tables: Dict[str, FlinkTablesConfig.Table]
+        options: str
+
+        @staticmethod
+        def from_dict(data: dict) -> FlinkTablesConfig.Catalog:
+            options = data.get("options", "")
+            databases = {
+                key: FlinkTablesConfig.Database.from_dict(item) for key, item in data.get("databases", {}).items()
+            }
+            temporary_tables = {
+                key: FlinkTablesConfig.Table.from_dict(item) for key, item in data.get("temporary_tables", {}).items()
+            }
+
+            return FlinkTablesConfig.Catalog(options=options, databases=databases, temporary_tables=temporary_tables)
+
+    @dataclass
+    class Database:
+        tables: Dict[str, FlinkTablesConfig.Table]
+
+        @staticmethod
+        def from_dict(data: dict) -> FlinkTablesConfig.Database:
+            tables = {key: FlinkTablesConfig.Table.from_dict(item) for key, item in data.get("tables", {}).items()}
+
+            return FlinkTablesConfig.Database(tables=tables)
+
+    @dataclass
+    class Table:
+        schema: str
+        options: str | None = None
+        partition_by: str | None = None
+        connector: str | None = None
+
+        @staticmethod
+        def from_dict(data: dict) -> FlinkTablesConfig.Table:
+            return FlinkTablesConfig.Table(**data)
 
     @staticmethod
-    def from_config_file(config_file_path: Optional[str] = None) -> FlinkTablesConfig:
-        if not config_file_path or not os.path.exists(config_file_path) or not os.path.isfile(config_file_path):
-            logger.warn(
-                "config file '{config_file_path}' does not exist or is not a file, will create an empty"
-                " FlinkTablesConfig"
-            )
-            return FlinkTablesConfig({})
-        with open(config_file_path, "r") as f:
-            config = json.loads(f.read())
-            return FlinkTablesConfig(config)
+    def from_yml(file_path: str | None) -> FlinkTablesConfig:
+        import yaml
 
-    @property
-    def catalogs(self) -> List[Dict]:
-        if "catalogs" in self.config:
-            return self.config["catalogs"]
-        else:
-            return []
+        if file_path is None:
+            return FlinkTablesConfig({}, {})
 
-    @property
-    def databases(self) -> List[Dict]:
-        if "databases" in self.config:
-            return self.config["databases"]
-        else:
-            return []
+        with Path(file_path).open() as f:
+            res: dict = yaml.safe_load(f)
+            return FlinkTablesConfig.from_dict(res)
 
-    def database(self, name: str) -> Optional[Dict]:
-        return next(filter(lambda t: t["name"] == name, self.databases), None)
+    @staticmethod
+    def from_dict(data: dict) -> FlinkTablesConfig:
+        connectors = {
+            key: FlinkTablesConfig.Connector.from_dict(item) for key, item in data.get("connectors", {}).items()
+        }
+        catalogs = {key: FlinkTablesConfig.Catalog.from_dict(item) for key, item in data.get("catalogs", {}).items()}
 
-    def table(self, database_config: Dict, table_name: str) -> Optional[Dict]:
-        return next(filter(lambda t: t["name"] == table_name, database_config["tables"]), None)
+        return FlinkTablesConfig(connectors=connectors, catalogs=catalogs)
 
-    def connector(self, database_config: Dict, connector_name: str) -> Optional[Dict]:
-        connectors = database_config.get("connectors", [])
-        return next(filter(lambda conn: conn["name"] == connector_name, connectors), None)
+    def generate_catalog_ddl(self) -> Iterable[tuple[str, str]]:
+        for name, catalog in self.catalogs.items():
+            ddl = f"CREATE CATALOG {name} with ({catalog.options})"
+            yield name, ddl
 
-    def table_options(self, connector: Dict, table: Dict) -> Dict[str, str]:
-        options = connector.get("options", {}).copy()
-        tableOptions = table.get("connector", {}).get("options", {})
-        options.update(tableOptions)
-        if "path" in options and "path" not in tableOptions:
-            assert "." not in table["name"], "Table name in configuration must not contains db, found " + table["name"]
-            options["path"] = options["path"].rstrip("/") + f"/{table['name']}"
+    def generate_db_ddl(self) -> Iterable[str]:
+        for cata_name, cata in self.catalogs.items():
+            for db_name, _ in cata.databases.items():
+                ddl = f"CREATE database if not exists {cata_name}.{db_name}"
+                yield ddl
+
+    def generate_table_ddl(self) -> Iterable[str]:
+        for cata_name, cata in self.catalogs.items():
+            for db_name, db in cata.databases.items():
+                for tb_name, tb in db.tables.items():
+                    full_tb_name = f"{cata_name}.{db_name}.{tb_name}"
+                    ddl = self._generate_table_ddl(tb, full_tb_name)
+                    yield ddl
+            for tp_tb_name, tp_tb in cata.temporary_tables.items():
+                ddl = self._generate_table_ddl(tp_tb, tp_tb_name, is_temporary=True)
+                yield ddl
+
+    def _generate_table_ddl(self, tb: FlinkTablesConfig.Table, tb_name: str, is_temporary=False) -> str:
+        merged_options = self._merge_table_options(tb)
+        options_expr = f"with ({merged_options})" if merged_options else ""
+
+        partition_by_expr = f"partitioned by ({tb.partition_by})" if tb.partition_by else ""
+        ddl = (
+            f'create {"temporary" if is_temporary else ""} table if not exists {tb_name} ({tb.schema})'
+            f" {partition_by_expr} {options_expr}"
+        )
+        return ddl
+
+    def _merge_table_options(self, tb: FlinkTablesConfig.Table) -> str | None:
+        base_options = {}
+        tb_options = self.parse_options(tb.options or "")
+        connector_name = tb.connector
+        if connector_name:
+            base_options = self.get_connector_options(connector_name)
+
+        base_options.update(tb_options)
+        merged_options = " , ".join([f"{k} = {v}" for k, v in base_options.items()])
+        return merged_options
+
+    def get_connector_options(self, name: str) -> Dict[str, str]:
+        connector = self.connectors.get(name)
+        if not connector:
+            raise Exception(f"couldn't find connector {name} in {list(self.connectors.keys())}")
+        options = self.parse_options(connector.options)
         return options
 
-    def table_fields(self, full_table_name: str, exclude_fields: Optional[List[str]] = None) -> List[str]:
-        exclude_fields = exclude_fields or []
-        assert full_table_name.count(".") == 1, 'full_table_name must in format "db.table", found: ' + full_table_name
-        db, table = tuple(full_table_name.split("."))
-        db_config = self.database(db)
-        if not db_config:
-            raise Exception("db configuration not found for " + db)
-        table_config = self.table(db_config, table)
-        if not table_config:
-            raise Exception("table configuration not found for " + full_table_name)
-        if "schema" not in table_config:
-            raise Exception("schema not found in table configuration for " + full_table_name)
-        field_expr_list: List[str] = table_config["schema"]
-        extract_field_name = lambda field_expr: re.split(r"\s", field_expr)[0].strip("'\"`")
-        fields = [extract_field_name(field_expr) for field_expr in field_expr_list]
-        return [f for f in fields if f not in exclude_fields]
+    @staticmethod
+    def parse_options(option_str: str) -> Dict[str, str]:
+        option_str = option_str or ""
+        options = {}
+        for line in option_str.splitlines():
+            for each_option in line.split(","):
+                if each_option.strip() == "":
+                    continue
+                key, value = each_option.split("=")
+                options[key.strip()] = value.strip()
+        return options

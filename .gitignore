@@ -21,3 +21,4 @@ test/flink/jars
 test/*.local.*
 test/*__local.py
 test/spark/jars
+test/flink/tools

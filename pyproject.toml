@@ -33,18 +33,25 @@ clickhouse-sqlalchemy = {version = "^0.2.1", optional = true}
 psycopg2 = {version = "^2.9.3", optional = true}
 pyodps = {version = "^0.11.2.1", optional = true}
 pyspark = [{version = ">=2.3.0, != 3.1.1, != 3.1.2, != 3.1.3, !=3.2.0, != 3.2.1", optional = true}]
-
-[tool.poetry.dev-dependencies]
-pytest = "^7.1.2"
+numpy = {version="~1.21.4", python=">=3.7,<3.11", optional=true}
+pandas = {version="~1.3", python=">=3.7.1", optional=true}
+apache-flink = {version = "^1.17.0", optional = true}
+ydata-profiling = {version = "^4.2.0", optional = true, python = ">=3.8,<3.12"}
+pyyaml = {version = "^6.0", optional = true}
 pymongo = "^3.8.0"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.1.2"
 coverage = "^6.4.3"
-pre-commit = "^2.20.0"
-flake8 = "^5.0.4"
-flake8-bugbear = "^22.7.1"
-flake8-comprehensions = "^3.10.0"
-flake8-simplify = "^0.19.3"
-flake8-type-checking = { version = "^2.1.2", python = "^3.8" }
 openpyxl = "^3.0.10"
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^2.20.0"
+flake8 = {version = "^6.0.0", python = ">=3.8.1"}
+flake8-bugbear = {version = "^23.5.9", python = ">=3.8.1"}
+flake8-comprehensions = "^3.12.0"
+flake8-simplify = "^0.20.0"
+flake8-type-checking = {version = "^2.4.0", python = ">=3.8"}
 
 [tool.poetry.extras]
 cli = ["click"]
@@ -53,6 +60,8 @@ spark = ["pyspark"]
 pg = ["SQLAlchemy", "psycopg2"]
 clickhouse = ["SQLAlchemy","clickhouse-driver","clickhouse-sqlalchemy"]
 maxcompute = ["pyodps"]
+flink = ["apache-flink", "pyyaml"]
+ydata-profiling=["ydata-profiling"]
 
 [tool.isort]
 profile = "black"
@@ -65,6 +74,10 @@ preview = true
 [tool.pytest.ini_options]
 testpaths = [
     "easy_sql",
+]
+python_files = [
+    "*_itest.py",
+    "*_test.py",
 ]
 
 [build-system]

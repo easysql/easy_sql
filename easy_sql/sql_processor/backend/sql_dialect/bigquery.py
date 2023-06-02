@@ -128,7 +128,7 @@ class BqSqlDialect(SqlDialect):
     def insert_data_sql(self, table_name: str, col_names_expr: str, select_sql: str, partitions: List[Partition]):
         if not self.contains_db(table_name):
             raise SqlProcessorAssertionError("BigQuery table must be qualified with a dataset.")
-        if any([pt.value is None for pt in partitions]):
+        if any(pt.value is None for pt in partitions):
             raise SqlProcessorAssertionError(
                 f"cannot insert data when partition value is None, partitions: {partitions}, "
                 "there maybe some bug, please check"

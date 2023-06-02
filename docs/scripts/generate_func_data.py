@@ -84,7 +84,7 @@ class FuncDoc:
         if parameters[0][0] == "self":
             parameters = parameters[1:]
 
-        if any([p[1].kind == inspect.Parameter.VAR_KEYWORD for p in parameters]):
+        if any(p[1].kind == inspect.Parameter.VAR_KEYWORD for p in parameters):
             raise Exception("var keyword argument (**kwargs) not supported: " + func_name + str(sig))
 
         end_var_arg_name = ""

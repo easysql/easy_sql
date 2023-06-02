@@ -1,0 +1,79 @@
+connectors:
+  connector_1:
+    options: |
+      'connector' = 'jdbc',
+      'url' = 'jdbc:postgresql://localhost:5432/postgres',
+      'username' = 'postgres',
+      'password' = '123456'
+  connector_cdc:
+    options: |
+      'connector' = 'postgres-cdc',
+      'hostname' = 'localhost',
+      'port' = '5432',
+      'username' = 'postgres',
+      'password' = '123456',
+      'database-name' = 'postgres',
+      'schema-name' = 'sample',
+      'decoding.plugin.name' = 'pgoutput'
+  connector_hudi:
+    options: |
+      'connector' = 'hudi',
+      'path' = '/tmp/hudi-flink-test',
+      'table.type': 'MERGE_ON_READ',
+      'changelog.enabled': 'true',
+      'compaction.async.enabled': 'false'
+catalogs:
+  myhiveCatalog:
+    options: |
+      'type' = 'hive',
+      'hive-conf-dir' = 'test/flink/flink_hive_conf'
+    databases:
+      db_pg:
+        tables:
+          source_1:
+            connector: connector_1
+            options: |
+              'table-name'   =   'sample.test'
+            partition_by: "id, val"
+            schema: |
+              `id` INT,
+              val VARCHAR,
+              PRIMARY KEY (id) NOT ENFORCED
+          source_cdc:
+            connector: connector_cdc
+            options: |
+              'table-name'   =   'test'
+            partition_by: "id, val"
+            schema: |
+              `id` INT,
+              val VARCHAR,
+              PRIMARY KEY (id) NOT ENFORCED
+          target_1:
+            connector: connector_1
+            options: |
+              'table-name'   =   'output_table'
+            partition_by: "id, val"
+            schema: |
+              `id` INT,
+              val VARCHAR,
+              PRIMARY KEY (id) NOT ENFORCED
+          target_agg:
+            connector: connector_1
+            options: |
+              'table-name'   =   'output_table_agg'
+            schema: |
+              count_val BIGINT,
+              val VARCHAR,
+              PRIMARY KEY (val) NOT ENFORCED
+      db_hudi:
+        tables:
+          target_hudi:
+            connector: connector_hudi
+            schema: |
+              id INT NOT NULL PRIMARY KEY NOT ENFORCED,
+              val VARCHAR
+          target_hudi_agg:
+            connector: connector_hudi
+            schema: |
+              val VARCHAR NOT NULL PRIMARY KEY NOT ENFORCED,
+              val_count BIGINT NOT NULL

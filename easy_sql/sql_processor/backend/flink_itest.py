@@ -5,6 +5,8 @@ import re
 import unittest
 from typing import TYPE_CHECKING
 
+import pytest
+import yaml
 from pyflink.common import Row
 from pyflink.table import DataTypes
 from pyflink.table.schema import Schema
@@ -18,7 +20,7 @@ from easy_sql.base_test import (
     TEST_PG_URL,
 )
 from easy_sql.sql_processor.backend import FlinkBackend, Partition, SaveMode, TableMeta
-from easy_sql.sql_processor.backend.flink import FlinkRow
+from easy_sql.sql_processor.backend.flink import FlinkRow, FlinkTablesConfig
 from easy_sql.sql_processor.backend.rdb import _exec_sql
 
 from .sql_dialect import SqlExpr
@@ -65,8 +67,7 @@ class FlinkTest(unittest.TestCase):
             )
         """,
         )
-        backend.exec_native_sql(
-            f"""
+        backend.exec_native_sql(f"""
             CREATE TABLE out_put_table (
                 id INT,
                 val VARCHAR,
@@ -78,8 +79,7 @@ class FlinkTest(unittest.TestCase):
                 'username' = '{TEST_PG_JDBC_USER}',
                 'password' = '{TEST_PG_JDBC_PASSWD}',
                 'table-name' = 'out_put_table');
-        """
-        )
+        """)
 
         from pyflink.java_gateway import get_gateway
         from pyflink.table.catalog import CatalogBaseTable
@@ -112,14 +112,12 @@ class FlinkTest(unittest.TestCase):
 
         catalog_name = "hive"
         hive_conf_dir = "/ops/apache-hive/conf"
-        backend.exec_native_sql(
-            f"""
+        backend.exec_native_sql(f"""
             CREATE CATALOG testHiveCatalog WITH (
                 'type' = '{catalog_name}',
                 'hive-conf-dir' = '{hive_conf_dir}'
             );
-        """
-        )
+        """)
 
         schema = DataTypes.ROW([DataTypes.FIELD("id", DataTypes.INT()), DataTypes.FIELD("val", DataTypes.STRING())])
         table = backend.flink.from_elements([(1, "1"), (2, "2"), (3, "3")], schema=schema)
@@ -389,6 +387,185 @@ class FlinkTest(unittest.TestCase):
                 FlinkRow(Row(6, "6", mock_dt_2), ["id", "val", "dt"]),
             ],
         )
+
+
+def test_filed_alignment():
+    bk = FlinkBackend(is_batch=False)
+    bk.exec_native_sql(
+        "CREATE TABLE source ("
+        " amount INT,"
+        " ts TIMESTAMP(3),"
+        " `user` BIGINT NOT NULl,"
+        " product VARCHAR(32),"
+        " WATERMARK FOR ts AS ts - INTERVAL '1' SECONDS"
+        ") with ('connector' = 'datagen')"
+    )
+
+    bk.exec_native_sql(
+        "CREATE TABLE sink ("
+        " `user` BIGINT NOT NULl,"
+        " product VARCHAR(32),"
+        " amount INT,"
+        " ts TIMESTAMP(3),"
+        " computed_field AS `user` * amount,"
+        " ptime AS PROCTIME(),"
+        " from_mata_fields TIMESTAMP_LTZ(3) METADATA FROM 'op_ts' VIRTUAL,"
+        " PRIMARY KEY(`user`) NOT ENFORCED,"
+        " WATERMARK FOR ts AS ts - INTERVAL '1' SECONDS"
+        ") with ('connector' = 'print')"
+    )
+
+    aligned_table = bk._align_fields(TableMeta("source"), TableMeta("sink"))
+
+    schema = aligned_table.get_schema()
+
+    assert schema.get_field_names() == ["user", "product", "amount", "ts"]
+
+
+def test_idempotency_of_create_table():
+    yml = """
+connectors:
+  print:
+    options: |
+      'connector' = 'print'
+catalogs:
+  paimon:
+    options: |
+      'type' = 'generic_in_memory'
+    databases:
+      ods:
+        tables:
+          orders:
+            connector: print
+            schema: |
+              order_id STRING
+    temporary_tables:
+      cdc_orders:
+        connector: print
+        schema: |
+          order_id STRING
+    """
+
+    res: dict = yaml.safe_load(yml)
+    config = FlinkTablesConfig.from_dict(res)
+    bk = FlinkBackend(is_batch=False, flink_tables_config=config)
+    bk.register_tables()  # first try
+    bk.register_tables()  # second try
+
+
+@pytest.fixture
+def config() -> FlinkTablesConfig:
+    yml = """
+connectors:
+  pg_cdc:
+    options: |
+      'connector' = 'postgres-cdc',
+      'hostname' = 'postgres',
+      'port' = '5432',
+      'username' = 'postgres',
+      'password' = 'postgres',
+      'database-name' = 'postgres',
+      'schema-name' = 'public',
+      'decoding.plugin.name' = 'pgoutput'
+catalogs:
+  paimon:
+    options: |
+      'type' = 'paimon',
+      'warehouse' = 'file:///opt/flink/paimon'
+    databases:
+      ods:
+        tables:
+          orders:
+            options: |
+              'changelog-producer'   =   'input'
+            partition_by: "dd, hh"
+            schema: |
+              order_id STRING,
+              product_id STRING,
+              customer_id STRING,
+              purchase_timestamp TIMESTAMP_LTZ,
+              dd STRING,
+              hh INT,
+              pts as PROCTIME(),
+              ts as cast(purchase_timestamp as TIMESTAMP_LTZ(3)),
+              WATERMARK FOR ts AS ts - INTERVAL '5' SECOND,
+              PRIMARY KEY (order_id, dd, hh) NOT ENFORCED
+    temporary_tables:
+      cdc_orders:
+        connector: pg_cdc
+        options: |
+          'table-name' = 'orders',
+          'slot.name' = 'orders'
+        schema: |
+          order_id STRING,
+          product_id STRING,
+          customer_id STRING,
+          purchase_timestamp TIMESTAMP_LTZ,
+          PRIMARY KEY (order_id) NOT ENFORCED
+    """
+
+    res: dict = yaml.safe_load(yml)
+    config = FlinkTablesConfig.from_dict(res)
+    return config
+
+
+def test_parse_flink_config_from_yml(config: FlinkTablesConfig):
+    assert "postgres" in config.connectors["pg_cdc"].options
+
+    paimon = config.catalogs["paimon"]
+    assert "warehouse" in (paimon.options or "")
+
+    orders = paimon.databases["ods"].tables["orders"]
+    assert "input" in (orders.options or "")
+    assert orders.partition_by == "dd, hh"
+    assert "WATERMARK" in orders.schema
+
+    cdc_orders = paimon.temporary_tables["cdc_orders"]
+    assert "purchase_timestamp" in cdc_orders.schema
+    assert "slot.name" in (cdc_orders.options or "")
+    assert cdc_orders.connector == "pg_cdc"
+
+
+def test_generate_catalog_ddl(config: FlinkTablesConfig):
+    ddl = list(config.generate_catalog_ddl())
+    assert len(ddl) == 1
+    assert ddl[0][0] == "paimon"
+    assert ddl[0][1] == "CREATE CATALOG paimon with ('type' = 'paimon',\n'warehouse' = 'file:///opt/flink/paimon'\n)"
+
+
+def test_generate_db_ddl(config: FlinkTablesConfig):
+    ddl = config.generate_db_ddl()
+    assert list(ddl) == ["CREATE database if not exists paimon.ods"]
+
+
+def test_generate_table_ddl(config: FlinkTablesConfig):
+    ddl = list(config.generate_table_ddl())
+
+    assert len(ddl) == 2
+
+    assert (
+        ddl[0]
+        == "create  table if not exists paimon.ods.orders (order_id STRING,\nproduct_id STRING,\ncustomer_id"
+        " STRING,\npurchase_timestamp TIMESTAMP_LTZ,\ndd STRING,\nhh INT,\npts as PROCTIME(),\nts as"
+        " cast(purchase_timestamp as TIMESTAMP_LTZ(3)),\nWATERMARK FOR ts AS ts - INTERVAL '5' SECOND,\nPRIMARY KEY"
+        " (order_id, dd, hh) NOT ENFORCED\n) partitioned by (dd, hh) with ('changelog-producer' = 'input')"
+    )
+
+    assert (
+        ddl[1]
+        == "create temporary table if not exists cdc_orders (order_id STRING,\nproduct_id STRING,\ncustomer_id"
+        " STRING,\npurchase_timestamp TIMESTAMP_LTZ,\nPRIMARY KEY (order_id) NOT ENFORCED\n)  with ('connector' ="
+        " 'postgres-cdc' , 'hostname' = 'postgres' , 'port' = '5432' , 'username' = 'postgres' , 'password' ="
+        " 'postgres' , 'database-name' = 'postgres' , 'schema-name' = 'public' , 'decoding.plugin.name' = 'pgoutput'"
+        " , 'table-name' = 'orders' , 'slot.name' = 'orders')"
+    )
+
+
+def test_from_none_yml():
+    cf = FlinkTablesConfig.from_yml(None)
+    assert cf is not None
+    assert cf.catalogs == {}
+    assert cf.connectors == {}
 
 
 if __name__ == "__main__":

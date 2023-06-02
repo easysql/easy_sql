@@ -21,14 +21,15 @@
 
 -- backend: flink
 
--- config: easy_sql.flink_tables_file_path=test/sample_etl.flink_tables_file.json
+-- config: easy_sql.flink_tables_file_path=test/sample_etl.flink_tables_file.yml
 -- config: easy_sql.etl_type=streaming
+-- config: easy_sql.prepare_sql_connector=connector_1
 
 -- config: flink.cmd=-pyexec python3
 -- config: flink.cmd=-pyclientexec python3
 -- config: flink.cmd=-t remote
 -- config: flink.execution.checkpointing.interval=3s
--- config: flink.pipeline.jars=test/flink/jars/flink-sql-connector-postgres-cdc-2.3.0.jar;test/flink/jars/hudi-flink1.15-bundle-0.12.2.jar
+-- config: flink.pipeline.jars=test/flink/jars/flink-sql-connector-postgres-cdc-2.3.0.jar;test/flink/jars/hudi-flink1.15-bundle-0.12.2.jar;test/flink/jars/flink-sql-connector-hive-3.1.2_2.12-1.15.1.jar;test/flink/jars/postgresql-42.2.14.jar;test/flink/jars/flink-connector-jdbc-1.15.1.jar
 
 -- inputs: db_pg.source_cdc
 -- add db_pg.target_1 below to allow the prepare-sql command to execute against.
@@ -55,5 +56,6 @@ select id, val from result_view
 -- target=func.execute_streaming_inserts()
 -- trigger execution of inserts manually, or it will be triggered at the end of the job and the query of db_hudi.target_hudi fails.
 
--- target=log.db_hudi__target_hudi
-select * from db_hudi.target_hudi
+-- hack below as we didn't prepared the hudi table
+-- target1=log.db_hudi__target_hudi
+-- select * from db_hudi.target_hudi

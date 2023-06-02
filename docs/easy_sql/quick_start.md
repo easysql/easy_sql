@@ -121,7 +121,7 @@ wget -P test/flink/jars https://repo1.maven.org/maven2/org/postgresql/postgresql
 
 Create a file named `sample_etl.flink.postgres.sql` with content as the test file [here](https://github.com/easysql/easy_sql/blob/main/test/sample_etl.flink.postgres.sql).
 
-Create a connector configuration file named `sample_etl.flink_tables_file.json` with content as the test configuration file [here](https://github.com/easysql/easy_sql/blob/main/test/sample_etl.flink_tables_file.json).
+Create a connector configuration file named `sample_etl.flink_tables_file.yml` with content as the test configuration file [here](https://github.com/easysql/easy_sql/blob/main/test/sample_etl.flink_tables_file.yml).
 
 Run it with command:
 
