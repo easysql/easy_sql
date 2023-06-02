@@ -449,8 +449,8 @@ catalogs:
     res: dict = yaml.safe_load(yml)
     config = FlinkTablesConfig.from_dict(res)
     bk = FlinkBackend(is_batch=False, flink_tables_config=config)
-    bk.register_tables()
-    bk.register_tables()
+    bk.register_tables()  # first try
+    bk.register_tables()  # second try
 
 
 @pytest.fixture
