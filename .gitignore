@@ -9,6 +9,7 @@ spark-warehouse/
 build/*
 .ipynb_checkpoints/
 easy_sql-easy_sql*
+easy-sql-easy-sql*
 easy_sql_easy_sql.egg-info
 dist/
 dist.old/
