@@ -18,7 +18,7 @@ More will be added in the near future.
 
 ## Install Easy SQL
 
-Install Easy SQL using pip: `python3 -m pip install easy_sql-easy_sql[extra,extra]`
+Install Easy SQL using pip: `python3 -m pip install 'easy-sql-easy-sql[extra,extra]'`
 
 Currently we are providing below extras, choose according to your need:
 - cli
@@ -40,7 +40,7 @@ You can install it with command `python3 -m pip install dist/easy_sql*.whl[extra
 
 ## First ETL with Easy SQL
 
-Install easy_sql with spark as the backend: `python3 -m pip install easy_sql-easy_sql[spark,cli]`.
+Install easy_sql with spark as the backend: `python3 -m pip install 'easy-sql-easy-sql[spark,cli]'`.
 
 ### For spark backend
 
@@ -97,7 +97,7 @@ docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=123456 postgres
 
 Create a file named `sample_etl.postgres.sql` with content as the test file [here](https://github.com/easysql/easy_sql/blob/main/test/sample_etl.postgres.sql).
 
-Make sure that you have install the corresponding backend with `python3 -m pip install easy-sql-easy-sql[cli,pg]`
+Make sure that you have install the corresponding backend with `python3 -m pip install 'easy-sql-easy-sql[cli,pg]'`
 
 Run it with command:
 
@@ -117,7 +117,7 @@ docker run -d --name clickhouse -p 9000:9000 yandex/clickhouse-server:20.12.5.18
 
 Create a file named `sample_etl.clickhouse.sql` with content as the test file [here](https://github.com/easysql/easy_sql/blob/main/test/sample_etl.clickhouse.sql).
 
-Make sure that you have install the corresponding backend with `python3 -m pip install easy-sql-easy-sql[cli,clickhouse]`
+Make sure that you have install the corresponding backend with `python3 -m pip install 'easy-sql-easy-sql[cli,clickhouse]'`
 
 Run it with command:
 

@@ -5,7 +5,7 @@ It's easy to build or install Easy SQL.
 
 ## Install Easy SQL
 
-Install Easy SQL using pip: `python3 -m pip install easy_sql-easy_sql[extra,extra]`
+Install Easy SQL using pip: `python3 -m pip install 'easy-sql-easy-sql[extra,extra]'`
 
 Currently we are providing below extras, choose according to your need:
 - cli

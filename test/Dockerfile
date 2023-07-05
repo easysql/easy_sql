@@ -8,7 +8,7 @@ ADD sample_etl.spark.sql /tmp
 ADD sample_etl.postgres.sql /tmp
 ADD sample_etl.clickhouse.sql /tmp
 
-RUN python3 -m pip install easy_sql-easy_sql[spark,pg,clickhouse,cli]
+RUN python3 -m pip install 'easy-sql-easy-sql[spark,pg,clickhouse,cli]'
 
 ARG PG_URL=
 ARG CLICKHOUSE_URL=
