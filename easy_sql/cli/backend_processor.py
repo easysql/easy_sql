@@ -37,7 +37,7 @@ class BackendProcessor:
             raise Exception("Unknown backend: " + config.backend)
 
     def shell_command(
-        self, vars_arg: Optional[str], dry_run_arg: str, entry_file: str, backend_config: Optional[List[str]]
+        self, vars_arg: Optional[str], dry_run_arg: str, entry_file: str, backend_config: Optional[List[str]], **kwargs
     ) -> str:
         raise Exception("No need to construct a shell command for backend " + self.config.backend)
 
@@ -81,9 +81,14 @@ class SparkBackendProcessor(BackendProcessor):
         super().__init__(config)
 
     def shell_command(
-        self, vars_arg: Optional[str], dry_run_arg: str, entry_file: str, backend_config: Optional[List[str]]
+        self,
+        vars_arg: Optional[str],
+        dry_run_arg: str,
+        entry_file: str,
+        backend_config: Optional[List[str]],
+        spark_submit: Optional[str] = None,
     ) -> str:
-        config = SparkBackendConfig(self.config, backend_config)
+        config = SparkBackendConfig(self.config, backend_config, spark_submit=spark_submit)
 
         from_zip_file = False
         cur_file = os.path.abspath(__file__)

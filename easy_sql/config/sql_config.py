@@ -203,15 +203,18 @@ class EasySqlConfig:
 
 
 class SparkBackendConfig:
-    def __init__(self, config: EasySqlConfig, default_config: Optional[List[str]] = None) -> None:
+    def __init__(
+        self, config: EasySqlConfig, default_config: Optional[List[str]] = None, spark_submit: Optional[str] = None
+    ) -> None:
         self.config = config
         self.user_default_conf = default_config
+        self._default_spark_submit = spark_submit
 
     @property
     def spark_submit(self):
         # 默认情况下使用系统中默认spark版本下的spark-submit
         # sql代码中指定了easy_sql.spark_submit时，优先级高于default配置
-        spark_submit = "spark-submit"
+        spark_submit = self._default_spark_submit or "spark-submit"
         for c in self.config.customized_easy_sql_conf:
             if c.startswith("spark_submit"):
                 spark_submit = get_value_by_splitter_and_strip(c)
@@ -241,7 +244,7 @@ class SparkBackendConfig:
         args = config._build_conf_command_args(
             sys_default_conf,
             self.user_default_conf or [],
-            ["spark.files", "spark.jars", "spark.submit.pyFiles"],
+            ["spark.files", "spark.jars", "spark.submit.pyFiles", "spark.kerberos.keytab"],
             config.customized_backend_conf,
         )
         return [f"--conf {arg}={args[arg]}" for arg in args]

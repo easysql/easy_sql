@@ -921,6 +921,15 @@ class SqlTester:
             tr.collect_case_result(case, TestResult.PASSED if passed else TestResult.FAILED)  # type: ignore
         return tr
 
+    def run_test_from_cases(self, etl_file: str, test_cases: List[TestCase], case_idx: int = -1):
+        tr = TestResult(etl_file)
+        for case in test_cases:
+            passed = self.run_case(case)
+            tr.collect_case_result(case, TestResult.PASSED if passed else TestResult.FAILED)  # type: ignore
+        TestResult.print_results([tr])
+        if tr.failed_cases:
+            sys.exit(1)
+
     def parse_test_cases(self, test_data_file, table_column_types: TableColumnTypes) -> List[TestCase]:
         if test_data_file.endswith(".xlsx"):
             cases = TestDataFile(test_data_file, sql_reader=self.sql_reader, backend=self.backend).parse_test_cases(
