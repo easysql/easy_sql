@@ -173,6 +173,9 @@ class ExecutedSqlTransformer:
     def transform_create_view_sql(self, view_name: str, select_sql: str):
         raise NotImplementedError()
 
+    def transform_func_ref_sql(self, func_ref_sql: Optional[str]):
+        return func_ref_sql
+
     def transform_save_table_sql(self, table_name: str, select_sql: str):
         raise NotImplementedError()
 
@@ -326,6 +329,7 @@ class Step:
         elif StepType.FUNC == self.target_config.step_type:
             assert self.target_config.name is not None
             self.executed_sql = self.func_runner.run_func(self.target_config.name, context.vars_context)
+            self.executed_sql = self.executed_sql_transformer.transform_func_ref_sql(self.executed_sql)
 
         elif StepType.CHECK == self.target_config.step_type:
             if self._should_skip_check(variables):
