@@ -65,7 +65,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-ut-1 # increase the number if you updated below install cmd
+        key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}-ut-1 # increase the number if you updated below install cmd
     - run: poetry install --no-interaction --without dev -E "spark linter pg"
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: poetry run make test-coverage
@@ -102,7 +102,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-spark
+        key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}-spark
     - run: poetry install --no-interaction --without dev -E "spark cli"
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: poetry run make e2e-test-spark
@@ -154,7 +154,7 @@ jobs:
             .venv
             test/flink/jars
             test/flink/tools
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-flink-v2
+        key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}-flink-v2
     - run: poetry install --no-interaction --without dev -E "pg cli linter flink" && poetry run make download-flink-jars && poetry run make prepare-flink-hadoop
       if: steps.cached-dependencies.outputs.cache-hit != 'true'
     - run: export HADOOP_CLASSPATH=$($(pwd)/test/flink/tools/hadoop/hadoop-3.3.4/bin/hadoop classpath) && bash $(poetry run python3 -c 'import pyflink; print(pyflink.__file__.replace("__init__.py", "bin/start-cluster.sh"))') && sleep 5
@@ -204,7 +204,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-pg
+        key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}-pg
     - run: poetry install --no-interaction --without dev -E "pg cli"
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: poetry run make e2e-test-postgres
@@ -244,7 +244,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-ch
+        key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}-ch
     - run: poetry install --no-interaction --without dev -E "clickhouse cli"
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
     - run: poetry run make e2e-test-clickhouse
@@ -289,7 +289,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ~/.local/  # the path depends on the OS
-        key: poetry-1  # increment to reset cache
+        key: poetry-2  # increment to reset cache
     - name: Install Poetry
       uses: snok/install-poetry@v1.3.1
       with:
@@ -301,7 +301,7 @@ jobs:
         path: |
             .venv
             test/flink/jars
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('poetry.lock') }}-all-v4 # if flink related dependency version changed, increase the version here
+        key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}-all-v5
     - run: poetry install --no-interaction --without dev -E "clickhouse pg spark cli linter flink ydata-profiling" && poetry run make download-flink-jars
       if: steps.cached-dependencies.outputs.cache-hit != 'true'
     - run: poetry run make test-coverage-all
