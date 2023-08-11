@@ -43,6 +43,11 @@ test-coverage-all:
 	python3 -m coverage report -m
 	python3 -m coverage xml
 
+package-zip:
+	- rm build/easysql.zip
+	mkdir -p build
+	zip -r --exclude=*__pycache__* build/easysql.zip easy_sql
+
 package-pip:
 	poetry build
 
@@ -71,3 +76,5 @@ download-flink-jars:
 	test -f test/flink/jars/postgresql-42.2.14.jar || wget -P test/flink/jars https://repo1.maven.org/maven2/org/postgresql/postgresql/42.2.14/postgresql-42.2.14.jar
 	test -f test/flink/jars/flink-sql-connector-postgres-cdc-2.3.0.jar || wget -P test/flink/jars https://repo1.maven.org/maven2/com/ververica/flink-sql-connector-postgres-cdc/2.3.0/flink-sql-connector-postgres-cdc-2.3.0.jar
 	test -f test/flink/jars/hudi-flink1.15-bundle-0.12.2.jar || wget -P test/flink/jars https://repo1.maven.org/maven2/org/apache/hudi/hudi-flink1.15-bundle/0.12.2/hudi-flink1.15-bundle-0.12.2.jar
+	test -f test/flink/jars/flink-sql-connector-kafka-1.15.2.jar || wget -P test/flink/jars https://repo.maven.apache.org/maven2/org/apache/flink/flink-sql-connector-kafka/1.15.2/flink-sql-connector-kafka-1.15.2.jar
+	test -f test/flink/jars/kafka-clients-3.3.2.jar || wget -P test/flink/jars https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.3.2/kafka-clients-3.3.2.jar

@@ -1,5 +1,6 @@
 tmp/
 .idea/
+.metals/
 __pycache__
 **/.DS_Store
 **/*.zip

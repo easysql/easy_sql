@@ -295,10 +295,17 @@ class TableColumnTypes:
 
 class TestCase:
     def __init__(
-        self, sql_file_path: Optional[str] = None, sql_file_content: Optional[str] = None, default_col_type="string"
+        self,
+        sql_file_path: Optional[str] = None,
+        sql_file_content: Optional[str] = None,
+        default_col_type="string",
+        *,
+        name: Optional[str] = None,
+        vars: Optional[Dict[str, str]] = None,
+        includes: Optional[Dict[str, str]] = None,
     ):
-        self.name, self.vars = None, {}
-        self.includes = {}
+        self.name, self.vars = name, vars or {}
+        self.includes = includes or {}
         self.inputs: List[TableData] = []
         self.outputs: List[TableData] = []
         assert sql_file_path is not None or sql_file_content is not None, "sql_file_path or sql_file_content required"
