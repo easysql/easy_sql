@@ -289,7 +289,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ~/.local/  # the path depends on the OS
-        key: poetry-1  # increment to reset cache
+        key: poetry-2  # increment to reset cache
     - name: Install Poetry
       uses: snok/install-poetry@v1.3.1
       with:
@@ -301,7 +301,7 @@ jobs:
         path: |
             .venv
             test/flink/jars
-        key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}-all-v4 # if flink related dependency version changed, increase the version here
+        key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('poetry.lock') }}-all-v5
     - run: poetry install --no-interaction --without dev -E "clickhouse pg spark cli linter flink ydata-profiling" && poetry run make download-flink-jars
       if: steps.cached-dependencies.outputs.cache-hit != 'true'
     - run: poetry run make test-coverage-all
