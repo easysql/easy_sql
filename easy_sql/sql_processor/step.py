@@ -259,7 +259,7 @@ class Step:
             return backend.exec_sql(self.select_sql)
 
     def preprocess_select_sql(self, context: ProcessorContext):
-        assert self.select_sql is not None
+        assert self.select_sql is not None, f"There must be a sql expression for step: {self}"
         self.select_sql = context.replace_templates(self.select_sql)
         self.select_sql = context.replace_variables(self.select_sql)
 
