@@ -23,6 +23,8 @@ jobs:
         key: poetry-0  # increment to reset cache
     - name: Install Poetry
       uses: snok/install-poetry@v1.3.4
+      with:
+        version: 1.5.1
     - name: version check
       id: version
       run: |

@@ -31,6 +31,8 @@ jobs:
         key: poetry-1  # increment to reset cache
     - name: Install Poetry
       uses: snok/install-poetry@v1.3.4
+      with:
+        version: 1.5.1
     - name: Setup tmate session
       if: ${{ failure() }}
       uses: mxschmitt/action-tmate@v3
@@ -62,6 +64,7 @@ jobs:
     - name: Install Poetry
       uses: snok/install-poetry@v1.3.4
       with:
+        version: 1.5.1
         virtualenvs-in-project: true
     - name: Cache Poetry
       id: cached-poetry-dependencies
@@ -99,6 +102,7 @@ jobs:
     - name: Install Poetry
       uses: snok/install-poetry@v1.3.4
       with:
+        version: 1.5.1
         virtualenvs-in-project: true
     - name: Load cached Poetry dependencies
       id: cached-poetry-dependencies
@@ -148,6 +152,7 @@ jobs:
     - name: Install Poetry
       uses: snok/install-poetry@v1.3.4
       with:
+        version: 1.5.1
         virtualenvs-in-project: true
     - name: Load cached Poetry dependencies
       id: cached-dependencies
@@ -201,6 +206,7 @@ jobs:
     - name: Install Poetry
       uses: snok/install-poetry@v1.3.4
       with:
+        version: 1.5.1
         virtualenvs-in-project: true
     - name: Load cached Poetry dependencies
       id: cached-poetry-dependencies
@@ -241,6 +247,7 @@ jobs:
     - name: Install Poetry
       uses: snok/install-poetry@v1.3.4
       with:
+        version: 1.5.1
         virtualenvs-in-project: true
     - name: Load cached Poetry dependencies
       id: cached-poetry-dependencies
@@ -296,6 +303,7 @@ jobs:
     - name: Install Poetry
       uses: snok/install-poetry@v1.3.4
       with:
+        version: 1.5.1
         virtualenvs-in-project: true
     - name: Load cached Poetry dependencies
       id: cached-dependencies
