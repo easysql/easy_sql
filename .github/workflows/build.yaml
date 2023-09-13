@@ -31,6 +31,9 @@ jobs:
         key: poetry-1  # increment to reset cache
     - name: Install Poetry
       uses: snok/install-poetry@v1.3.4
+    - name: Setup tmate session
+      if: ${{ failure() }}
+      uses: mxschmitt/action-tmate@v3
     - run: poetry build
 
   unit-test:
