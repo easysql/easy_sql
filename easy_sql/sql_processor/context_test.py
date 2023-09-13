@@ -14,6 +14,12 @@ class TemplateContextTest(unittest.TestCase):
         replaced = tc.replace_templates("??@{a(var=${fn(abc)})}??")
         self.assertNotEquals("??xx\n${fn(abc)}=abc, 123??", replaced)
 
+        # if this is a comment, do not replace
+        replaced = tc.replace_templates("??@{a(var=${abc})}?? --??@{a(var=${abc})}??")
+        self.assertEquals("??xx\n${abc}=abc, 123?? --??@{a(var=${abc})}??", replaced)
+        replaced = tc.replace_templates("-- ??@{a(var=${abc})}??")
+        self.assertEquals("-- ??@{a(var=${abc})}??", replaced)
+
     def test_multi_line_in_template_reference(self):
         tc = TemplatesContext(True, {"a": "xx\n#{var}=abc, #{var1} 123"})
         replaced = tc.replace_templates("??@{a(var=123\n,var1=234)}??")

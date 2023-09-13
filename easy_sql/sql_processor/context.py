@@ -109,6 +109,9 @@ class TemplatesContext:
         self.debug_log = debug_log
 
     def replace_templates(self, text: str):
+        comment_substitutor = CommentSubstitutor()
+        text = comment_substitutor.substitute(text)
+
         templates = self.templates
         tmpl_with_arg_pattern = re.compile(r"@{\s*(\w+)\(\s*?(\s*\w+\s*=\s*[^,)]+\s*,?\s*)*\)\s*}", flags=re.IGNORECASE)
         tmpl_no_arg_pattern = re.compile(r"@{\s*(\w+)\s*}", flags=re.IGNORECASE)
@@ -141,6 +144,9 @@ class TemplatesContext:
                     index += 1
             text = re.sub(re.escape(template_define), template, text, flags=re.IGNORECASE)
             self._log_replace_process(f"text after template replaced: {text}")
+
+        text = comment_substitutor.recover(text)
+        self._log_replace_process(f"text after template replaced: {text}")
 
         return text
 
