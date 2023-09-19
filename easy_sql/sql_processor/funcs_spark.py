@@ -198,7 +198,16 @@ class LangFuncs:
         spark = self.backend.spark
         gw = spark.sparkContext._gateway  # type: ignore
         from py4j.java_gateway import java_import
+        from py4j.protocol import Py4JError
 
         java_import(gw.jvm, cls)
         func = eval(f"gw.jvm.{cls}.{func_name}", {"gw": gw})
-        return func(spark._jsparkSession, *args)  # type: ignore
+        try:
+            return func(spark._jsparkSession, *args)  # type: ignore
+        except Py4JError as e:
+            import re
+            import traceback
+
+            if re.match(r".*Py4JException: Method.*does not exist", traceback.format_exc(), re.DOTALL):
+                return func(*args)
+            raise e
