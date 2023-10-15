@@ -1,7 +1,7 @@
 import unittest
 
 from easy_sql.sql_processor import SqlProcessorException, StepConfig
-from easy_sql.sql_processor.step import SqlCleaner
+from easy_sql.sql_processor.step import SqlCleaner, StepFactory
 
 
 class StepConfigTest(unittest.TestCase):
@@ -61,6 +61,18 @@ select * from a
         --comment
         """),
         )
+
+    def test_should_read_sql_correctly(self):
+        sql = """
+-- target=temp.test
+select ';' as a
+        """
+        steps = StepFactory(None, None).create_from_sql(sql, {})  # type: ignore
+        self.assertEquals(1, len(steps))
+        assert steps[0].target_config is not None
+        self.assertEquals(steps[0].target_config.name, "test")
+        assert steps[0].select_sql is not None
+        self.assertEquals(steps[0].select_sql.strip(), "select ';' as a")
 
 
 if __name__ == "__main__":

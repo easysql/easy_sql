@@ -521,7 +521,7 @@ class StepFactory:
             executed_sql_transformer=self.executed_sql_transformer,
         )
         while index < len(lines):
-            line = lines[index].replace(";", "")
+            line = lines[index]
             line_stripped = line.strip()
             if re.compile(StepConfig.STEP_CONFIG_PATTERN, flags=re.IGNORECASE).match(line_stripped):
                 if len(sql_parts) > 0:
@@ -556,7 +556,6 @@ class StepFactory:
         lines = sql.split("\n")
         resoloved_sqls = []
         for _, line in enumerate(lines):
-            line = line.replace(";", "")
             line_stripped = line.strip()
             if re.match(include_sql_pattern, line_stripped, flags=re.IGNORECASE):
                 matches = re.match(include_sql_pattern, line_stripped, flags=re.IGNORECASE)
