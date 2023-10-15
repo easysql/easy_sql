@@ -6,7 +6,7 @@ from os import path
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from easy_sql.sql_processor.backend.rdb import RdbBackend
-from easy_sql.utils.sql_expr import CommentSubstitutor
+from easy_sql.utils.sql_expr import CommentSubstitutor, remove_semicolon_from_line
 
 from ..logger import logger
 from .backend import Backend, Partition, SaveMode
@@ -521,7 +521,7 @@ class StepFactory:
             executed_sql_transformer=self.executed_sql_transformer,
         )
         while index < len(lines):
-            line = lines[index]
+            line = remove_semicolon_from_line(lines[index])
             line_stripped = line.strip()
             if re.compile(StepConfig.STEP_CONFIG_PATTERN, flags=re.IGNORECASE).match(line_stripped):
                 if len(sql_parts) > 0:
@@ -556,6 +556,7 @@ class StepFactory:
         lines = sql.split("\n")
         resoloved_sqls = []
         for _, line in enumerate(lines):
+            line = remove_semicolon_from_line(line)
             line_stripped = line.strip()
             if re.match(include_sql_pattern, line_stripped, flags=re.IGNORECASE):
                 matches = re.match(include_sql_pattern, line_stripped, flags=re.IGNORECASE)

@@ -41,7 +41,7 @@ class CommentSubstitutor:
                 if m:
                     comment_start = m.start(1) + 1
                     left_of_comment = line[: current_index + comment_start]
-                    if CommentSubstitutor.is_quote_closed(left_of_comment):
+                    if is_quote_closed(left_of_comment):
                         lines.append(
                             left_of_comment + self._get_replacement(recognized_comment, replace_with_empty_str)
                         )
@@ -61,47 +61,6 @@ class CommentSubstitutor:
             self.comment_identifiable_name + str(len(recognized_comment)) + "__" if not replace_with_empty_str else ""
         )
 
-    @staticmethod
-    def is_quote_closed(sql_expr: str) -> bool:
-        sql_expr = sql_expr.replace("\\\\", "")
-
-        def find_char_without_escape(text: str, char: str) -> int:
-            start = 0
-            while True:
-                idx = text.find(char, start)
-                if idx != -1:
-                    if idx > 0 and text[idx - 1] == "\\":
-                        start = idx + 1
-                    else:
-                        return idx
-                else:
-                    return -1
-
-        def _is_quote_closed(quote_index: int, quote_char: str) -> bool:
-            start_index = quote_index + 1
-            char_without_escape_idx = find_char_without_escape(sql_expr[start_index:], quote_char)
-            if char_without_escape_idx == -1:
-                return False
-            else:
-                return CommentSubstitutor.is_quote_closed(sql_expr[start_index + char_without_escape_idx + 1 :])
-
-        # a valid sql_expr should not starts with \' or \", so we don't need to check \\ when find quote start point
-        single_quote_index = sql_expr.find("'")
-        double_quote_index = sql_expr.find('"')
-        if single_quote_index != -1 and double_quote_index == -1:
-            return _is_quote_closed(single_quote_index, "'")
-        elif single_quote_index != -1 and double_quote_index != -1:
-            if single_quote_index < double_quote_index:
-                return _is_quote_closed(single_quote_index, "'")
-            else:
-                return _is_quote_closed(double_quote_index, '"')
-        elif single_quote_index == -1 and double_quote_index == -1:
-            return True
-        elif single_quote_index == -1 and double_quote_index != -1:
-            return _is_quote_closed(double_quote_index, '"')
-        else:
-            raise Exception("should not happen")
-
     def recover(self, substituted_sql_expr: str) -> str:
         lines = []
         comment_index = 0
@@ -120,3 +79,91 @@ class CommentSubstitutor:
             else:
                 lines.append(line)
         return "\n".join(lines)
+
+
+def is_quote_closed(sql_expr: str) -> bool:
+    sql_expr = sql_expr.replace("\\\\", "")
+
+    def find_char_without_escape(text: str, char: str) -> int:
+        start = 0
+        while True:
+            idx = text.find(char, start)
+            if idx != -1:
+                if idx > 0 and text[idx - 1] == "\\":
+                    start = idx + 1
+                else:
+                    return idx
+            else:
+                return -1
+
+    def _is_quote_closed(quote_index: int, quote_char: str) -> bool:
+        start_index = quote_index + 1
+        char_without_escape_idx = find_char_without_escape(sql_expr[start_index:], quote_char)
+        if char_without_escape_idx == -1:
+            return False
+        else:
+            return is_quote_closed(sql_expr[start_index + char_without_escape_idx + 1 :])
+
+    # a valid sql_expr should not starts with \' or \", so we don't need to check \\ when find quote start point
+    single_quote_index = sql_expr.find("'")
+    double_quote_index = sql_expr.find('"')
+    if single_quote_index != -1 and double_quote_index == -1:
+        return _is_quote_closed(single_quote_index, "'")
+    elif single_quote_index != -1 and double_quote_index != -1:
+        if single_quote_index < double_quote_index:
+            return _is_quote_closed(single_quote_index, "'")
+        else:
+            return _is_quote_closed(double_quote_index, '"')
+    elif single_quote_index == -1 and double_quote_index == -1:
+        return True
+    elif single_quote_index == -1 and double_quote_index != -1:
+        return _is_quote_closed(double_quote_index, '"')
+    else:
+        raise Exception("should not happen")
+
+
+def comment_start(sql_line: str) -> int:
+    if sql_line.startswith("--"):
+        return 0
+    current_index = 0
+    while True:
+        m = re.match(r".*?([^-]--).*", sql_line[current_index:])
+        if m:
+            comment_start = m.start(1) + 1
+            left_of_comment = sql_line[: current_index + comment_start]
+            if is_quote_closed(left_of_comment):
+                return current_index + comment_start
+            else:
+                current_index += comment_start
+        else:
+            return -1
+
+
+def remove_semicolon_from_line(sql_line: str) -> str:
+    semicolon_pos_to_remove: List[int] = []
+    start = 0
+    comment_start_pos = comment_start(sql_line)
+    while start < len(sql_line):
+        pos = sql_line.find(";", start)
+        if pos != -1:
+            if is_quote_closed(sql_line[:pos]):
+                if comment_start_pos != -1 and comment_start_pos < pos:
+                    break
+                semicolon_pos_to_remove.append(pos)
+            start = pos + 1
+        else:
+            break
+    final_expr = []
+    for i, pos in enumerate(semicolon_pos_to_remove + [len(sql_line)]):
+        if i == 0:
+            final_expr.append(sql_line[:pos])
+        else:
+            final_expr.append(sql_line[semicolon_pos_to_remove[i - 1] + 1 : pos])
+    return "".join(final_expr)
+
+
+def remove_semicolon(sql_expr: str) -> str:
+    result_lines = []
+    for line in sql_expr.splitlines():
+        result_lines.append(remove_semicolon_from_line(line))
+    return "\n".join(result_lines)

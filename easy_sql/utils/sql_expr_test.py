@@ -1,37 +1,68 @@
 import unittest
 
-from .sql_expr import CommentSubstitutor
+from .sql_expr import (
+    CommentSubstitutor,
+    comment_start,
+    is_quote_closed,
+    remove_semicolon,
+)
 
 
-class CommentSubstitutorTest(unittest.TestCase):
+class SqlExprTest(unittest.TestCase):
     def test_check_if_quote_closed(self):
         # self.assertTrue(CommentSubstitutor.is_quote_closed(''))
         # self.assertTrue(CommentSubstitutor.is_quote_closed('abc'))
-        self.assertTrue(CommentSubstitutor.is_quote_closed('""'))
-        self.assertTrue(CommentSubstitutor.is_quote_closed('"a"'))
-        self.assertTrue(CommentSubstitutor.is_quote_closed('"\'"'))
-        self.assertTrue(CommentSubstitutor.is_quote_closed('"\\""'))
-        self.assertTrue(CommentSubstitutor.is_quote_closed('"\\\\\\""'))
-        self.assertTrue(CommentSubstitutor.is_quote_closed('"\\\\\\""""'))
-        self.assertTrue(CommentSubstitutor.is_quote_closed('"\\\\\\"""."'))
-        self.assertTrue(CommentSubstitutor.is_quote_closed('"\\\\\\""."."'))
-        self.assertTrue(CommentSubstitutor.is_quote_closed('"\\\\\\""\'\''))
-        self.assertTrue(CommentSubstitutor.is_quote_closed('"\\\\\\""\'.\''))
-        self.assertTrue(CommentSubstitutor.is_quote_closed('"\\\\\\"."\'.\''))
-        self.assertFalse(CommentSubstitutor.is_quote_closed('"\\\\\\""\''))
-        self.assertFalse(CommentSubstitutor.is_quote_closed('"\\\\\\"".\''))
-        self.assertFalse(CommentSubstitutor.is_quote_closed('"\\\\\\"""'))
-        self.assertFalse(CommentSubstitutor.is_quote_closed('"\\\\""'))
-        self.assertTrue(CommentSubstitutor.is_quote_closed("''"))
-        self.assertTrue(CommentSubstitutor.is_quote_closed("'a'"))
-        self.assertTrue(CommentSubstitutor.is_quote_closed("'\"'"))
-        self.assertTrue(CommentSubstitutor.is_quote_closed("'\\''"))
-        self.assertTrue(CommentSubstitutor.is_quote_closed("'\\\\\\''"))
-        self.assertFalse(CommentSubstitutor.is_quote_closed("'\\\\\\''\""))
-        self.assertFalse(CommentSubstitutor.is_quote_closed("'\\\\\\'''"))
-        self.assertFalse(CommentSubstitutor.is_quote_closed("'\\\\\\''.'"))
-        self.assertFalse(CommentSubstitutor.is_quote_closed("'\\\\''"))
+        self.assertTrue(is_quote_closed('""'))
+        self.assertTrue(is_quote_closed('"a"'))
+        self.assertTrue(is_quote_closed('"\'"'))
+        self.assertTrue(is_quote_closed('"\\""'))
+        self.assertTrue(is_quote_closed('"\\\\\\""'))
+        self.assertTrue(is_quote_closed('"\\\\\\""""'))
+        self.assertTrue(is_quote_closed('"\\\\\\"""."'))
+        self.assertTrue(is_quote_closed('"\\\\\\""."."'))
+        self.assertTrue(is_quote_closed('"\\\\\\""\'\''))
+        self.assertTrue(is_quote_closed('"\\\\\\""\'.\''))
+        self.assertTrue(is_quote_closed('"\\\\\\"."\'.\''))
+        self.assertFalse(is_quote_closed('"\\\\\\""\''))
+        self.assertFalse(is_quote_closed('"\\\\\\"".\''))
+        self.assertFalse(is_quote_closed('"\\\\\\"""'))
+        self.assertFalse(is_quote_closed('"\\\\""'))
+        self.assertTrue(is_quote_closed("''"))
+        self.assertTrue(is_quote_closed("'a'"))
+        self.assertTrue(is_quote_closed("'\"'"))
+        self.assertTrue(is_quote_closed("'\\''"))
+        self.assertTrue(is_quote_closed("'\\\\\\''"))
+        self.assertFalse(is_quote_closed("'\\\\\\''\""))
+        self.assertFalse(is_quote_closed("'\\\\\\'''"))
+        self.assertFalse(is_quote_closed("'\\\\\\''.'"))
+        self.assertFalse(is_quote_closed("'\\\\''"))
 
+    def test_comment_start(self):
+        self.assertEquals(comment_start("--abc"), 0)
+        self.assertEquals(comment_start("-abc"), -1)
+        self.assertEquals(comment_start("---,abc"), 0)
+        self.assertEquals(comment_start(" ---,abc"), 1)
+        self.assertEquals(comment_start('" -"--,abc'), 4)
+        self.assertEquals(comment_start('" ---,abc'), -1)
+        self.assertEquals(comment_start("' ---,abc"), -1)
+        self.assertEquals(comment_start("' --'-,abc"), -1)
+        self.assertEquals(comment_start("' -'--,abc"), 4)
+        self.assertEquals(comment_start("' -''--',abc"), -1)
+        self.assertEquals(comment_start("' -'--'--',abc"), 4)
+
+    def test_remove_semicolon(self):
+        self.assertEquals(remove_semicolon("select 1; select 2"), "select 1 select 2")
+        self.assertEquals(remove_semicolon('select "1;" select 2'), 'select "1;" select 2')
+        self.assertEquals(remove_semicolon('select --"1;" select 2'), 'select --"1;" select 2')
+        self.assertEquals(remove_semicolon('select -"1";"; select 2'), 'select -"1""; select 2')
+        self.assertEquals(remove_semicolon('select -"1";"; --select 2'), 'select -"1""; --select 2')
+        self.assertEquals(remove_semicolon('\n\nselect -"1";"; --select 2'), '\n\nselect -"1""; --select 2')
+        self.assertEquals(remove_semicolon(";;;"), "")
+        self.assertEquals(remove_semicolon(";\n;;"), "\n")
+        self.assertEquals(remove_semicolon(";  "), "  ")
+
+
+class CommentSubstitutorTest(unittest.TestCase):
     def test_should_replace_and_recover_comment(self):
         sql_expr = """
 select ${a}, ${b} -- ${a} in comment
