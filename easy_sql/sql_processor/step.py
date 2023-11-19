@@ -79,9 +79,20 @@ class StepConfig:
         self.condition = condition
         self.line_no = line_no
         self.step_config_str = step_config_str
+        self.rendered_condition = condition
+        self.rendered_name = step_name
+
+    def update_rendered_condition(self, rendered_condition: str):
+        self.rendered_condition = rendered_condition
+
+    def update_rendered_name(self, rendered_name: str):
+        self.rendered_name = rendered_name
 
     def __str__(self):
-        return f"StepConfig(target={self.step_type}.{self.name}, condition={self.condition}, line_no={self.line_no})"
+        return (
+            f"StepConfig(target={self.step_type}.{self.rendered_name}, condition={self.rendered_condition},"
+            f" line_no={self.line_no})"
+        )
 
     def __repr__(self):
         return str(self)
@@ -238,6 +249,9 @@ class Step:
         if not self.target_config.has_condition():
             return True
         assert self.target_config.condition is not None
+        self.target_config.update_rendered_condition(
+            self.func_runner.render_func_call(self.target_config.condition, context.vars_context)
+        )
         return self.func_runner.run_func(self.target_config.condition, context.vars_context)
 
     def read(self, backend: Backend, context: ProcessorContext) -> Optional[BackendTable]:
@@ -328,6 +342,9 @@ class Step:
 
         elif StepType.FUNC == self.target_config.step_type:
             assert self.target_config.name is not None
+            self.target_config.update_rendered_name(
+                self.func_runner.render_func_call(self.target_config.name, context.vars_context)
+            )
             self.executed_sql = self.func_runner.run_func(self.target_config.name, context.vars_context)
             self.executed_sql = self.executed_sql_transformer.transform_func_ref_sql(self.executed_sql)
 
@@ -454,6 +471,9 @@ class Step:
         assert self.target_config is not None
         if self.target_config.is_target_name_a_func():
             assert self.target_config.name is not None
+            self.target_config.update_rendered_name(
+                self.func_runner.render_func_call(self.target_config.name, context.vars_context)
+            )
             if not self.func_runner.run_func(self.target_config.name, context.vars_context):
                 message = (
                     f"check failed! check function returned False. check={self.target_config.name}, vars={context.vars}"

@@ -217,6 +217,10 @@ class FuncRunner:
         ret_val = func(*params)
         return self._ref_sql(func_name, func, ret_val, *params)
 
+    def render_func_call(self, func_def: str, vars_replacer: VarsReplacer) -> str:
+        func_name, _, params = self._parse(func_def, vars_replacer)
+        return f'{func_name}({", ".join([str(p) for p in params])})'
+
     def _ref_sql(self, func_name, func, func_call_ret: str, *params) -> str:
         if hasattr(func, "ref_sql"):
             assert callable(

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from .step import ReportCollector, Step
+from .step import ReportCollector, Step, StepType
 
 
 class StepStatus:
@@ -54,6 +54,7 @@ class SqlProcessorReporter(ReportCollector):
         report_hdfs_path: Optional[str] = None,
         report_es_url: Optional[str] = None,
         report_es_index_prefix: Optional[str] = None,
+        skip_templates: bool = False,
     ):
         self.report_task_id = report_task_id
         self.report_hdfs_path = report_hdfs_path
@@ -62,6 +63,7 @@ class SqlProcessorReporter(ReportCollector):
         self._steps = None
         self.step_reports: Optional[Dict[str, StepReport]] = None
         self.start_time = datetime.now()
+        self.skip_templates = skip_templates
 
     def init(self, steps: List[Step]):
         self._steps = steps
@@ -139,6 +141,8 @@ class SqlProcessorReporter(ReportCollector):
         assert self._steps is not None
         assert self.step_reports is not None
         for step in self._steps:
+            if self.skip_templates and step.target_config and step.target_config.step_type == StepType.TEMPLATE:
+                continue
             report.append(self.step_reports[step.id].report_as_text(total_execution_seconds, verbose))
         report.append(f"\ntotal execution time: {total_execution_seconds}s")
         return "\n".join(report)
