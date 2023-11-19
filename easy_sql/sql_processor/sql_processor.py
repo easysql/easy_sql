@@ -40,6 +40,11 @@ class SqlCollector:
 
 
 class SqlProcessor:
+    _current_step: Optional[Step] = None
+    _current_context: Optional[ProcessorContext] = None
+    _current_backend: Optional[Backend] = None
+    _current_config: Optional[Any] = None
+
     def __init__(
         self,
         backend: Union[SparkSession, Backend],
@@ -50,6 +55,7 @@ class SqlProcessor:
         report_task_id: Optional[str] = None,
         report_es_url: Optional[str] = None,
         report_es_index_prefix: Optional[str] = None,
+        report_skip_templates: bool = False,
         scala_udf_initializer: Optional[str] = None,
         templates: Optional[dict] = None,
         includes: Optional[Dict[str, str]] = None,
@@ -65,6 +71,7 @@ class SqlProcessor:
             report_hdfs_path=report_hdfs_path,
             report_es_url=report_es_url,
             report_es_index_prefix=report_es_index_prefix,
+            skip_templates=report_skip_templates,
         )
         log_var_tmpl_replace = False
         vars_context = VarsContext(debug_log=log_var_tmpl_replace, vars=variables)
@@ -82,6 +89,10 @@ class SqlProcessor:
         self.backend.init_udfs(scala_udf_initializer=scala_udf_initializer)
         self.config = config
         self.sql_collector = SqlCollector()
+
+        SqlProcessor._current_context = self.context
+        SqlProcessor._current_backend = self.backend
+        SqlProcessor._current_config = self.config
 
     @property
     def variables(self) -> Dict[str, Any]:
@@ -124,6 +135,7 @@ class SqlProcessor:
 
     def run_step(self, step: Step, dry_run: bool):
         try:
+            SqlProcessor._current_step = step
             # add meta vars to support step information retrieving in functions
             self.context.add_vars({"__step__": step})
             self.context.add_vars({"__context__": self.context})
@@ -157,3 +169,27 @@ class SqlProcessor:
                 self.run_step(step, dry_run)
         finally:
             self.reporter.print_report(True)
+
+
+def get_current_step() -> Step:
+    if not SqlProcessor._current_step:
+        raise RuntimeError("current step is not set, you must be under some step to call this function")
+    return SqlProcessor._current_step
+
+
+def get_current_context() -> ProcessorContext:
+    if not SqlProcessor._current_context:
+        raise RuntimeError("current context is not set, you must be under some sql processor to call this function")
+    return SqlProcessor._current_context
+
+
+def get_current_backend() -> Backend:
+    if not SqlProcessor._current_backend:
+        raise RuntimeError("current backend is not set, you must be under some sql processor to call this function")
+    return SqlProcessor._current_backend
+
+
+def get_current_config() -> Any:
+    if not SqlProcessor._current_config:
+        raise RuntimeError("current config is not set, you must be under some sql processor to call this function")
+    return SqlProcessor._current_config
