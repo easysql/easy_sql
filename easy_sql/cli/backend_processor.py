@@ -41,7 +41,13 @@ class BackendProcessor:
     ) -> str:
         raise Exception("No need to construct a shell command for backend " + self.config.backend)
 
-    def run(self, vars: Optional[str] = None, dry_run: bool = False, backend_config: Optional[List[str]] = None):
+    def run(
+        self,
+        vars: Optional[str] = None,
+        dry_run: bool = False,
+        backend_config: Optional[List[str]] = None,
+        report_skip_templates: bool = False,
+    ):
         backend = self._create_backend(backend_config)
 
         for prepare_sql in self.config.prepare_sql_list:
@@ -50,7 +56,7 @@ class BackendProcessor:
         try:
             all_vars = self._pre_defined_vars(backend)
             all_vars.update(parse_vars(vars))
-            self._run_with_vars(backend, all_vars, dry_run)
+            self._run_with_vars(backend, all_vars, dry_run, report_skip_templates=report_skip_templates)
         finally:
             backend.clean()
 
@@ -63,10 +69,17 @@ class BackendProcessor:
     def _exec_prepare_sql(self, backend: Backend, prepare_sql: str):
         return backend.exec_native_sql(prepare_sql)
 
-    def _run_with_vars(self, backend: Backend, variables: Dict[str, Any], dry_run: bool):
+    def _run_with_vars(
+        self, backend: Backend, variables: Dict[str, Any], dry_run: bool, report_skip_templates: bool = False
+    ):
         config = self.config
         sql_processor = SqlProcessor(
-            backend, config.sql, variables=variables, scala_udf_initializer=config.scala_udf_initializer, config=config
+            backend,
+            config.sql,
+            variables=variables,
+            scala_udf_initializer=config.scala_udf_initializer,
+            config=config,
+            report_skip_templates=report_skip_templates,
         )
         if config.resolved_udf_file_path:
             sql_processor.register_udfs_from_pyfile(config.resolved_udf_file_path)
