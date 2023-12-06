@@ -238,33 +238,6 @@ From the example, we know the following things about 'if' statement in Easy SQL:
 - The function call must return a boolean value to indicate if the step needs to be executed.
 - Any step could be controlled by a 'if' statement, including 'func' 'temp' 'variables' and so on.
 
-### Write data
-
-If we need to write data to some table, we could use another type of target. The name of the target is 'output'.
-There should be a query statement following the 'output' target. And the result of the query will be written to the output table.
-
-Below is an example:
-
-```sql
--- target=temp.result
-select 1 as a, '2' as b
-
--- target=output.some_db.some_table
-select * from result
-```
-
-After the execution of the ETL above, there will be one row written to table 'some_db.some_table'.
-
-Things to note about 'output' target:
-
-- There must be a full table name (both database name and table name specified) after the 'output' keyword in the target definition.
-- The table must be created before writing data.
-- If we'd like to create table automatically, we need to define a special variable named '\_\_create_output_table\_\_' with value equals to 1.
-- If we'd like to write data to some static partition of the output table, we need to define a special variable named '\_\_partition\_\_' with partition column name followed by. An example could be '__partition__data_date'. Then the partition column is 'data_date'. The value of the variable will be the partition value when writing data.
-- If we'd like to write data to some static partition of the output table, we can only define one partition value at the moment.
-- If the query returns more columns than what is defined by the real table, the extra columns will be ignored.
-- If the query returns less columns than what is defined by the real table, an error will be raised.
-
 ### Templates used to reuse code
 
 To support reusing of code, templates have been introduced in Easy SQL.
