@@ -64,11 +64,11 @@ upload-pip:
 	poetry publish --build
 
 prepare-flink-hadoop:
-	test -f test/flink/tools/hadoop/hadoop-3.3.4.tar.gz || ( \
+	test -f test/flink/tools/hadoop/hadoop-3.3.5.tar.gz || ( \
         mkdir -pv test/flink/tools/hadoop && \
-        wget -P test/flink/tools/hadoop https://dlcdn.apache.org/hadoop/common/hadoop-3.3.4/hadoop-3.3.4.tar.gz && \
+        wget -P test/flink/tools/hadoop https://dlcdn.apache.org/hadoop/common/hadoop-3.3.5/hadoop-3.3.5.tar.gz && \
         cd test/flink/tools/hadoop && \
-        tar xf hadoop-3.3.4.tar.gz )
+        tar xf hadoop-3.3.5.tar.gz )
 
 download-flink-jars:
 	test -f test/flink/jars/flink-connector-jdbc-1.15.1.jar || wget -P test/flink/jars https://repo1.maven.org/maven2/org/apache/flink/flink-connector-jdbc/1.15.1/flink-connector-jdbc-1.15.1.jar
