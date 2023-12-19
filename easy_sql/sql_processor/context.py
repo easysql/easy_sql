@@ -126,6 +126,8 @@ class TemplatesContext:
                 raise SqlProcessorException(f"no template for found `{template_name}`, existing are {templates}")
 
             template = templates.get(template_name)
+            assert template is not None, f"Content of template `{template_name}` is None, this should not happen!"
+            template = CommentSubstitutor().remove(template).strip("\n")
             values = re.compile(r"\s*\w+\s*=\s*[^,)]+,?\s*", flags=re.IGNORECASE).findall(template_define_normalized)
             if values:
                 index = 0
