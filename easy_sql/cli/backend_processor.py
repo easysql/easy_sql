@@ -136,7 +136,7 @@ class FlinkBackendProcessor(BackendProcessor):
     ) -> str:
         config = FlinkBackendConfig(self.config, backend_config)
         return (
-            f'{config.flink} run {" ".join(config.flink_conf_command_args())} '
+            f'{config.flink} {config.flink_action} {" ".join(config.flink_conf_command_args())} '
             f'--python "{entry_file}" '
             f"-f {self.config.sql_file} --dry-run {dry_run_arg} "
             f'{"-v " + vars_arg if vars_arg else ""} '

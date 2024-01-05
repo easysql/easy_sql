@@ -286,9 +286,12 @@ class FlinkTablesConfig:
         import yaml
 
         if file_path is None:
+            logger.warn(
+                f"config file '{file_path}' does not exist or is not a file, will create an empty FlinkTablesConfig"
+            )
             return FlinkTablesConfig({}, {})
 
-        with Path(file_path).open() as f:
+        with Path(file_path).open(encoding="utf8") as f:
             res: dict = yaml.safe_load(f)
             return FlinkTablesConfig.from_dict(res)
 
@@ -360,6 +363,9 @@ class FlinkTablesConfig:
             for each_option in line.split(","):
                 if each_option.strip() == "":
                     continue
-                key, value = each_option.split("=")
+                assert (
+                    "=" in each_option
+                ), f"invalid option, must be of {{key}}={{value}}, found '{each_option}' in line '{line}'"
+                key, value = each_option[: each_option.index("=")], each_option[each_option.index("=") + 1 :]
                 options[key.strip()] = value.strip()
         return options

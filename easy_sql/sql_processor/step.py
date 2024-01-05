@@ -521,10 +521,12 @@ class StepFactory:
         reporter: ReportCollector,
         func_runner: FuncRunner,
         executed_sql_transformer: Optional[ExecutedSqlTransformer] = None,
+        base_dir: Optional[str] = None,
     ):
         self.reporter = reporter
         self.func_runner = func_runner
         self.executed_sql_transformer = executed_sql_transformer
+        self.base_dir = base_dir
 
     def create_from_sql(self, sql: str, includes: Optional[Dict[str, str]] = None) -> List[Step]:
         includes = includes or {}
@@ -599,7 +601,7 @@ class StepFactory:
                     resoloved_sqls.append(read_file_func(file))
                 except ModuleNotFoundError:
                     logger.info("failed to import common.file_reader, will try default file reader")
-                    resoloved_sqls.append(SqlSnippetsReader.read_file(file))
+                    resoloved_sqls.append(SqlSnippetsReader.read_file(file, self.base_dir))
             elif re.match(include_py_pattern, line_stripped, flags=re.IGNORECASE):
                 matches = re.match(include_py_pattern, line_stripped, flags=re.IGNORECASE)
                 assert matches is not None
@@ -640,7 +642,7 @@ class SqlSnippetsReader:
     @staticmethod
     def read_file(file_name: str, base_path: Optional[str] = None) -> str:
         possible_paths = [file_name]
-        if base_path is not None:
+        if base_path:
             possible_paths.append(path.join(base_path, file_name))
 
         for p in possible_paths:

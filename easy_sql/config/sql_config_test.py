@@ -64,7 +64,12 @@ class EasySqlConfigTest(unittest.TestCase):
         )
 
         config = FlinkBackendConfig(
-            _config, ["--parallelism=2", "-py=test/sample_etl.spark.sql", "-pyarch=test/sample_etl.clickhouse.sql"]
+            _config,
+            [
+                "flink.cmd=--parallelism 2",
+                "flink.cmd=-py test/sample_etl.spark.sql",
+                "flink.cmd=-pyarch test/sample_etl.clickhouse.sql",
+            ],
         )
         contains_conf = lambda c: len([_c for _c in config.flink_conf_command_args() if _c.find(c) != -1]) == 1
         contains_conf_re = (
@@ -96,3 +101,27 @@ class EasySqlConfigTest(unittest.TestCase):
 
         self.assertEqual(find_conf("--pyFiles ")[0].count(","), 2)
         self.assertEqual(find_conf("-pyarch ")[0].count(","), 1)
+
+    def test_parse_flink_config_with_jvm_config(self):
+        _config = EasySqlConfig.from_sql(
+            sql="""
+-- config: flink.cmd=-Djobmanager.memory.process.size=512m
+        """,
+            sql_file="",
+        )
+
+        config = FlinkBackendConfig(
+            _config,
+            [
+                "flink.cmd=--parallelism 2",
+                "flink.cmd=-Djobmanager.memory.process.size=1024m",
+                "flink.cmd=-Dtaskmanager.memory.process.size=1024m",
+            ],
+        )
+        contains_conf = lambda c: len([_c for _c in config.flink_conf_command_args() if _c == c]) == 1
+        print(config.flink_conf_command_args())
+
+        self.assertTrue(contains_conf("--parallelism 2"))
+        self.assertTrue(contains_conf("-Djobmanager.memory.process.size=512m"))
+        self.assertFalse(contains_conf("-Djobmanager.memory.process.size=1024m"))
+        self.assertTrue(contains_conf("-Dtaskmanager.memory.process.size=1024m"))

@@ -65,6 +65,7 @@ class EasySqlConfig:
         scala_udf_initializer: Optional[str],
         input_tables: List[str],
         output_tables: List[str],
+        base_dir: Optional[str] = None,
     ):
         self.sql_file = sql_file
         self.sql = sql
@@ -75,10 +76,14 @@ class EasySqlConfig:
         self.input_tables, self.output_tables = input_tables, output_tables
         self.resolved_udf_file_path = self._resolve_file(udf_file_path) if udf_file_path else None
         self.resolved_func_file_path = self._resolve_file(func_file_path) if func_file_path else None
+        self.base_dir = base_dir
 
     @staticmethod
     def from_sql(
-        sql_file: Optional[str] = None, sql: Optional[str] = None, system_config_prefix: str = "easy_sql."  # type: ignore
+        sql_file: Optional[str] = None,
+        sql: Optional[str] = None,  # type: ignore
+        system_config_prefix: str = "easy_sql.",
+        base_dir: str = "",
     ) -> EasySqlConfig:
         assert sql_file is not None or sql is not None, "sql_file or sql must be set"
         if sql and sql_file:
@@ -103,11 +108,17 @@ class EasySqlConfig:
         for c in customized_easy_sql_conf:
             if c.startswith("udf_file_path"):
                 udf_file_path = get_value_by_splitter_and_strip(c)
-                udf_file_path = resolve_file(udf_file_path) if udf_file_path and "/" in udf_file_path else udf_file_path
+                udf_file_path = (
+                    resolve_file(udf_file_path, relative_to=base_dir)
+                    if udf_file_path and "/" in udf_file_path
+                    else udf_file_path
+                )
             elif c.startswith("func_file_path"):
                 func_file_path = get_value_by_splitter_and_strip(c)
                 func_file_path = (
-                    resolve_file(func_file_path) if func_file_path and "/" in func_file_path else func_file_path
+                    resolve_file(func_file_path, relative_to=base_dir)
+                    if func_file_path and "/" in func_file_path
+                    else func_file_path
                 )
             elif c.startswith("scala_udf_initializer"):
                 scala_udf_initializer = get_value_by_splitter_and_strip(c)
@@ -122,6 +133,7 @@ class EasySqlConfig:
             scala_udf_initializer,
             input_tables,
             output_tables,
+            base_dir,
         )
 
     @property
@@ -253,7 +265,7 @@ class SparkBackendConfig:
 class FlinkBackendConfig:
     def __init__(self, config: EasySqlConfig, default_config: Optional[List[str]] = None) -> None:
         self.config = config
-        self.user_default_conf = default_config
+        self.user_default_conf = default_config or []
 
     @property
     def flink_configurations(self) -> Dict[str, str]:
@@ -295,10 +307,34 @@ class FlinkBackendConfig:
             flink = os.path.join(find_flink_home._find_flink_home(), "bin/flink")
         except Exception:
             flink = "flink"
+        return self._get_conf("flink_run", flink)
+
+    def _get_conf(self, key: str, def_val: str | None = None) -> Optional[str]:
+        value = def_val or None
+        if self.user_default_conf:
+            for c in self.user_default_conf:
+                if c.startswith(key):
+                    value = get_value_by_splitter_and_strip(c)
         for c in self.config.customized_easy_sql_conf:
-            if c.startswith("flink_run"):
-                flink = get_value_by_splitter_and_strip(c)
-        return flink
+            if c.startswith(key):
+                value = get_value_by_splitter_and_strip(c)
+        return value
+
+    @property
+    def flink_action(self):
+        """
+        flink cli action: https://nightlies.apache.org/flink/flink-docs-release-1.16/docs/deployment/cli/#cli-actions
+        """
+        return self._get_conf("flink_action", "run")
+
+    @property
+    def flink_on_yarn_base_dir(self):
+        return self._get_conf("flink_on_yarn_base_dir")
+
+    @property
+    def flink_on_yarn_using_shipfiles(self):
+        # use -Dyarn.ship-files=xxx for required files, so no need to pass files via -pyfs or -pyarch
+        return (self._get_conf("flink_on_yarn_using_shipfiles") or "0").lower() in ["1", "true"]
 
     @property
     def flink_tables_file_path(self) -> Optional[str]:
@@ -312,7 +348,13 @@ class FlinkBackendConfig:
         if flink_tables_file_path is None:
             return None
         else:
-            return self.config._resolve_file(get_value_by_splitter_and_strip(flink_tables_file_path))
+            flink_on_yarn_base_dir = self.flink_on_yarn_base_dir
+            if not flink_on_yarn_base_dir:
+                file_path = f"{self.flink_on_yarn_base_dir}/{get_value_by_splitter_and_strip(flink_tables_file_path)}"
+                print(f"got flink_tables_file_path: {file_path}")
+                return file_path
+            else:
+                return self.config._resolve_file(get_value_by_splitter_and_strip(flink_tables_file_path))
 
     def _resolve_file(self, file_path: str) -> str:
         return self.config._resolve_file(file_path, prefix="file://")
@@ -321,35 +363,47 @@ class FlinkBackendConfig:
         # config 的优先级：1. sql 代码里的 config 优先级高于这里的 default 配置
         # 对于数组类的 config，sql 代码里的 config 会添加进来，而不是覆盖默认配置
         config = self.config
-        default_conf = [
-            "--parallelism=1",
-            (
-                f"--pyFiles={'file://' + self.config.abs_sql_file_path}"
+        default_conf = ["flink.cmd=--parallelism 1"]
+        if not self.flink_on_yarn_using_shipfiles:
+            default_conf.append(
+                f"flink.cmd=--pyFiles {'file://' + self.config.abs_sql_file_path}"
                 f"{',' + self._resolve_file(config.udf_file_path) if config.udf_file_path else ''}"
                 f"{',' + self._resolve_file(config.func_file_path) if config.func_file_path else ''}"
-            ),
-        ]
+            )
 
         # refer: https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/cli/
-        file_keys = [
-            "-pyarch",
-            "--pyArchives",
-            "-pyfs",
-            "--pyFiles",
-        ]
-        cmd_value_args = []
-        for c in config.customized_backend_conf:
+        file_keys = ["-pyarch", "--pyArchives", "-pyfs", "--pyFiles"]
+        cmd_args = {}
+        jvm_args = {}
+        # handle prioritization for flink.cmd here, not in the _build_conf_command_args call
+        # since flink cmd config are not formatted as key=value
+        for c in default_conf + self.user_default_conf + config.customized_backend_conf:
             if get_key_by_splitter_and_strip(c) == "flink.cmd":
-                key = get_key_by_splitter_and_strip(get_value_by_splitter_and_strip(c), " ")
-                value = get_value_by_splitter_and_strip(get_value_by_splitter_and_strip(c), " ")
+                flink_cmd_config_line = get_value_by_splitter_and_strip(c)
+                if " " not in flink_cmd_config_line:
+                    if "-D" in flink_cmd_config_line:
+                        jvm_arg_key = get_key_by_splitter_and_strip(flink_cmd_config_line)
+                        jvm_arg_value = get_value_by_splitter_and_strip(flink_cmd_config_line)
+                        jvm_args[jvm_arg_key] = jvm_arg_value
+                        continue
+                    key = flink_cmd_config_line
+                    value = ""
+                else:
+                    key = get_key_by_splitter_and_strip(flink_cmd_config_line, " ")
+                    value = get_value_by_splitter_and_strip(flink_cmd_config_line, " ")
                 if key in file_keys:
-                    resolve_files = [f"{self._resolve_file(val.strip())}" for val in value.split(",") if val.strip()]
+                    if self.flink_on_yarn_using_shipfiles:
+                        # if using shipfiles, do not try to resolve files
+                        # since they may not exist locally but should exist in yarn app
+                        resolve_files = [val.strip() for val in value.split(",") if val.strip()]
+                    else:
+                        resolve_files = [
+                            f"{self._resolve_file(val.strip())}" for val in value.split(",") if val.strip()
+                        ]
+                    if key in cmd_args:
+                        resolve_files = resolve_files + cmd_args[key].split(",")
                     value = f'"{",".join(set(resolve_files))}"'
-                cmd_value_args.append(f"{key}={value}")
-
-        args = config._build_conf_command_args(
-            default_conf, self.user_default_conf or [], file_keys, cmd_value_args, prefix="file://"
-        )
-        cmd_args = [f"{arg} {args[arg]}" for arg in args]
-
-        return cmd_args
+                    cmd_args[key] = value
+                else:
+                    cmd_args[key] = value
+        return [f"{k}={v}" for k, v in jvm_args.items()] + [f"{k} {v}".strip() for k, v in cmd_args.items()]
