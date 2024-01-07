@@ -33,12 +33,12 @@ class DataProcessTest(unittest.TestCase):
 
         assert command is not None
         self.assertRegex(
-            command,
+            command.strip(),
             r".*flink run --parallelism 2 "
-            '--pyFiles [^"]+test/sample_etl.flink.hive.sql '
+            '--pyFiles "[^"]+test/sample_etl.flink.hive.sql" '
             "-t local "
             '--python "[^"]+/easy_sql/data_process.py" '
-            "-f .+/test/sample_etl.flink.hive.sql --dry-run 0",
+            r"-f .+/test/sample_etl.flink.hive.sql --dry-run 0",
         )
 
     def test_flink_hive_postgres(self):
@@ -49,7 +49,7 @@ class DataProcessTest(unittest.TestCase):
         self.assertRegex(
             command,
             r".*flink run --parallelism 1 "
-            '--pyFiles [^"]+test/sample_etl.flink.hive.postgres.sql '
+            '--pyFiles "[^"]+test/sample_etl.flink.hive.postgres.sql" '
             '--python "[^"]+/easy_sql/data_process.py" '
             "-f .+/test/sample_etl.flink.hive.postgres.sql --dry-run 0",
         )
@@ -60,7 +60,7 @@ class DataProcessTest(unittest.TestCase):
         self.assertRegex(
             command,
             r".*flink run --parallelism 1 "
-            '--pyFiles [^"]+test/udf/flink-scala/etl_with_udf.sql --jarfile udf.jar '
+            '--pyFiles "[^"]+test/udf/flink-scala/etl_with_udf.sql" --jarfile udf.jar '
             '--python "[^"]+/easy_sql/data_process.py" '
             "-f .+/test/udf/flink-scala/etl_with_udf.sql --dry-run 0",
         )

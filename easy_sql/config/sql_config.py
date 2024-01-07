@@ -349,7 +349,7 @@ class FlinkBackendConfig:
             return None
         else:
             flink_on_yarn_base_dir = self.flink_on_yarn_base_dir
-            if not flink_on_yarn_base_dir:
+            if flink_on_yarn_base_dir:
                 file_path = f"{self.flink_on_yarn_base_dir}/{get_value_by_splitter_and_strip(flink_tables_file_path)}"
                 print(f"got flink_tables_file_path: {file_path}")
                 return file_path
