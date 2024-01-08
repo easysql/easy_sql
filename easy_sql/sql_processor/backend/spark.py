@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Un
 
 from ...logger import logger
 from ...udf import udfs
-from ..common import SqlProcessorAssertionError
+from ..common import SqlProcessorAssertionError, SqlProcessorException
 from .base import Backend, Col, Partition, Row, SaveMode, Table, TableMeta
 
 __all__ = ["SparkRow", "SparkTable", "SparkBackend"]
@@ -178,6 +178,37 @@ class SparkBackend(Backend):
         self.exec_native_sql(create_database_stmt)
         self.exec_native_sql(create_table_stmt)
         return self
+
+    def verify_schema(self, source_table: TableMeta, target_table: TableMeta, verify_type: bool = False):
+        if not self.table_exists(target_table):
+            raise SqlProcessorException(f"Verify schema failed. Target table {target_table.table_name} does not exist")
+        source_columns = self.exec_native_sql(f"select * from {source_table.table_name}").schema.fields
+        target_columns = self.exec_native_sql(f"select * from {target_table.table_name}").schema.fields
+        source_col_names = {c.name.lower() for c in source_columns}
+        target_col_names = {c.name.lower() for c in target_columns}
+        if not target_col_names.issubset(source_col_names):
+            raise SqlProcessorException(
+                f"Target table {target_table.table_name} has columns that are not in source table"
+                f" {source_table.table_name}: {target_col_names - source_col_names}"
+            )
+        source_col = lambda col_name: next(c for c in source_columns if c.name.lower() == col_name.lower())
+        type_diff_cols = [
+            f"{c.name.lower()}(target_type={c.dataType}, source_type={source_col(c.name).dataType})"
+            for c in target_columns
+            if c.name.lower() in source_col_names and c.dataType != source_col(c.name).dataType
+        ]
+        if type_diff_cols:
+            message = (
+                f"target table {target_table.table_name} has columns whose type are different from source table"
+                f" {source_table.table_name}: "
+                + ", ".join(type_diff_cols)
+            )
+            if verify_type:
+                raise SqlProcessorException("Verify schema failed. Found " + message)
+            else:
+                logger.info("Verify schema passed. Found " + message)
+        else:
+            logger.info("Verify schema passed. Source table has all columns in target table and their types are same.")
 
     def save_table_sql(self, source_table: TableMeta, source_table_sql: str, target_table: TableMeta) -> str:
         columns = self.exec_native_sql(f"select * from {source_table.table_name}").limit(0).columns

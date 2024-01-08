@@ -324,7 +324,7 @@ class Step:
 
         elif StepType.CACHE == self.target_config.step_type:
             assert self.target_config.name is not None
-            if "__no_cache__" in variables and variables["__no_cache__"] in ["TRUE", True, 1, "True", "true"]:
+            if "__no_cache__" in variables and str(variables["__no_cache__"]).lower() in ["true", "1"]:
                 backend.create_temp_table(table, self.target_config.name)
             else:
                 backend.create_cache_table(table, self.target_config.name)
@@ -336,7 +336,7 @@ class Step:
             self.executed_sql = self._create_view_sql()
 
         elif StepType.LOG == self.target_config.step_type:
-            if "__no_log__" in variables and variables["__no_log__"] in ["TRUE", True, 1, "True", "true"]:
+            if "__no_log__" in variables and str(variables["__no_log__"]).lower() in ["true", "1"]:
                 return
             self._write_for_log_step(table)
 
@@ -357,7 +357,7 @@ class Step:
             self._write_for_output_step(backend, table, context, dry_run)
 
     def _should_skip_check(self, variables):
-        return "__no_check__" in variables and variables["__no_check__"] in ["TRUE", True, 1, "True", "true"]
+        return "__no_check__" in variables and str(variables["__no_check__"]).lower() in ["true", "1"]
 
     def is_template_statement(self):
         assert self.target_config is not None
@@ -389,6 +389,7 @@ class Step:
             False,
             SaveMode.overwrite,
         )
+        dry_run_verify_output_schema, dry_run_verify_output_schema_type = False, False
         for name, value in variables.items():
             if "__partition__" in name:
                 static_partition_name = name[len("__partition__") :]
@@ -399,11 +400,13 @@ class Step:
                     static_partition_value = backend.sql_expr.convert_partition_value(static_partition_name, value)
             if name.lower() == "save_mode" or name.lower() == "__save_mode__":
                 save_mode = SaveMode[value.lower()]
-            if name.lower() in [
-                "__create_hive_table__",
-                "__create_output_table__",
-            ]:
-                create_output_table = value in [True, "true", "TRUE", "True", 1, "1"]
+            true_values = [True, "true", "TRUE", "True", 1, "1"]
+            if name.lower() in ["__create_hive_table__", "__create_output_table__"]:
+                create_output_table = value in true_values
+            if name.lower() == "__dry_run_verify_output_schema__":
+                dry_run_verify_output_schema = value in true_values
+            if name.lower() == "__dry_run_verify_output_schema_type__":
+                dry_run_verify_output_schema_type = value in true_values
 
         if static_partition_name is not None:
             if static_partition_value is None or str(static_partition_value).strip() == "":
@@ -431,6 +434,10 @@ class Step:
                     partition_value = backend.sql_expr.for_value(static_partition_value)  # type: ignore
                     table = table.with_column(static_partition_name, partition_value)
             backend.create_temp_table(table, temp_table_name + "_output")  # type: ignore
+            if dry_run_verify_output_schema:
+                backend.verify_schema(
+                    Table(temp_table_name + "_output"), target_table, verify_type=dry_run_verify_output_schema_type
+                )
             self.collect_report(message="will not save data to data warehouse, since we are in dry run mode")
             # may need to provide a more accurate sql
             assert self.select_sql is not None

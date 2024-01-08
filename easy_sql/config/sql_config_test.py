@@ -9,6 +9,24 @@ from easy_sql.config.sql_config import (
 
 
 class EasySqlConfigTest(unittest.TestCase):
+    def test_extra_config(self):
+        config = EasySqlConfig.from_sql(
+            sql="""
+-- config: easy_sql.udf_file_path=test/sample_data_process.py
+-- config: easy_sql.func_file_path=test/sample_data_process.py
+-- config: easy_sql.spark_submit=/my/custom/spark-submit
+-- config: spark.test=1
+-- config: spark.files=test/sample_etl.spark.sql,test/sample_etl.postgres.sql,
+        """,
+            sql_file="",
+            extra_config=["easy_sql.udf_file_path=test/sample_data_process1.py", "spark.test=2"],
+        )
+        self.assertEqual(config.udf_file_path, "test/sample_data_process1.py")
+        self.assertEqual(
+            config.customized_backend_conf,
+            ["spark.test=1", "spark.files=test/sample_etl.spark.sql,test/sample_etl.postgres.sql,", "spark.test=2"],
+        )
+
     def test_parse_spark_config(self):
         _config = EasySqlConfig.from_sql(
             sql="""
@@ -16,6 +34,7 @@ class EasySqlConfigTest(unittest.TestCase):
 -- config: easy_sql.func_file_path=test/sample_data_process.py
 -- config: easy_sql.spark_submit=/my/custom/spark-submit
 -- config: spark.test=1
+-- config: spark.test=2
 -- config: spark.files=test/sample_etl.spark.sql,test/sample_etl.postgres.sql,
         """,
             sql_file="",
@@ -28,7 +47,8 @@ class EasySqlConfigTest(unittest.TestCase):
 
         self.assertEqual(config.spark_submit, "/my/custom/spark-submit")
         self.assertTrue(contains_conf("spark.master=yarn"))
-        self.assertTrue(contains_conf("spark.test=1"))
+        self.assertFalse(contains_conf("spark.test=1"))
+        self.assertTrue(contains_conf("spark.test=2"))
         self.assertEqual(find_conf("spark.files=")[0].count(","), 3)
 
     def test_parse_spark_config_with_relative_files(self):

@@ -17,6 +17,8 @@ As an example, if we defined variable `__partition__dt`, then dt will be the par
 - `__no_check__`: If true, will skip any `check` step defined by `-- target=check.xxx` for performance consideration.
 - `__no_log__`: If true, will skip any `log` step defined by `-- target=log.xxx` for performance consideration.
 - `__no_cache__`: If true, will create temporal table instead of cache table. This if for spark backend only. For the other backends, all the `cache` or `temp` table will be views.
+- `__dry_run_verify_output_schema__`: If true, will verify output table schema against the target table. Will fail if target table does not exist or there are columns in target table but not in the output query. Useful when need to do check in dryrun mode.
+- `__dry_run_verify_output_schema_type__`: Will be take into account when `__dry_run_verify_output_schema__` is true. If both `__dry_run_verify_output_schema__` and `__dry_run_verify_output_schema_type__` are true, will verify output table field types against the target table.
 - `__skip_all__`: If true, will skip execution of the following steps. Could be used when the partition of the input data does not exist.
 - `__exception_handler__`: When specified, the value must be a function call.
 The function call will be executed when there is an exception found during the execution of some step.

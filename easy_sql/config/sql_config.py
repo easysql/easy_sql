@@ -84,6 +84,8 @@ class EasySqlConfig:
         sql: Optional[str] = None,  # type: ignore
         system_config_prefix: str = "easy_sql.",
         base_dir: str = "",
+        *,
+        extra_config: List[str] | None = None,
     ) -> EasySqlConfig:
         assert sql_file is not None or sql is not None, "sql_file or sql must be set"
         if sql and sql_file:
@@ -96,7 +98,7 @@ class EasySqlConfig:
 
         customized_backend_conf: List[str] = []
         customized_easy_sql_conf: List[str] = []
-        for line in sql_lines:
+        for line in sql_lines + ([f"-- config: {c}" for c in extra_config or []]):
             if re.match(r"^-- \s*config:.*$", line):
                 config_value = get_value_by_splitter_and_strip(line, "config:")
                 if config_value.strip().lower().startswith(system_config_prefix):
