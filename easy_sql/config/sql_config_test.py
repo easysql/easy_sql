@@ -19,9 +19,9 @@ class EasySqlConfigTest(unittest.TestCase):
 -- config: spark.files=test/sample_etl.spark.sql,test/sample_etl.postgres.sql,
         """,
             sql_file="",
-            extra_config=["easy_sql.udf_file_path=test/sample_data_process1.py", "spark.test=2"],
+            extra_config=["easy_sql.udf_file_path=test/sample_etl.spark.sql", "spark.test=2"],
         )
-        self.assertEqual(config.udf_file_path, "test/sample_data_process1.py")
+        self.assertEqual(config.udf_file_path, "test/sample_etl.spark.sql")
         self.assertEqual(
             config.customized_backend_conf,
             ["spark.test=1", "spark.files=test/sample_etl.spark.sql,test/sample_etl.postgres.sql,", "spark.test=2"],
