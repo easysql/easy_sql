@@ -4,7 +4,7 @@ import copy
 import re
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from easy_sql.utils.sql_expr import CommentSubstitutor
+from easy_sql.utils.sql_expr import CommentSubstitutor, comment_start
 
 from ..logger import logger
 
@@ -127,7 +127,11 @@ class TemplatesContext:
 
             template = templates.get(template_name)
             assert template is not None, f"Content of template `{template_name}` is None, this should not happen!"
-            template = CommentSubstitutor().remove(template).strip("\n")
+            template = template.strip()
+            template_lines = template.split("\n")
+            if comment_start(template_lines[-1]) != -1:
+                # last line contains comment, add a new line to ensure it does affect the referencing sql
+                template = template + "\n"
             values = re.compile(r"\s*\w+\s*=\s*[^,)]+,?\s*", flags=re.IGNORECASE).findall(template_define_normalized)
             if values:
                 index = 0

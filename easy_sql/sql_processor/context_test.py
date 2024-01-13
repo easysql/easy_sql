@@ -8,7 +8,7 @@ class TemplateContextTest(unittest.TestCase):
     def test_should_replace_template(self):
         tc = TemplatesContext(True, {"a": "xx\n#{var}=abc, 123"})
         replaced = tc.replace_templates("??@{a(var=${abc})}??")
-        self.assertEquals("??xx\n${abc}=abc, 123??", replaced)
+        self.assertEqual("??xx\n${abc}=abc, 123??", replaced)
 
         # does not support var-func in template parameters
         replaced = tc.replace_templates("??@{a(var=${fn(abc)})}??")
@@ -16,37 +16,37 @@ class TemplateContextTest(unittest.TestCase):
 
         # if this is a comment, do not replace
         replaced = tc.replace_templates("??@{a(var=${abc})}?? --??@{a(var=${abc})}??")
-        self.assertEquals("??xx\n${abc}=abc, 123?? --??@{a(var=${abc})}??", replaced)
+        self.assertEqual("??xx\n${abc}=abc, 123?? --??@{a(var=${abc})}??", replaced)
         replaced = tc.replace_templates("-- ??@{a(var=${abc})}??")
-        self.assertEquals("-- ??@{a(var=${abc})}??", replaced)
+        self.assertEqual("-- ??@{a(var=${abc})}??", replaced)
 
     def test_multi_line_in_template_reference(self):
         tc = TemplatesContext(True, {"a": "xx\n#{var}=abc, #{var1} 123"})
         replaced = tc.replace_templates("??@{a(var=123\n,var1=234)}??")
-        self.assertEquals("??xx\n123=abc, 234 123??", replaced)
+        self.assertEqual("??xx\n123=abc, 234 123??", replaced)
 
         replaced = tc.replace_templates("??@{a(var=123,\nvar1=234)}??")
-        self.assertEquals("??xx\n123=abc, 234 123??", replaced)
+        self.assertEqual("??xx\n123=abc, 234 123??", replaced)
 
         replaced = tc.replace_templates("??@{a(\n  var\n=123\n,\nvar1=234)}??")
-        self.assertEquals("??xx\n123=abc, 234 123??", replaced)
+        self.assertEqual("??xx\n123=abc, 234 123??", replaced)
 
     def test_comment_line_in_template_reference(self):
         tc = TemplatesContext(True, {"a": "--xx\n#{var}=abc, #{var1} 123--abc\n--abc"})
         replaced = tc.replace_templates("??@{a(var=123\n,var1=234)}??")
-        self.assertEquals("??123=abc, 234 123??", replaced)
+        self.assertEqual("??--xx\n123=abc, 234 123--abc\n--abc\n??", replaced)
 
         tc = TemplatesContext(True, {"a": "--xx\n#{var}=abc, #{var1} 123--abc\n"})
         replaced = tc.replace_templates("??@{a(var=123\n,var1=234)}??")
-        self.assertEquals("??123=abc, 234 123??", replaced)
+        self.assertEqual("??--xx\n123=abc, 234 123--abc\n??", replaced)
 
         tc = TemplatesContext(True, {"a": "--xx\n#{var}=abc, #{var1} 123--abc"})
         replaced = tc.replace_templates("??@{a(var=123\n,var1=234)}??")
-        self.assertEquals("??123=abc, 234 123??", replaced)
+        self.assertEqual("??--xx\n123=abc, 234 123--abc\n??", replaced)
 
         tc = TemplatesContext(True, {"a": "\n#{var}=abc, #{var1} 123\n"})
         replaced = tc.replace_templates("??@{a(var=123\n,var1=234)}??")
-        self.assertEquals("??123=abc, 234 123??", replaced)
+        self.assertEqual("??123=abc, 234 123??", replaced)
 
 
 class VarsContextTest(unittest.TestCase):
