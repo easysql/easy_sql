@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, Tuple
+
+from easy_sql.sql_processor.common import SqlProcessorException
 
 from ...logger import logger
 from .base import Backend, Row, SaveMode, Table, TableMeta
@@ -158,7 +162,12 @@ class FlinkBackend(Backend):
         database = table.dbname if table.dbname else self.flink.get_current_database()
         from pyflink.table.catalog import ObjectPath
 
-        return self.flink.get_catalog(catalog).table_exists(ObjectPath(database, table.pure_table_name))
+        catalog = self.flink.get_catalog(catalog)
+        if not catalog:
+            raise SqlProcessorException(
+                f"Catalog {catalog} not exists when trying to check existence for table: {table}"
+            )
+        return catalog.table_exists(ObjectPath(database, table.pure_table_name))
 
     def save_table_sql(self, source_table: TableMeta, source_table_sql: str, target_table: TableMeta) -> str:
         columns = self.exec_native_sql_query(f"select * from {source_table.table_name}").get_schema().get_field_names()
@@ -175,8 +184,8 @@ class FlinkBackend(Backend):
         sink_table_name = target_table_meta.table_name
         if not self.table_exists(target_table_meta):
             raise Exception(
-                f"target table {sink_table_name} does not exist, "
-                f"cannot save table {source_table_name} to {sink_table_name}"
+                f"target table {sink_table_name} does not exist, cannot save table {source_table_name} to"
+                f" {sink_table_name}"
             )
 
         source_table = self._align_fields(source_table_meta, target_table_meta)
@@ -246,7 +255,7 @@ class FlinkTablesConfig:
     class Catalog:
         databases: Dict[str, FlinkTablesConfig.Database]
         temporary_tables: Dict[str, FlinkTablesConfig.Table]
-        options: str
+        options: str | Dict[str, str]
 
         @staticmethod
         def from_dict(data: dict) -> FlinkTablesConfig.Catalog:
@@ -272,8 +281,8 @@ class FlinkTablesConfig:
 
     @dataclass
     class Table:
-        schema: str
-        options: str | None = None
+        schema: str | List[str]
+        options: str | Dict[str, str] | None = None
         partition_by: str | None = None
         connector: str | None = None
 
@@ -281,18 +290,35 @@ class FlinkTablesConfig:
         def from_dict(data: dict) -> FlinkTablesConfig.Table:
             return FlinkTablesConfig.Table(**data)
 
-    @staticmethod
-    def from_yml(file_path: str | None) -> FlinkTablesConfig:
-        import yaml
+        @property
+        def normalized_schema(self) -> str:
+            return self.schema if isinstance(self.schema, str) else ",\n".join(self.schema) + "\n"
 
+    @staticmethod
+    def from_file(file_path: str | None) -> FlinkTablesConfig:
         if file_path is None:
-            logger.warn(
-                f"config file '{file_path}' does not exist or is not a file, will create an empty FlinkTablesConfig"
-            )
+            logger.warn(f"config file '{file_path}' not specified, will create an empty FlinkTablesConfig")
             return FlinkTablesConfig({}, {})
+        assert os.path.exists(file_path) and os.path.isfile(file_path), f"config file '{file_path}' not exists"
+        if file_path.lower().endswith(".json"):
+            return FlinkTablesConfig.from_json(file_path)
+        else:
+            if not (file_path.lower().endswith(".yml") or file_path.lower().endswith(".yaml")):
+                logger.warn("Config file does not ends with .yml or .yaml, will try to load it as yaml format.")
+            return FlinkTablesConfig.from_yml(file_path)
+
+    @staticmethod
+    def from_yml(file_path: str) -> FlinkTablesConfig:
+        import yaml
 
         with Path(file_path).open(encoding="utf8") as f:
             res: dict = yaml.safe_load(f)
+            return FlinkTablesConfig.from_dict(res)
+
+    @staticmethod
+    def from_json(file_path: str) -> FlinkTablesConfig:
+        with Path(file_path).open(encoding="utf8") as f:
+            res: dict = json.loads(f.read())
             return FlinkTablesConfig.from_dict(res)
 
     @staticmethod
@@ -306,7 +332,13 @@ class FlinkTablesConfig:
 
     def generate_catalog_ddl(self) -> Iterable[tuple[str, str]]:
         for name, catalog in self.catalogs.items():
-            ddl = f"CREATE CATALOG {name} with ({catalog.options})"
+            if isinstance(catalog.options, str):
+                options = catalog.options
+            elif isinstance(catalog.options, dict):
+                options = ", ".join([f"'{k}' = '{catalog.options[k]}'" for k in sorted(catalog.options.keys())])
+            else:
+                raise Exception(f"Unknown catalog option (should be str or dict): {catalog.options}")
+            ddl = f"CREATE CATALOG {name} with ({options})"
             yield name, ddl
 
     def generate_db_ddl(self) -> Iterable[str]:
@@ -332,27 +364,32 @@ class FlinkTablesConfig:
 
         partition_by_expr = f"partitioned by ({tb.partition_by})" if tb.partition_by else ""
         ddl = (
-            f'create {"temporary" if is_temporary else ""} table if not exists {tb_name} ({tb.schema})'
+            f'create {"temporary" if is_temporary else ""} table if not exists {tb_name} ({tb.normalized_schema})'
             f" {partition_by_expr} {options_expr}"
         )
         return ddl
 
     def _merge_table_options(self, tb: FlinkTablesConfig.Table) -> str | None:
         base_options = {}
-        tb_options = self.parse_options(tb.options or "")
+        assert (
+            isinstance(tb.options, (str, dict)) or tb.options is None
+        ), f"table options should be of type str or dict, found: {tb.options}"
+        tb_options = (
+            self.parse_options(tb.options or "") if isinstance(tb.options, str) or tb.options is None else tb.options
+        )
         connector_name = tb.connector
         if connector_name:
             base_options = self.get_connector_options(connector_name)
 
         base_options.update(tb_options)
-        merged_options = " , ".join([f"{k} = {v}" for k, v in base_options.items()])
+        merged_options = " , ".join([f"'{k}' = '{v}'" for k, v in base_options.items()])
         return merged_options
 
     def get_connector_options(self, name: str) -> Dict[str, str]:
         connector = self.connectors.get(name)
         if not connector:
             raise Exception(f"couldn't find connector {name} in {list(self.connectors.keys())}")
-        options = self.parse_options(connector.options)
+        options = self.parse_options(connector.options) if isinstance(connector.options, str) else connector.options
         return options
 
     @staticmethod
@@ -365,7 +402,7 @@ class FlinkTablesConfig:
                     continue
                 assert (
                     "=" in each_option
-                ), f"invalid option, must be of {{key}}={{value}}, found '{each_option}' in line '{line}'"
+                ), f"invalid option, must be of '{{key}}'='{{value}}', found '{each_option}' in line '{line}'"
                 key, value = each_option[: each_option.index("=")], each_option[each_option.index("=") + 1 :]
-                options[key.strip()] = value.strip()
+                options[key.strip(" '")] = value.strip(" '")
         return options
