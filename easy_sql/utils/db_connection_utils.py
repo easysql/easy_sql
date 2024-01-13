@@ -11,9 +11,9 @@ if TYPE_CHECKING:
 
 
 def _create_sqlalchemy_conn(flink_connector_config: Dict[str, str]) -> Optional[Connection]:
-    base_url = flink_connector_config["'url'"].strip("'")
-    username = flink_connector_config["'username'"].strip("'")
-    password = flink_connector_config["'password'"].strip("'")
+    base_url = flink_connector_config["url"]
+    username = flink_connector_config["username"]
+    password = flink_connector_config["password"]
     split_expr = "://"
     split_expr_index = base_url.index(split_expr)
     db_type = base_url[len("jdbc:") : split_expr_index]
