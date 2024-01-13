@@ -136,6 +136,7 @@ class EasySqlConfigTest(unittest.TestCase):
                 "flink.cmd=--parallelism 2",
                 "flink.cmd=-Djobmanager.memory.process.size=1024m",
                 "flink.cmd=-Dtaskmanager.memory.process.size=1024m",
+                "easy_sql.flink_tables_file_path=test/sample_etl.postgres.sql",
             ],
         )
         contains_conf = lambda c: len([_c for _c in config.flink_conf_command_args() if _c == c]) == 1
@@ -145,3 +146,7 @@ class EasySqlConfigTest(unittest.TestCase):
         self.assertTrue(contains_conf("-Djobmanager.memory.process.size=512m"))
         self.assertFalse(contains_conf("-Djobmanager.memory.process.size=1024m"))
         self.assertTrue(contains_conf("-Dtaskmanager.memory.process.size=1024m"))
+        self.assertTrue(
+            config.flink_tables_file_path is not None
+            and config.flink_tables_file_path.endswith("test/sample_etl.postgres.sql")
+        )

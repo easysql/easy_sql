@@ -66,6 +66,7 @@ class EasySqlConfig:
         input_tables: List[str],
         output_tables: List[str],
         base_dir: Optional[str] = None,
+        system_config_prefix: str = "easy_sql.",
     ):
         self.sql_file = sql_file
         self.sql = sql
@@ -77,6 +78,7 @@ class EasySqlConfig:
         self.resolved_udf_file_path = self._resolve_file(udf_file_path) if udf_file_path else None
         self.resolved_func_file_path = self._resolve_file(func_file_path) if func_file_path else None
         self.base_dir = base_dir
+        self.system_config_prefix = system_config_prefix
 
     @staticmethod
     def from_sql(
@@ -136,6 +138,7 @@ class EasySqlConfig:
             input_tables,
             output_tables,
             base_dir,
+            system_config_prefix,
         )
 
     @property
@@ -268,6 +271,12 @@ class FlinkBackendConfig:
     def __init__(self, config: EasySqlConfig, default_config: Optional[List[str]] = None) -> None:
         self.config = config
         self.user_default_conf = default_config or []
+        self.user_default_customized_easy_sql_conf = []
+        for config_value in self.user_default_conf:
+            if config_value.strip().lower().startswith(self.config.system_config_prefix):
+                self.user_default_customized_easy_sql_conf += [
+                    get_value_by_splitter_and_strip(config_value, self.config.system_config_prefix)
+                ]
 
     @property
     def flink_configurations(self) -> Dict[str, str]:
@@ -343,7 +352,7 @@ class FlinkBackendConfig:
         flink_tables_file_path = next(
             filter(
                 lambda c: get_key_by_splitter_and_strip(c) == "flink_tables_file_path",
-                self.config.customized_easy_sql_conf,
+                self.config.customized_easy_sql_conf + self.user_default_customized_easy_sql_conf,
             ),
             None,
         )
