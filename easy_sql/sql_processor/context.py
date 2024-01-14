@@ -163,12 +163,18 @@ class TemplatesContext:
             text = text.replace(template_define, template)
             self._log_replace_process(f"text after template replaced: {text}")
 
+            # recover the comment and substitute again to ensure no comment after template replacement
+            text = comment_substitutor.recover(text)
+            comment_substitutor = CommentSubstitutor()
+            text = comment_substitutor.substitute(text)
+
         text = comment_substitutor.recover(text)
         self._log_replace_process(f"text after template replaced: {text}")
 
         return text
 
     def _log_replace_process(self, message: str):
+        logger.info(message)
         if self.debug_log:
             logger.debug(message)
 
