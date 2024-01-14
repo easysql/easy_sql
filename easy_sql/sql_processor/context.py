@@ -119,7 +119,7 @@ class TemplatesContext:
         while tmpl_with_arg_pattern.search(text) or tmpl_no_arg_pattern.search(text):
             match_result = tmpl_with_arg_pattern.search(text) or tmpl_no_arg_pattern.search(text)
             template_define = match_result.group(0)  # type: ignore
-            self._log_replace_process(f"found template: {template_define}")
+            self._log_replace_process(f"found template: `{template_define}`")
             template_define_normalized = template_define.replace("\n", "")
             template_name = match_result.groups()[0]  # type: ignore
             if template_name not in templates:
@@ -130,7 +130,7 @@ class TemplatesContext:
             template = template.strip()
             template_lines = template.split("\n")
             if comment_start(template_lines[-1]) != -1:
-                # last line contains comment, add a new line to ensure it does affect the referencing sql
+                # last line contains comment, add a new line to ensure it does not affect the referencing sql
                 template = template + "\n"
             values = re.compile(r"\s*\w+\s*=\s*[^,)]+,?\s*", flags=re.IGNORECASE).findall(template_define_normalized)
             if values:
@@ -148,7 +148,19 @@ class TemplatesContext:
                     )
                     template = re.sub(re.escape(f"#{{{value_name}}}"), value, template, flags=re.IGNORECASE)
                     index += 1
-            text = re.sub(re.escape(template_define), template, text, flags=re.IGNORECASE)
+            # sometimes there will be issue when some special characters are in the template(e.g. `\s`),
+            # this could usually happen in comment
+            #   Traceback (most recent call last):
+            #       File "/usr/local/lib/python3.7/sre_parse.py", line 1015, in parse_template
+            #           this = chr(ESCAPES[this][1])
+            #       KeyError: '\\s'
+            # to reproduce: re.sub(re.escape('@{streaming_state_indicator_meta_cols}'), '\s', 'abc')
+            # change to simple text replacement to avoid this issue
+            # the previous version is:
+            #   text = re.sub(re.escape(template_define), template, text, flags=re.IGNORECASE)
+            # to debug this:
+            # print(f"template: `{template}`, template_define: `{template_define}`, text: `{text}`")
+            text = text.replace(template_define, template)
             self._log_replace_process(f"text after template replaced: {text}")
 
         text = comment_substitutor.recover(text)
