@@ -522,6 +522,14 @@ class Step:
         self.reporter_collector.collect_report(self, status=status, message=message)
 
 
+class IncludeResolver:
+    def resolve_include(self, include_file: str) -> str | None:
+        """
+        Resolve include file to sql string. If could not resolve, return None.
+        """
+        raise NotImplementedError()
+
+
 class StepFactory:
     def __init__(
         self,
@@ -535,7 +543,7 @@ class StepFactory:
         self.executed_sql_transformer = executed_sql_transformer
         self.base_dir = base_dir
 
-    def create_from_sql(self, sql: str, includes: Optional[Dict[str, str]] = None) -> List[Step]:
+    def create_from_sql(self, sql: str, includes: Dict[str, str] | IncludeResolver | None = None) -> List[Step]:
         includes = includes or {}
         resolved_sql = self._resolve_include(sql, includes)
         lines = resolved_sql.split("\n")
@@ -579,7 +587,7 @@ class StepFactory:
             index += 1
         return step_list
 
-    def _resolve_include(self, sql, includes: Dict[str, str]) -> str:
+    def _resolve_include(self, sql, includes: Dict[str, str] | IncludeResolver | None = None) -> str:
         include_sql_pattern = r"^--\s*include\s*=\s*(.*\.sql)\s*$"
         include_py_pattern = r"^--\s*include\s*=\s*(.*)\.(\w+|\*)$"
         lines = sql.split("\n")
@@ -596,9 +604,14 @@ class StepFactory:
                         f"bug got config line {line_stripped}"
                     )
                 file = matches.group(1)
-                if file in includes:
+                if isinstance(includes, dict) and file in includes:
                     resoloved_sqls.append(includes[file])
                     continue
+                if isinstance(includes, IncludeResolver):
+                    resolved_sql = includes.resolve_include(file)
+                    if resolved_sql is not None:
+                        resoloved_sqls.append(resolved_sql)
+                        continue
 
                 try:
                     import importlib

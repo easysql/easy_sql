@@ -174,7 +174,6 @@ class TemplatesContext:
         return text
 
     def _log_replace_process(self, message: str):
-        logger.info(message)
         if self.debug_log:
             logger.debug(message)
 
