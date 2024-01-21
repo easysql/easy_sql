@@ -114,7 +114,7 @@ class SparkBackend(Backend):
         exclude = exclude or []
         for table in self.spark.catalog.listTables("default"):
             if table.isTemporary and table.name not in exclude:
-                print(f"dropping temp view {table.name}")
+                logger.info(f"dropping temp view {table.name}")
                 self.spark.catalog.dropTempView(table.name)
 
     def create_empty_table(self):
@@ -127,6 +127,7 @@ class SparkBackend(Backend):
 
     def create_cache_table(self, table: SparkTable, name: str):
         table.df.createOrReplaceTempView(name)
+        logger.info(f"caching table: {name}")
         self.spark.catalog.cacheTable(name)
 
     def broadcast_table(self, table: SparkTable, name: str):

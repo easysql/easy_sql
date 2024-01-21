@@ -375,7 +375,7 @@ class TestCase:
                         f"parse test case at row {row_start_idx + 1 + i} failed: there must be value set for INCLUDES,"
                         " found None"
                     )
-                self.includes[include_name] = include_value
+                self.includes[include_name] = include_value  # type: ignore
                 log_debug(
                     f"find includes at row {row_start_idx + 1}: include_name={include_name},"
                     f" include_value={include_value}"
@@ -616,7 +616,7 @@ class TestDataFile:
         cases_start_indices = []
         for row_idx, row in enumerate(sheet.rows):
             cells = list(row)
-            if cells[0].value and cells[0].value.strip() == "CASE":
+            if cells[0].value and str(cells[0].value).strip() == "CASE":
                 if last_row_idx == -1:
                     last_row_idx = row_idx
                 log_debug(f"add case at: {row_idx}")
