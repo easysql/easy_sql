@@ -599,6 +599,26 @@ class TestDataFile:
         self.wb = openpyxl.load_workbook(self.test_data_file, data_only=True)
         self.backend = backend
 
+    @staticmethod
+    def parse_from_file(
+        test_data_file,
+        table_column_types: TableColumnTypes,
+        sql_reader: SqlReader | None = None,
+        backend: str = "spark",
+    ) -> List[TestCase]:
+        if test_data_file.endswith(".xlsx"):
+            sql_reader = sql_reader or SqlReader()
+            cases = TestDataFile(test_data_file, sql_reader=sql_reader, backend=backend).parse_test_cases(
+                table_column_types
+            )
+        elif test_data_file.endswith(".json"):
+            with open(test_data_file, "r") as f:
+                cases = json.loads(f.read(), object_hook=json_util.object_hook)
+            cases = [TestCase.from_dict(case_dict) for case_dict in cases]
+        else:
+            raise AssertionError(f"unsupported format of test file: {test_data_file}")
+        return cases
+
     def parse_test_cases(self, table_column_types: TableColumnTypes) -> List[TestCase]:
         wb = self.wb
         test_cases = []
@@ -811,8 +831,8 @@ class TestCaseRunner:
             tempview_name = [tv for tv in tempviews if tv == output.name]
         if len(tempview_name) == 0:
             raise Exception(
-                f"output `{output.name}` not found after execute test: {case.simple_sql_name}.{case.name}. "
-                f"All temporary views are: {tempviews}"
+                f"output `{output.name}` not found after execute test: {case.simple_sql_name}.{case.name}. All"
+                f" temporary views are: {tempviews}"
             )
         elif len(tempview_name) > 1:
             raise Exception(
@@ -938,17 +958,7 @@ class SqlTester:
             sys.exit(1)
 
     def parse_test_cases(self, test_data_file, table_column_types: TableColumnTypes) -> List[TestCase]:
-        if test_data_file.endswith(".xlsx"):
-            cases = TestDataFile(test_data_file, sql_reader=self.sql_reader, backend=self.backend).parse_test_cases(
-                table_column_types
-            )
-        elif test_data_file.endswith(".json"):
-            with open(test_data_file, "r") as f:
-                cases = json.loads(f.read(), object_hook=json_util.object_hook)
-            cases = [TestCase.from_dict(case_dict) for case_dict in cases]
-        else:
-            raise AssertionError(f"unsupported format of test file: {test_data_file}")
-        return cases
+        return TestDataFile.parse_from_file(test_data_file, table_column_types, self.sql_reader, self.backend)
 
     def run_case(self, case: TestCase) -> bool:
         try:

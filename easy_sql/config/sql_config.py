@@ -141,6 +141,31 @@ class EasySqlConfig:
             system_config_prefix,
         )
 
+    def update_default_easy_sql_conf(self, customized_conf: List[str]):
+        customized_easy_sql_conf = []
+        for config_value in customized_conf:
+            if config_value.strip().lower().startswith(self.system_config_prefix):
+                customized_easy_sql_conf += [get_value_by_splitter_and_strip(config_value, self.system_config_prefix)]
+        # add the default config value to the front, it could be overwritten by the latter sql config
+        self.customized_easy_sql_conf = customized_easy_sql_conf + self.customized_easy_sql_conf
+        for c in self.customized_easy_sql_conf:
+            if c.startswith("udf_file_path"):
+                udf_file_path = get_value_by_splitter_and_strip(c)
+                self.udf_file_path = (
+                    resolve_file(udf_file_path, relative_to=(self.base_dir or ""))
+                    if udf_file_path and "/" in udf_file_path
+                    else udf_file_path
+                )
+            elif c.startswith("func_file_path"):
+                func_file_path = get_value_by_splitter_and_strip(c)
+                self.func_file_path = (
+                    resolve_file(func_file_path, relative_to=(self.base_dir or ""))
+                    if func_file_path and "/" in func_file_path
+                    else func_file_path
+                )
+            elif c.startswith("scala_udf_initializer"):
+                self.scala_udf_initializer = get_value_by_splitter_and_strip(c)
+
     @property
     def tables(self) -> List[str]:
         return list({t.strip() for t in self.input_tables + self.output_tables})
@@ -226,12 +251,14 @@ class SparkBackendConfig:
         self.config = config
         self.user_default_conf = default_config
         self._default_spark_submit = spark_submit
+        self.config.update_default_easy_sql_conf(default_config or [])
 
     @property
     def spark_submit(self):
         # 默认情况下使用系统中默认spark版本下的spark-submit
         # sql代码中指定了easy_sql.spark_submit时，优先级高于default配置
         spark_submit = self._default_spark_submit or "spark-submit"
+        # if multiple config fould, the last config takes precedence
         for c in self.config.customized_easy_sql_conf:
             if c.startswith("spark_submit"):
                 spark_submit = get_value_by_splitter_and_strip(c)
@@ -277,6 +304,7 @@ class FlinkBackendConfig:
                 self.user_default_customized_easy_sql_conf += [
                     get_value_by_splitter_and_strip(config_value, self.config.system_config_prefix)
                 ]
+        self.config.update_default_easy_sql_conf(default_config or [])
 
     @property
     def flink_configurations(self) -> Dict[str, str]:

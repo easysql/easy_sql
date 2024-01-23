@@ -13,7 +13,6 @@ class EasySqlConfigTest(unittest.TestCase):
         config = EasySqlConfig.from_sql(
             sql="""
 -- config: easy_sql.udf_file_path=test/sample_data_process.py
--- config: easy_sql.func_file_path=test/sample_data_process.py
 -- config: easy_sql.spark_submit=/my/custom/spark-submit
 -- config: spark.test=1
 -- config: spark.files=test/sample_etl.spark.sql,test/sample_etl.postgres.sql,
@@ -26,6 +25,18 @@ class EasySqlConfigTest(unittest.TestCase):
             config.customized_backend_conf,
             ["spark.test=1", "spark.files=test/sample_etl.spark.sql,test/sample_etl.postgres.sql,", "spark.test=2"],
         )
+
+        config.update_default_easy_sql_conf(
+            [
+                "easy_sql.udf_file_path=test/sample_etl.spark.sql",
+                "easy_sql.scala_udf_initializer=abc",
+                "easy_sql.func_file_path=test/sample_data_process.py",
+                "spark.test=2",
+            ]
+        )
+        self.assertEqual(config.udf_file_path, "test/sample_etl.spark.sql")
+        self.assertEqual(config.func_file_path, "test/sample_data_process.py")
+        self.assertEqual(config.scala_udf_initializer, "abc")
 
     def test_parse_spark_config(self):
         _config = EasySqlConfig.from_sql(

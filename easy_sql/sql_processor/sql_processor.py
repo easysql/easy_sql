@@ -25,6 +25,7 @@ def extract_funcs_from_pyfile(funcs_py_file):
     func_mod = importlib.import_module(os.path.basename(funcs_py_file)[:-3])
     exported_funcs = func_mod.__all__ if hasattr(func_mod, "__all__") else dir(func_mod)
     funcs = {func: getattr(func_mod, func) for func in exported_funcs if callable(getattr(func_mod, func))}
+    logger.info(f"extracted {len(funcs)} funcs from pyfile {funcs_py_file}: {funcs}")
     return funcs
 
 
