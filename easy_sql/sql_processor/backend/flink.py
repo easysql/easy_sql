@@ -188,7 +188,7 @@ class FlinkBackend(Backend):
                 f" {sink_table_name}"
             )
 
-        source_table = self._align_fields(source_table_meta, target_table_meta)
+        source_table: PyFlinkTable = self._align_fields(source_table_meta, target_table_meta)
 
         override_insert = save_mode == SaveMode.overwrite
         if self.streaming_insert_stmts is not None:
@@ -199,7 +199,7 @@ class FlinkBackend(Backend):
             logger.info(f"save table {source_table_name} to {sink_table_name}")
             source_table.execute_insert(sink_table_name, overwrite=override_insert)
 
-    def _align_fields(self, source_table_meta: TableMeta, target_table_meta: TableMeta):
+    def _align_fields(self, source_table_meta: TableMeta, target_table_meta: TableMeta) -> PyFlinkTable:
         from pyflink.table.expressions import col, lit
 
         source_table = self.flink.from_path(source_table_meta.table_name)
@@ -231,7 +231,9 @@ class FlinkBackend(Backend):
             self.exec_native_sql(ddl)
 
     def add_jars(self, jars_path: List[str]):
-        self.flink.get_config().set("pipeline.jars", f'{";".join([f"file://{path}" for path in jars_path])}')
+        jars = f'{";".join([f"file://{os.path.abspath(path)}" for path in jars_path])}'
+        self.flink.get_config().set("pipeline.jars", jars)
+        self.flink.get_config().set("pipeline.classpaths", jars)
 
     def set_configurations(self, configs: dict):
         for c in configs:

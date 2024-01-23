@@ -1,6 +1,6 @@
 from typing import Callable, Dict, List, Optional, Tuple
 
-from easy_sql.sql_processor.funcs_flink import SetConfigFuncs
+from easy_sql.sql_processor.funcs_flink import LangFuncs, SetConfigFuncs
 
 from .backend import Backend, FlinkBackend, SparkBackend
 from .backend.rdb import RdbBackend
@@ -145,6 +145,7 @@ class FuncRunner:
             "test_run_etl": test_funcs.test_run_etl,
             "exec_sql_in_source": test_funcs.exec_sql_in_source,
             "set_config": SetConfigFuncs(backend).set_config,
+            "call_java": LangFuncs(backend).call_java,
         }
 
     @staticmethod

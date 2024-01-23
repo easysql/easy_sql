@@ -122,3 +122,20 @@ class TestFuncs(BaseTestFuncs):
                     fm.stop_cluster()
         else:
             run_etl(etl_file)
+
+
+class LangFuncs:
+    def __init__(self, backend: FlinkBackend) -> None:
+        self.backend = backend
+
+    def call_java(self, cls: str, func_name: str, *args) -> str:
+        from py4j.java_gateway import java_import
+        from pyflink.java_gateway import get_gateway
+
+        gw = get_gateway()
+        java_import(gw.jvm, cls)
+        func = eval(f"gw.jvm.{cls}.{func_name}", {"gw": gw})
+        stream_env = (
+            self.backend.flink_stream_env._j_stream_execution_environment if self.backend.flink_stream_env else None
+        )
+        return func(stream_env, self.backend.flink._j_tenv, *args)
