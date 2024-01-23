@@ -80,6 +80,24 @@ class EasySqlConfig:
         self.base_dir = base_dir
         self.system_config_prefix = system_config_prefix
 
+    def describe(self):
+        return (
+            f"sql_file: {self.sql_file}\n"
+            f"sql: {self.sql}\n"
+            f"backend: {self.backend}\n"
+            f"customized_backend_conf: {self.customized_backend_conf}\n"
+            f"customized_easy_sql_conf: {self.customized_easy_sql_conf}\n"
+            f"udf_file_path: {self.udf_file_path}\n"
+            f"func_file_path: {self.func_file_path}\n"
+            f"scala_udf_initializer: {self.scala_udf_initializer}\n"
+            f"input_tables: {self.input_tables}\n"
+            f"output_tables: {self.output_tables}\n"
+            f"resolved_udf_file_path: {self.resolved_udf_file_path}\n"
+            f"resolved_func_file_path: {self.resolved_func_file_path}\n"
+            f"base_dir: {self.base_dir}\n"
+            f"system_config_prefix: {self.system_config_prefix}\n"
+        )
+
     @staticmethod
     def from_sql(
         sql_file: Optional[str] = None,
@@ -165,6 +183,8 @@ class EasySqlConfig:
                 )
             elif c.startswith("scala_udf_initializer"):
                 self.scala_udf_initializer = get_value_by_splitter_and_strip(c)
+        self.resolved_udf_file_path = self._resolve_file(self.udf_file_path) if self.udf_file_path else None
+        self.resolved_func_file_path = self._resolve_file(self.func_file_path) if self.func_file_path else None
 
     @property
     def tables(self) -> List[str]:

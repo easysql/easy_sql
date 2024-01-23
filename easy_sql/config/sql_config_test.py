@@ -37,6 +37,7 @@ class EasySqlConfigTest(unittest.TestCase):
         self.assertEqual(config.udf_file_path, "test/sample_etl.spark.sql")
         self.assertEqual(config.func_file_path, "test/sample_data_process.py")
         self.assertEqual(config.scala_udf_initializer, "abc")
+        self.assertTrue("sample_data_process.py" in config.describe())
 
     def test_parse_spark_config(self):
         _config = EasySqlConfig.from_sql(
