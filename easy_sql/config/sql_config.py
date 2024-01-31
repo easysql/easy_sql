@@ -439,12 +439,12 @@ class FlinkBackendConfig:
         for c in default_conf + self.user_default_conf + config.customized_backend_conf:
             if get_key_by_splitter_and_strip(c) == "flink.cmd":
                 flink_cmd_config_line = get_value_by_splitter_and_strip(c)
+                if flink_cmd_config_line.startswith("-D"):
+                    jvm_arg_key = get_key_by_splitter_and_strip(flink_cmd_config_line)
+                    jvm_arg_value = get_value_by_splitter_and_strip(flink_cmd_config_line)
+                    jvm_args[jvm_arg_key] = jvm_arg_value
+                    continue
                 if " " not in flink_cmd_config_line:
-                    if "-D" in flink_cmd_config_line:
-                        jvm_arg_key = get_key_by_splitter_and_strip(flink_cmd_config_line)
-                        jvm_arg_value = get_value_by_splitter_and_strip(flink_cmd_config_line)
-                        jvm_args[jvm_arg_key] = jvm_arg_value
-                        continue
                     key = flink_cmd_config_line
                     value = ""
                 else:
