@@ -254,11 +254,12 @@ class SparkBackend(Backend):
         # to resolve issue: pyspark.sql.utils.AnalysisException: Cannot overwrite a path that is also being read from.
         # refer: https://stackoverflow.com/questions/38746773/read-from-a-hive-table-and-write-back-to-it-using-spark-sql
         temp_res = self.spark.createDataFrame(temp_res.rdd, temp_res.schema)
-        temp_res.createOrReplaceTempView("res")
+        temp_res_name = f"{source_table_meta.pure_table_name}__result__{id(temp_res)}"
+        temp_res.createOrReplaceTempView(temp_res_name)
 
         save_sql = (
             f"insert {'into' if save_mode == SaveMode.append else save_mode.name} table"
-            f" {target_table_meta.table_name} {partition_expr} select * from res"
+            f" {target_table_meta.table_name} {partition_expr} select * from {temp_res_name}"
         )
         self.exec_native_sql(save_sql)
 
