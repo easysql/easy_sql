@@ -38,11 +38,11 @@ class SqlProcessorDebugger:
             templates or {},
         )
         self.backend = backend
+        self.skip_duplicate_include = skip_duplicate_include
         self.sql_processor = self._create_sql_processor()
         self.steps = self.sql_processor.step_list
         self._current_step_index = -1
         self.initial_temp_views = self.tempviews
-        self.skip_duplicate_include = skip_duplicate_include
 
     def _create_sql_processor(self) -> SqlProcessor:
         import copy
