@@ -56,7 +56,16 @@ class BackendProcessor:
         try:
             all_vars = self._pre_defined_vars(backend)
             all_vars.update(parse_vars(vars))
-            self._run_with_vars(backend, all_vars, dry_run, report_skip_templates=report_skip_templates)
+            skip_duplicate_include = (
+                self.config.skip_duplicate_include if self.config.skip_duplicate_include is not None else False
+            )
+            self._run_with_vars(
+                backend,
+                all_vars,
+                dry_run,
+                report_skip_templates=report_skip_templates,
+                skip_duplicate_include=skip_duplicate_include,
+            )
         finally:
             backend.clean()
 
@@ -70,7 +79,12 @@ class BackendProcessor:
         return backend.exec_native_sql(prepare_sql)
 
     def _run_with_vars(
-        self, backend: Backend, variables: Dict[str, Any], dry_run: bool, report_skip_templates: bool = False
+        self,
+        backend: Backend,
+        variables: Dict[str, Any],
+        dry_run: bool,
+        report_skip_templates: bool = False,
+        skip_duplicate_include: bool = False,
     ):
         config = self.config
         sql_processor = SqlProcessor(
@@ -80,6 +94,7 @@ class BackendProcessor:
             scala_udf_initializer=config.scala_udf_initializer,
             config=config,
             report_skip_templates=report_skip_templates,
+            skip_duplicate_include=skip_duplicate_include,
         )
         if config.resolved_udf_file_path:
             sql_processor.register_udfs_from_pyfile(config.resolved_udf_file_path)

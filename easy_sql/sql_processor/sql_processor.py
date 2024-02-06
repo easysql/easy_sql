@@ -63,6 +63,7 @@ class SqlProcessor:
         config: Any = None,
         executed_sql_transformer: Optional[ExecutedSqlTransformer] = None,
         base_dir: Optional[str] = None,
+        skip_duplicate_include: bool = False,
     ):
         backend = backend if isinstance(backend, (Backend,)) else SparkBackend(spark=backend)
         self.backend = backend
@@ -83,7 +84,11 @@ class SqlProcessor:
             vars_context, TemplatesContext(debug_log=log_var_tmpl_replace, templates=templates), extra_cols=extra_cols
         )
         self.step_factory = StepFactory(
-            self.reporter, self.func_runner, executed_sql_transformer=executed_sql_transformer, base_dir=base_dir
+            self.reporter,
+            self.func_runner,
+            executed_sql_transformer=executed_sql_transformer,
+            base_dir=base_dir,
+            skip_duplicate_include=skip_duplicate_include,
         )
 
         self.step_list = self.step_factory.create_from_sql(self.sql, includes)
@@ -92,6 +97,7 @@ class SqlProcessor:
         self.config = config
         self.sql_collector = SqlCollector()
         self.base_dir = base_dir
+        self.skip_duplicate_include = skip_duplicate_include
 
         SqlProcessor._current_context = self.context
         SqlProcessor._current_backend = self.backend

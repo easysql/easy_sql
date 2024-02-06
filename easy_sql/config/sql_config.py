@@ -67,6 +67,7 @@ class EasySqlConfig:
         output_tables: List[str],
         base_dir: Optional[str] = None,
         system_config_prefix: str = "easy_sql.",
+        skip_duplicate_include: bool | None = None,
     ):
         self.sql_file = sql_file
         self.sql = sql
@@ -79,6 +80,7 @@ class EasySqlConfig:
         self.resolved_func_file_path = self._resolve_file(func_file_path) if func_file_path else None
         self.base_dir = base_dir
         self.system_config_prefix = system_config_prefix
+        self.skip_duplicate_include = skip_duplicate_include
 
     def describe(self):
         return (
@@ -96,6 +98,7 @@ class EasySqlConfig:
             f"resolved_func_file_path: {self.resolved_func_file_path}\n"
             f"base_dir: {self.base_dir}\n"
             f"system_config_prefix: {self.system_config_prefix}\n"
+            f"skip_duplicate_include: {self.skip_duplicate_include}\n"
         )
 
     @staticmethod
@@ -105,6 +108,7 @@ class EasySqlConfig:
         system_config_prefix: str = "easy_sql.",
         base_dir: str = "",
         *,
+        default_config: List[str] | None = None,
         extra_config: List[str] | None = None,
     ) -> EasySqlConfig:
         assert sql_file is not None or sql is not None, "sql_file or sql must be set"
@@ -118,7 +122,12 @@ class EasySqlConfig:
 
         customized_backend_conf: List[str] = []
         customized_easy_sql_conf: List[str] = []
-        for line in sql_lines + ([f"-- config: {c}" for c in extra_config or []]):
+        sql_lines = (
+            [f"-- config: {c}" for c in default_config or []]
+            + sql_lines
+            + [f"-- config: {c}" for c in extra_config or []]
+        )
+        for line in sql_lines:
             if re.match(r"^-- \s*config:.*$", line):
                 config_value = get_value_by_splitter_and_strip(line, "config:")
                 if config_value.strip().lower().startswith(system_config_prefix):
@@ -126,7 +135,7 @@ class EasySqlConfig:
                 else:
                     customized_backend_conf += [config_value]
 
-        udf_file_path, func_file_path, scala_udf_initializer = None, None, None
+        udf_file_path, func_file_path, scala_udf_initializer, skip_duplicate_include = None, None, None, None
         for c in customized_easy_sql_conf:
             if c.startswith("udf_file_path"):
                 udf_file_path = get_value_by_splitter_and_strip(c)
@@ -144,6 +153,8 @@ class EasySqlConfig:
                 )
             elif c.startswith("scala_udf_initializer"):
                 scala_udf_initializer = get_value_by_splitter_and_strip(c)
+            elif c.startswith("skip_duplicate_include"):
+                skip_duplicate_include = get_value_by_splitter_and_strip(c).lower() in ["1", "true"]
         return EasySqlConfig(
             sql_file,
             sql,
@@ -157,6 +168,7 @@ class EasySqlConfig:
             output_tables,
             base_dir,
             system_config_prefix,
+            skip_duplicate_include=skip_duplicate_include,
         )
 
     def update_default_easy_sql_conf(self, customized_conf: List[str]):
@@ -183,6 +195,8 @@ class EasySqlConfig:
                 )
             elif c.startswith("scala_udf_initializer"):
                 self.scala_udf_initializer = get_value_by_splitter_and_strip(c)
+            elif c.startswith("skip_duplicate_include"):
+                self.skip_duplicate_include = get_value_by_splitter_and_strip(c).lower() in ["1", "true"]
         self.resolved_udf_file_path = self._resolve_file(self.udf_file_path) if self.udf_file_path else None
         self.resolved_func_file_path = self._resolve_file(self.func_file_path) if self.func_file_path else None
 
@@ -330,22 +344,18 @@ class FlinkBackendConfig:
     def flink_configurations(self) -> Dict[str, str]:
         # refer: https://nightlies.apache.org/flink/flink-docs-master/docs/dev/python/python_config/
         # refer: https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/config/
-        configs = dict(
-            [
-                KV.from_config(config).as_tuple()
-                for config in self.user_default_conf or []
-                if config and not config.startswith("-")
-            ]
-        )
-        configs.update(
-            {
-                get_value_by_splitter_and_strip(
-                    get_key_by_splitter_and_strip(arg), "flink."
-                ): get_value_by_splitter_and_strip(arg)
-                for arg in self.config.customized_backend_conf
-                if arg.startswith("flink.") and not arg.startswith("flink.cmd")
-            }
-        )
+        configs = dict([
+            KV.from_config(config).as_tuple()
+            for config in self.user_default_conf or []
+            if config and not config.startswith("-")
+        ])
+        configs.update({
+            get_value_by_splitter_and_strip(
+                get_key_by_splitter_and_strip(arg), "flink."
+            ): get_value_by_splitter_and_strip(arg)
+            for arg in self.config.customized_backend_conf
+            if arg.startswith("flink.") and not arg.startswith("flink.cmd")
+        })
 
         file_keys = ["python.archives", "python.files", "python.requirements", "pipeline.jars"]
         for k in file_keys:

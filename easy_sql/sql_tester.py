@@ -321,12 +321,10 @@ class TestCase:
             for attr in dir(self)
             if not attr.startswith("_") and not callable(getattr(self, attr))
         }
-        data.update(
-            {
-                "inputs": [table_data.as_dict() for table_data in self.inputs],
-                "outputs": [table_data.as_dict() for table_data in self.outputs],
-            }
-        )
+        data.update({
+            "inputs": [table_data.as_dict() for table_data in self.inputs],
+            "outputs": [table_data.as_dict() for table_data in self.outputs],
+        })
         return data
 
     @staticmethod
@@ -889,6 +887,7 @@ class SqlTester:
         work_dir: Optional[str] = None,
         backend: str = "spark",
         scala_udf_initializer: Optional[str] = None,
+        skip_duplicate_include: bool = False,
     ):
         if work_dir is not None:
             work_path.set_work_path(os.path.abspath(work_dir))
@@ -899,7 +898,13 @@ class SqlTester:
             else:
                 vars = case.vars
             return SqlProcessor(
-                backend, sql, [], variables=vars, scala_udf_initializer=scala_udf_initializer, includes=case.includes
+                backend,
+                sql,
+                [],
+                variables=vars,
+                scala_udf_initializer=scala_udf_initializer,
+                includes=case.includes,
+                skip_duplicate_include=skip_duplicate_include,
             )
 
         self.sql_processor_creator = sql_processor_creator or create_sql_processor
@@ -989,7 +994,9 @@ class SqlTester:
         )
         import jinja2
 
-        env = jinja2.Environment(loader=jinja2.DictLoader({"py_file_tpl": f"""import os
+        env = jinja2.Environment(
+            loader=jinja2.DictLoader({
+                "py_file_tpl": f"""import os
 import unittest
 import sys
 import importlib
@@ -1020,7 +1027,9 @@ class SqlTest(unittest.TestCase):
 {{% endfor %}}
 if __name__ == '__main__':
     unittest.main()
-"""}))
+"""
+            })
+        )
         with open(py_file, "wb") as f:
             env.get_template("py_file_tpl").stream(cases=cases).dump(f, encoding="utf8")
             logger.info(f"created file: {py_file}")

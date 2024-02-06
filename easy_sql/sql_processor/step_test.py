@@ -35,14 +35,16 @@ class StepConfigTest(unittest.TestCase):
         --comment
 select * from a
         """.strip(),
-            SqlCleaner().clean_sql("""
+            SqlCleaner().clean_sql(
+                """
         -- comment
         with a as (select 1 as a) -- comment
         --comment
         select * from a -- comment
         ;
         --comment
-        """),
+        """
+            ),
         )
 
     def test_should_clean_sql_with_semicolon_before_comment(self):
@@ -52,14 +54,16 @@ select * from a
         --comment
 select * from a
         """.strip(),
-            SqlCleaner().clean_sql("""
+            SqlCleaner().clean_sql(
+                """
         -- comment
         with a as (select 1 as a) -- comment
         --comment
         select * from a; -- comment
         ;
         --comment
-        """),
+        """
+            ),
         )
 
     def test_should_read_sql_correctly(self):
@@ -73,6 +77,34 @@ select ';' as a
         self.assertEquals(steps[0].target_config.name, "test")
         assert steps[0].select_sql is not None
         self.assertEquals(steps[0].select_sql.strip(), "select ';' as a")
+
+    def test_should_skip_duplicate_include(self):
+        sql0 = """
+-- target=temp.test
+select 1 as a
+        """
+        sql1 = """
+-- include 0 start
+-- include=0.sql
+        """
+        sql = """
+-- outer include start
+-- include=1.sql
+-- include=1.sql
+-- include=0.sql
+        """
+        sql_expected = """
+-- outer include start
+-- include 0 start
+-- target=temp.test
+select 1 as a
+"""
+        sf = StepFactory(None, None, skip_duplicate_include=True)  # type: ignore
+        sf.create_from_sql(sql, {"0.sql": sql0, "1.sql": sql1})
+        print(sf.resolved_sql)
+        assert (
+            "\n".join([line.strip() for line in sf.resolved_sql.splitlines() if line.strip()]) == sql_expected.strip()
+        )
 
 
 if __name__ == "__main__":

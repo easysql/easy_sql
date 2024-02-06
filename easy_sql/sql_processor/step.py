@@ -537,16 +537,19 @@ class StepFactory:
         func_runner: FuncRunner,
         executed_sql_transformer: Optional[ExecutedSqlTransformer] = None,
         base_dir: Optional[str] = None,
+        skip_duplicate_include: bool = False,
     ):
         self.reporter = reporter
         self.func_runner = func_runner
         self.executed_sql_transformer = executed_sql_transformer
         self.base_dir = base_dir
+        self.skip_duplicate_include = skip_duplicate_include
+        self.resolved_sql = ""
 
     def create_from_sql(self, sql: str, includes: Dict[str, str] | IncludeResolver | None = None) -> List[Step]:
         includes = includes or {}
-        resolved_sql = self._resolve_include(sql, includes)
-        lines = resolved_sql.split("\n")
+        self.resolved_sql = self._resolve_include(sql, includes)
+        lines = self.resolved_sql.split("\n")
 
         index = 0
         sql_parts = []
@@ -587,7 +590,10 @@ class StepFactory:
             index += 1
         return step_list
 
-    def _resolve_include(self, sql, includes: Dict[str, str] | IncludeResolver | None = None) -> str:
+    def _resolve_include(
+        self, sql, includes: Dict[str, str] | IncludeResolver | None = None, resolved_includes: List[str] | None = None
+    ) -> str:
+        resolved_includes = resolved_includes or []
         include_sql_pattern = r"^--\s*include\s*=\s*(.*\.sql)\s*$"
         include_py_pattern = r"^--\s*include\s*=\s*(.*)\.(\w+|\*)$"
         lines = sql.split("\n")
@@ -595,15 +601,12 @@ class StepFactory:
         for _, line in enumerate(lines):
             line = remove_semicolon_from_line(line)
             line_stripped = line.strip()
-            if re.match(include_sql_pattern, line_stripped, flags=re.IGNORECASE):
-                matches = re.match(include_sql_pattern, line_stripped, flags=re.IGNORECASE)
-                assert matches is not None
-                if len(matches.groups()) != 1:
-                    raise SqlProcessorException(
-                        "parse include config failed. must provide complete module name and the sql variable name."
-                        f"bug got config line {line_stripped}"
-                    )
+            matches = re.match(include_sql_pattern, line_stripped, flags=re.IGNORECASE)
+            if matches:
                 file = matches.group(1)
+                if file in resolved_includes and self.skip_duplicate_include:
+                    continue
+                resolved_includes.append(file)
                 if isinstance(includes, dict) and file in includes:
                     resoloved_sqls.append(includes[file])
                     continue
@@ -640,17 +643,15 @@ class StepFactory:
                 resoloved_sqls.append(line)
         resolved_sql = "\n".join(resoloved_sqls)
         if self._need_resolve(resolved_sql, include_sql_pattern, include_py_pattern):
-            return self._resolve_include(resolved_sql, includes)
+            return self._resolve_include(resolved_sql, includes, resolved_includes=resolved_includes)
         return resolved_sql
 
     def _need_resolve(self, resolved_sql, include_sql_pattern, include_py_pattern):
         lines = resolved_sql.split("\n")
-        return any(
-            (
-                self._match_sql_or_py_pattern(include_py_pattern, include_sql_pattern, line.replace(";", "").strip())
-                for line in lines
-            )
-        )
+        return any((
+            self._match_sql_or_py_pattern(include_py_pattern, include_sql_pattern, line.replace(";", "").strip())
+            for line in lines
+        ))
 
     def _match_sql_or_py_pattern(self, include_py_pattern, include_sql_pattern, line):
         return re.match(include_sql_pattern, line, flags=re.IGNORECASE) or re.match(

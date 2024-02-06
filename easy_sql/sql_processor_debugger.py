@@ -24,6 +24,7 @@ class SqlProcessorDebugger:
         udf_py_file: Optional[str] = None,
         scala_udf_initializer: Optional[str] = None,
         templates: Optional[Dict[str, Any]] = None,
+        skip_duplicate_include: bool = False,
     ):
         backend = backend if isinstance(backend, (Backend,)) else SparkBackend(spark=backend)
         self.udf_py_file = udf_py_file
@@ -41,6 +42,7 @@ class SqlProcessorDebugger:
         self.steps = self.sql_processor.step_list
         self._current_step_index = -1
         self.initial_temp_views = self.tempviews
+        self.skip_duplicate_include = skip_duplicate_include
 
     def _create_sql_processor(self) -> SqlProcessor:
         import copy
@@ -54,6 +56,7 @@ class SqlProcessorDebugger:
             variables=copy.deepcopy(self.initial_vars),
             scala_udf_initializer=self.scala_udf_initializer,
             templates=copy.deepcopy(self.initial_templates),
+            skip_duplicate_include=self.skip_duplicate_include,
         )
         if self.initial_funcs:
             sql_processor.register_funcs(self.initial_funcs)
