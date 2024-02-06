@@ -546,9 +546,11 @@ class StepFactory:
         self.skip_duplicate_include = skip_duplicate_include
         self.resolved_sql = ""
 
-    def create_from_sql(self, sql: str, includes: Dict[str, str] | IncludeResolver | None = None) -> List[Step]:
+    def create_from_sql(
+        self, sql: str, includes: Dict[str, str] | IncludeResolver | None = None, sql_file: str = ""
+    ) -> List[Step]:
         includes = includes or {}
-        self.resolved_sql = self._resolve_include(sql, includes)
+        self.resolved_sql = self._resolve_include(sql, includes, current_file=sql_file)
         lines = self.resolved_sql.split("\n")
 
         index = 0
@@ -591,29 +593,41 @@ class StepFactory:
         return step_list
 
     def _resolve_include(
-        self, sql, includes: Dict[str, str] | IncludeResolver | None = None, resolved_includes: List[str] | None = None
+        self,
+        sql,
+        includes: Dict[str, str] | IncludeResolver | None = None,
+        resolved_includes: List[str] | None = None,
+        current_file: str = "",
     ) -> str:
         resolved_includes = resolved_includes or []
         include_sql_pattern = r"^--\s*include\s*=\s*(.*\.sql)\s*$"
-        include_py_pattern = r"^--\s*include\s*=\s*(.*)\.(\w+|\*)$"
         lines = sql.split("\n")
         resoloved_sqls = []
-        for _, line in enumerate(lines):
+        for i, line in enumerate(lines):
             line = remove_semicolon_from_line(line)
             line_stripped = line.strip()
             matches = re.match(include_sql_pattern, line_stripped, flags=re.IGNORECASE)
             if matches:
                 file = matches.group(1)
                 if file in resolved_includes and self.skip_duplicate_include:
+                    logger.info(f"skip duplicate include file at line {current_file}:{i}: {file}")
                     continue
                 resolved_includes.append(file)
                 if isinstance(includes, dict) and file in includes:
-                    resoloved_sqls.append(includes[file])
+                    resoloved_sqls.append(
+                        self._resolve_include(
+                            includes[file], includes, resolved_includes=resolved_includes, current_file=file
+                        )
+                    )
                     continue
                 if isinstance(includes, IncludeResolver):
                     resolved_sql = includes.resolve_include(file)
                     if resolved_sql is not None:
-                        resoloved_sqls.append(resolved_sql)
+                        resoloved_sqls.append(
+                            self._resolve_include(
+                                resolved_sql, includes, resolved_includes=resolved_includes, current_file=file
+                            )
+                        )
                         continue
 
                 try:
@@ -621,42 +635,25 @@ class StepFactory:
 
                     func_mod = importlib.import_module("common.file_reader")
                     read_file_func = func_mod.read_file
-                    resoloved_sqls.append(read_file_func(file))
+                    resoloved_sqls.append(
+                        self._resolve_include(
+                            read_file_func(file), includes, resolved_includes=resolved_includes, current_file=file
+                        )
+                    )
                 except ModuleNotFoundError:
                     logger.info("failed to import common.file_reader, will try default file reader")
-                    resoloved_sqls.append(SqlSnippetsReader.read_file(file, self.base_dir))
-            elif re.match(include_py_pattern, line_stripped, flags=re.IGNORECASE):
-                matches = re.match(include_py_pattern, line_stripped, flags=re.IGNORECASE)
-                assert matches is not None
-                if len(matches.groups()) != 2:
-                    raise SqlProcessorException(
-                        "parse include config failed. must provide complete module name and the sql variable name."
-                        f"bug got config line {line_stripped}"
+                    resoloved_sqls.append(
+                        self._resolve_include(
+                            SqlSnippetsReader.read_file(file, self.base_dir),
+                            includes,
+                            resolved_includes=resolved_includes,
+                            current_file=file,
+                        )
                     )
-                module = matches.group(1)
-                sql_name = matches.group(2)
-                import importlib
-
-                snippet_mod = importlib.import_module(module)
-                resoloved_sqls.append(getattr(snippet_mod, sql_name))
             else:
                 resoloved_sqls.append(line)
         resolved_sql = "\n".join(resoloved_sqls)
-        if self._need_resolve(resolved_sql, include_sql_pattern, include_py_pattern):
-            return self._resolve_include(resolved_sql, includes, resolved_includes=resolved_includes)
         return resolved_sql
-
-    def _need_resolve(self, resolved_sql, include_sql_pattern, include_py_pattern):
-        lines = resolved_sql.split("\n")
-        return any((
-            self._match_sql_or_py_pattern(include_py_pattern, include_sql_pattern, line.replace(";", "").strip())
-            for line in lines
-        ))
-
-    def _match_sql_or_py_pattern(self, include_py_pattern, include_sql_pattern, line):
-        return re.match(include_sql_pattern, line, flags=re.IGNORECASE) or re.match(
-            include_py_pattern, line, flags=re.IGNORECASE
-        )
 
 
 class SqlSnippetsReader:
