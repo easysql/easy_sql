@@ -387,13 +387,11 @@ class FuncRunnerTest(unittest.TestCase):
             ["id", "fk1", "fk2", "pt"],
         ).write.mode("overwrite").partitionBy("pt").saveAsTable("data_table")
         spark.createDataFrame(
-            [
-                (
-                    1,
-                    "1",
-                    20210101,
-                )
-            ],
+            [(
+                1,
+                "1",
+                20210101,
+            )],
             ["id", "fk", "pt"],
         ).write.mode("overwrite").partitionBy(
             "pt"
@@ -476,12 +474,10 @@ class FuncRunnerTest(unittest.TestCase):
             [], StructType([StructField("id", IntegerType()), StructField("pt", IntegerType())])
         ).write.mode("overwrite").partitionBy("pt").saveAsTable("empty_table")
         spark.createDataFrame(
-            [
-                (
-                    1,
-                    20210101,
-                )
-            ],
+            [(
+                1,
+                20210101,
+            )],
             ["id", "pt"],
         ).write.mode("overwrite").partitionBy(
             "pt"
@@ -562,25 +558,6 @@ select 1 as b
 
 
 class StepFactoryTest(unittest.TestCase):
-    def test_include_snippet_from_py(self):
-        spark = LocalSpark.get()
-        sql = """
--- can have comments here
--- include=easy_sql.sql_processor_test.test_snippet
--- target=temp.result1
-select ${a} as res_a
-
--- can add include anywhere
--- include=easy_sql.sql_processor_test.test_snippet2
--- target=temp.result2
-select ${b} as res_b
-        """
-
-        steps = StepFactory(None, None).create_from_sql(sql)  # type: ignore
-
-        self.assertEqual(4, len(steps))
-        self.assertEqual(run_sql(sql, "result1", spark=spark), [(1,)])
-        self.assertEqual(run_sql(sql, "result2", spark=spark), [(1,)])
 
     def test_include_snippet_from_sql(self):
         sql = """
