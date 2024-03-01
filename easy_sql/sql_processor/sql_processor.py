@@ -150,6 +150,7 @@ class SqlProcessor:
             self.context.add_vars({"__context__": self.context})
             self.context.add_vars({"__backend__": self.backend})
             self.context.add_vars({"__config__": self.config})
+            self.context.add_vars({"__dry_run__": dry_run})
             if not step.should_run(self.context):
                 self.reporter.collect_report(step, status=StepStatus.SKIPPED)
                 return

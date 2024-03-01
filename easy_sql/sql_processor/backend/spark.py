@@ -201,8 +201,7 @@ class SparkBackend(Backend):
         if type_diff_cols:
             message = (
                 f"target table {target_table.table_name} has columns whose type are different from source table"
-                f" {source_table.table_name}: "
-                + ", ".join(type_diff_cols)
+                f" {source_table.table_name}: " + ", ".join(type_diff_cols)
             )
             if verify_type:
                 raise SqlProcessorException("Verify schema failed. Found " + message)

@@ -5,12 +5,15 @@ from typing import Any, Callable, Dict, Optional, Tuple
 
 def get_key_by_splitter_and_strip(source: str, splitter: Optional[str] = "=", strip_chars: Optional[str] = None):
     source = source.strip()
-    return source[: source.index(splitter or "=")].strip(strip_chars)
+    splitter = splitter or "="
+    assert splitter in source, f"splitter {splitter} not found in source {source}"
+    return source[: source.index(splitter)].strip(strip_chars)
 
 
 def get_value_by_splitter_and_strip(source: str, splitter: Optional[str] = "=", strip_chars: Optional[str] = None):
     source = source.strip()
     splitter = splitter or "="
+    assert splitter in source, f"splitter {splitter} not found in source {source}"
     return source[source.index(splitter) + len(splitter) :].strip(strip_chars)
 
 
