@@ -421,7 +421,7 @@ class FlinkBackendConfig:
             if flink_on_yarn_base_dir:
                 file_path = f"{self.flink_on_yarn_base_dir}/{get_value_by_splitter_and_strip(flink_tables_file_path)}"
                 print(f"got flink_tables_file_path: {file_path}")
-                return file_path
+                return self.config._resolve_file(file_path)
             else:
                 return self.config._resolve_file(get_value_by_splitter_and_strip(flink_tables_file_path))
 
