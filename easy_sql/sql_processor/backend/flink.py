@@ -129,8 +129,12 @@ class FlinkBackend(Backend):
             else:
                 logger.info("no insert statements to commit.")
 
-    def clean(self):
-        self.execute_streaming_inserts()
+    def verify_schema(self, source_table: TableMeta, target_table: TableMeta, verify_type: bool = False):
+        logger.info("Will not try verify schema in flink backend since flink will do a simple verify it for us.")
+
+    def clean(self, dry_run: bool = False):
+        if not dry_run:
+            self.execute_streaming_inserts()
 
         for temp_view in self.flink.list_temporary_views():
             self.flink.drop_temporary_view(temp_view)

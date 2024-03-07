@@ -51,6 +51,12 @@ class StreamingFuncs:
         self.flink = flink
 
     def execute_streaming_inserts(self):
+        from easy_sql.sql_processor.sql_processor import get_current_context
+
+        if str(get_current_context().vars_context.vars.get("__dry_run__")).lower() in ("1", "true"):
+            logger.info("dry run, will not execute streaming inserts")
+            return
+
         self.flink.execute_streaming_inserts()
 
 

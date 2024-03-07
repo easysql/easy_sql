@@ -274,7 +274,7 @@ class SparkBackend(Backend):
             partitions = [Partition(x[0]) for x in partition_details[0]]
             table.update_partitions([Partition(p.field, p.value) for p in partitions])
 
-    def clean(self):
+    def clean(self, dry_run: bool = False):
         from easy_sql.spark_optimizer import clear_temp_views
 
         self.spark.catalog.clearCache()

@@ -67,7 +67,7 @@ class BackendProcessor:
                 skip_duplicate_include=skip_duplicate_include,
             )
         finally:
-            backend.clean()
+            backend.clean(dry_run=dry_run)
 
     def _create_backend(self, backend_config: Optional[List[str]]) -> Backend:
         raise NotImplementedError()

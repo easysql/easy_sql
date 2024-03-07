@@ -96,7 +96,7 @@ class Backend:
     def verify_schema(self, source_table: TableMeta, target_table: TableMeta, verify_type: bool = False):
         raise NotImplementedError()
 
-    def clean(self):
+    def clean(self, dry_run: bool = False):
         raise NotImplementedError()
 
     def create_table_with_data(
