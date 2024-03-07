@@ -538,7 +538,7 @@ class RdbBackend(Backend):
     def clear_cache(self):
         pass
 
-    def clean(self):
+    def clean(self, dry_run: bool = False):
         logger.info(f"clean temp db: {self.temp_schema}")
         _exec_sql(self.conn, self.sql_dialect.drop_db_sql(self.temp_schema))
 
