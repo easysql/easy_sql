@@ -168,13 +168,14 @@ class SparkBackend(Backend):
                     )
                 df = df.withColumn(p.field, lit(p.value))
 
-        df.createOrReplaceTempView("table_data")
+        temp_view_name = f"{dbname}__{table_name}__table_data"
+        df.createOrReplaceTempView(temp_view_name)
         partition_expr = f'partitioned by ({",".join([p.field for p in partitions])}) ' if partitions else ""
         create_database_stmt = f"create database if not exists {dbname}"
         create_table_stmt = f"""create table if not exists {dbname}.{table_name} using hive
                                 options(FILEFORMAT "parquet") {partition_expr}
                                 TBLPROPERTIES ("transactional" = "false")
-                                as select * from table_data"""
+                                as select * from {temp_view_name}"""
 
         self.exec_native_sql(create_database_stmt)
         self.exec_native_sql(create_table_stmt)
@@ -185,7 +186,9 @@ class SparkBackend(Backend):
             raise SqlProcessorException(f"Verify schema failed. Target table {target_table.table_name} does not exist")
         source_columns = self.exec_native_sql(f"select * from {source_table.table_name}").schema.fields
         target_columns = self.exec_native_sql(f"select * from {target_table.table_name}").schema.fields
-        source_col_names = {c.name.lower() for c in source_columns}
+        source_col_names = {c.name.lower() for c in source_columns}.union(
+            {p.field.lower() for p in source_table.partitions}
+        )
         target_col_names = {c.name.lower() for c in target_columns}
         if not target_col_names.issubset(source_col_names):
             raise SqlProcessorException(
@@ -198,6 +201,7 @@ class SparkBackend(Backend):
             for c in target_columns
             if c.name.lower() in source_col_names and c.dataType != source_col(c.name).dataType
         ]
+        # will not verify partition column types since it will be converted automatically when saving.
         if type_diff_cols:
             message = (
                 f"target table {target_table.table_name} has columns whose type are different from source table"
@@ -208,7 +212,9 @@ class SparkBackend(Backend):
             else:
                 logger.info("Verify schema passed. Found " + message)
         else:
-            logger.info("Verify schema passed. Source table has all columns in target table and their types are same.")
+            logger.info(
+                "Verify schema passed. Source table has all columns in target table and their types are the same."
+            )
 
     def save_table_sql(self, source_table: TableMeta, source_table_sql: str, target_table: TableMeta) -> str:
         columns = self.exec_native_sql(f"select * from {source_table.table_name}").limit(0).columns
