@@ -44,7 +44,9 @@ config: {self.step.target_config} {verbose_parts}
 status: {self.status}
 start time: {start_time_str}, end time: {end_time_str}, execution time: {self.execution_time}s - {self.execution_time / total_execution_time * 100:.2f}%
 messages:
-""" + "\n".join(self.messages)
+""" + "\n".join(
+            self.messages
+        )
 
 
 class SqlProcessorReporter(ReportCollector):
@@ -144,5 +146,19 @@ class SqlProcessorReporter(ReportCollector):
             if self.skip_templates and step.target_config and step.target_config.step_type == StepType.TEMPLATE:
                 continue
             report.append(self.step_reports[step.id].report_as_text(total_execution_seconds, verbose))
+
+        if not self._steps or not self.step_reports:
+            app_status = StepStatus.NOT_STARTED
+        else:
+            if any(self.step_reports[step.id].status == StepStatus.FAILED for step in self._steps):
+                app_status = StepStatus.FAILED
+            elif any(
+                self.step_reports[step.id].status in (StepStatus.RUNNING, StepStatus.NOT_STARTED)
+                for step in self._steps
+            ):
+                app_status = StepStatus.RUNNING
+            else:
+                app_status = StepStatus.SUCCEEDED
+        report.append(f"\napplication status: {app_status}")
         report.append(f"\ntotal execution time: {total_execution_seconds}s")
         return "\n".join(report)
