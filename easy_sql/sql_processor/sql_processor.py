@@ -45,6 +45,7 @@ class SqlProcessor:
     _current_context: Optional[ProcessorContext] = None
     _current_backend: Optional[Backend] = None
     _current_config: Optional[Any] = None
+    _instance: Optional[SqlProcessor] = None
 
     def __init__(
         self,
@@ -102,6 +103,7 @@ class SqlProcessor:
         SqlProcessor._current_context = self.context
         SqlProcessor._current_backend = self.backend
         SqlProcessor._current_config = self.config
+        SqlProcessor._instance = self
 
     @property
     def variables(self) -> Dict[str, Any]:
@@ -122,16 +124,23 @@ class SqlProcessor:
             logger.warn(f"ignored set spark configs when backend is of type {type(self.backend)}")
 
     def register_funcs_from_pyfile(self, funcs_py_file: str):
-        funcs = extract_funcs_from_pyfile(funcs_py_file)
-        self.register_funcs(funcs)
+        for f in funcs_py_file.split(","):
+            if not f:
+                continue
+            logger.info(f"register funcs from pyfile {f}")
+            funcs = extract_funcs_from_pyfile(f)
+            self.register_funcs(funcs)
 
     def register_funcs(self, funcs: Dict[str, Callable]):
         self.func_runner.register_funcs(funcs)
 
     def register_udfs_from_pyfile(self, funcs_py_file: str):
-        logger.info(f"resolving udfs from pyfile {funcs_py_file}")
-        funcs = extract_funcs_from_pyfile(funcs_py_file)
-        self.register_udfs(funcs)
+        for f in funcs_py_file.split(","):
+            if not f:
+                continue
+            logger.info(f"register udfs from pyfile {f}")
+            funcs = extract_funcs_from_pyfile(f)
+            self.register_udfs(funcs)
 
     def register_udfs(self, funcs: Dict[str, Callable]):
         self.backend.register_udfs(funcs)
@@ -203,3 +212,11 @@ def get_current_config() -> Any:
     if not SqlProcessor._current_config:
         raise RuntimeError("current config is not set, you must be under some sql processor to call this function")
     return SqlProcessor._current_config
+
+
+def get_current_sql_processor() -> Any:
+    if not SqlProcessor._instance:
+        raise RuntimeError(
+            "current sql processor is not set, you must be under some sql processor to call this function"
+        )
+    return SqlProcessor._instance
