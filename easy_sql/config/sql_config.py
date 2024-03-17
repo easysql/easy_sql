@@ -8,7 +8,7 @@ from os import path
 from typing import Any, Dict, List, Optional
 
 from easy_sql.logger import logger
-from easy_sql.utils.io_utils import read_sql, resolve_file
+from easy_sql.utils.io_utils import read_sql, resolve_file, resolve_files
 from easy_sql.utils.kv import (
     KV,
     get_key_by_splitter_and_strip,
@@ -76,8 +76,8 @@ class EasySqlConfig:
         self.udf_file_path, self.func_file_path = udf_file_path, func_file_path
         self.scala_udf_initializer = scala_udf_initializer
         self.input_tables, self.output_tables = input_tables, output_tables
-        self.resolved_udf_file_path = self._resolve_file(udf_file_path) if udf_file_path else None
-        self.resolved_func_file_path = self._resolve_file(func_file_path) if func_file_path else None
+        self.resolved_udf_file_path = self._resolve_files(udf_file_path) if udf_file_path else None
+        self.resolved_func_file_path = self._resolve_files(func_file_path) if func_file_path else None
         self.base_dir = base_dir
         self.system_config_prefix = system_config_prefix
         self.skip_duplicate_include = skip_duplicate_include
@@ -140,14 +140,14 @@ class EasySqlConfig:
             if c.startswith("udf_file_path"):
                 udf_file_path = get_value_by_splitter_and_strip(c)
                 udf_file_path = (
-                    resolve_file(udf_file_path, relative_to=base_dir)
+                    resolve_files(udf_file_path, relative_to=base_dir)
                     if udf_file_path and "/" in udf_file_path
                     else udf_file_path
                 )
             elif c.startswith("func_file_path"):
                 func_file_path = get_value_by_splitter_and_strip(c)
                 func_file_path = (
-                    resolve_file(func_file_path, relative_to=base_dir)
+                    resolve_files(func_file_path, relative_to=base_dir)
                     if func_file_path and "/" in func_file_path
                     else func_file_path
                 )
@@ -182,14 +182,14 @@ class EasySqlConfig:
             if c.startswith("udf_file_path"):
                 udf_file_path = get_value_by_splitter_and_strip(c)
                 self.udf_file_path = (
-                    resolve_file(udf_file_path, relative_to=(self.base_dir or ""))
+                    resolve_files(udf_file_path, relative_to=(self.base_dir or ""))
                     if udf_file_path and "/" in udf_file_path
                     else udf_file_path
                 )
             elif c.startswith("func_file_path"):
                 func_file_path = get_value_by_splitter_and_strip(c)
                 self.func_file_path = (
-                    resolve_file(func_file_path, relative_to=(self.base_dir or ""))
+                    resolve_files(func_file_path, relative_to=(self.base_dir or ""))
                     if func_file_path and "/" in func_file_path
                     else func_file_path
                 )
@@ -197,8 +197,8 @@ class EasySqlConfig:
                 self.scala_udf_initializer = get_value_by_splitter_and_strip(c)
             elif c.startswith("skip_duplicate_include"):
                 self.skip_duplicate_include = get_value_by_splitter_and_strip(c).lower() in ["1", "true"]
-        self.resolved_udf_file_path = self._resolve_file(self.udf_file_path) if self.udf_file_path else None
-        self.resolved_func_file_path = self._resolve_file(self.func_file_path) if self.func_file_path else None
+        self.resolved_udf_file_path = self._resolve_files(self.udf_file_path) if self.udf_file_path else None
+        self.resolved_func_file_path = self._resolve_files(self.func_file_path) if self.func_file_path else None
 
     @property
     def tables(self) -> List[str]:
@@ -245,6 +245,13 @@ class EasySqlConfig:
 
     def _resolve_file(self, file_path: str, *, prefix: str = "") -> str:
         return resolve_file(file_path, abs_path=True, prefix=prefix, relative_to=self.abs_sql_file_path)
+
+    def _resolve_files(self, file_path: str, *, prefix: str = "") -> str:
+        return ",".join([
+            resolve_file(f, abs_path=True, prefix=prefix, relative_to=self.abs_sql_file_path)
+            for f in file_path.split(",")
+            if f
+        ])
 
     def _build_conf_command_args(
         self,
@@ -314,8 +321,8 @@ class SparkBackendConfig:
             ),
             (
                 f'spark.files="{self.config.abs_sql_file_path}'
-                f'{"," + self.config._resolve_file(config.udf_file_path) if config.udf_file_path else ""}'
-                f'{"," + self.config._resolve_file(config.func_file_path) if config.func_file_path else ""}'
+                f'{"," + self.config._resolve_files(config.udf_file_path) if config.udf_file_path else ""}'
+                f'{"," + self.config._resolve_files(config.func_file_path) if config.func_file_path else ""}'
                 '"'
             ),
         ]

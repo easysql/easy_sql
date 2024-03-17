@@ -35,8 +35,10 @@ def resolve_file(file_path: str, abs_path: bool = False, prefix: str = "", relat
     return prefix + file_path
 
 
-def resolve_files(files_path: str, abs_path: bool = False) -> str:
-    return ",".join([resolve_file(f.strip(), abs_path) for f in files_path.split(",") if f.strip()])
+def resolve_files(files_path: str, abs_path: bool = False, relative_to: str = "") -> str:
+    return ",".join(
+        [resolve_file(f.strip(), abs_path, relative_to=relative_to) for f in files_path.split(",") if f.strip()]
+    )
 
 
 def read_sql(sql_file: str):
