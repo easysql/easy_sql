@@ -93,6 +93,9 @@ class Backend:
     ):
         raise NotImplementedError()
 
+    def register_save_table_end_hooks(self, hooks: List[Callable[[Backend, TableMeta], None]]):
+        raise NotImplementedError()
+
     def verify_schema(self, source_table: TableMeta, target_table: TableMeta, verify_type: bool = False):
         raise NotImplementedError()
 
@@ -153,6 +156,9 @@ class TableMeta:
             f", dbname={self.dbname}"
             f", pure_table_name={self.pure_table_name})"
         )
+
+    def __str__(self):
+        return f"TableMeta(table_name={self.table_name}, partitions={self.partitions})"
 
     def update_partitions(self, partitions: List[Partition]) -> TableMeta:
         self.partitions = partitions

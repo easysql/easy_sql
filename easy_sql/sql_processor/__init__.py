@@ -7,6 +7,7 @@ from easy_sql.sql_processor.sql_processor import (
     get_current_backend,
     get_current_config,
     get_current_context,
+    get_current_sql_processor,
     get_current_step,
 )
 from easy_sql.sql_processor.step import Step, StepConfig, StepType
@@ -27,4 +28,5 @@ __all__ = [
     "get_current_config",
     "get_current_context",
     "get_current_step",
+    "get_current_sql_processor",
 ]

@@ -214,7 +214,7 @@ def get_current_config() -> Any:
     return SqlProcessor._current_config
 
 
-def get_current_sql_processor() -> Any:
+def get_current_sql_processor() -> SqlProcessor:
     if not SqlProcessor._instance:
         raise RuntimeError(
             "current sql processor is not set, you must be under some sql processor to call this function"

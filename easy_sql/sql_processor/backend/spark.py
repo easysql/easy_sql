@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
 from ...logger import logger
@@ -79,6 +80,7 @@ class SparkBackend(Backend):
 
         self.spark: SparkSession = spark
         self.scala_udf_initializer = scala_udf_initializer
+        self.save_table_end_hooks: List[Callable[[SparkBackend, TableMeta], None]] = []
 
     def reset(self):
         pass
@@ -216,6 +218,16 @@ class SparkBackend(Backend):
                 "Verify schema passed. Source table has all columns in target table and their types are the same."
             )
 
+    def register_save_table_end_hooks(self, hooks: List[Callable[[SparkBackend, TableMeta], None]]):
+        self.save_table_end_hooks.extend(hooks)
+
+    def _call_save_table_end_hooks(self, target_table: TableMeta):
+        for hook in self.save_table_end_hooks:
+            start_time = time.time()
+            logger.info(f"calling save table end hook start: {hook.__name__}")
+            hook(self, target_table)
+            logger.info(f"calling save table end hook end(time took {time.time() - start_time:.2f}s): {hook.__name__}")
+
     def save_table_sql(self, source_table: TableMeta, source_table_sql: str, target_table: TableMeta) -> str:
         columns = self.exec_native_sql(f"select * from {source_table.table_name}").limit(0).columns
         return f'insert into {target_table.table_name} select {",".join(columns)} from ({source_table_sql})'
@@ -267,6 +279,7 @@ class SparkBackend(Backend):
             f" {target_table_meta.table_name} {partition_expr} select * from {temp_res_name}"
         )
         self.exec_native_sql(save_sql)
+        self._call_save_table_end_hooks(target_table_meta)
 
     def refresh_table_partitions(self, table: TableMeta):
         df = self.exec_native_sql(f"desc {table.table_name}")
