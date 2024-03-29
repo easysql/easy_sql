@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -21,7 +23,7 @@ class StepReport:
         self.execution_time = 0
         self.messages = []
 
-    def update(self, status: Optional[str] = None, message: Optional[str] = None) -> "StepReport":
+    def update(self, status: Optional[str] = None, message: Optional[str] = None) -> StepReport:
         if status is not None:
             if status == StepStatus.RUNNING:
                 self.start_time = datetime.now()
@@ -78,6 +80,9 @@ class SqlProcessorReporter(ReportCollector):
             report.update(status=status)
         if message is not None:
             report.update(message=message)
+
+    def collected_report(self, step: Step) -> StepReport | None:
+        return self.step_reports.get(step.id) if self.step_reports is not None else None
 
     def print_report(self, verbose: bool = False):
         report = self.get_report(verbose)

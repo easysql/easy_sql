@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 import uuid
 from os import path
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from easy_sql.sql_processor.backend.rdb import RdbBackend
 from easy_sql.utils.sql_expr import CommentSubstitutor, remove_semicolon_from_line
@@ -25,10 +25,16 @@ class ReportCollector:
     def collect_report(self, step: Step, status: Optional[str] = None, message: Optional[str] = None):
         raise NotImplementedError()
 
+    def collected_report(self, step: Step) -> Any | None:
+        raise NotImplementedError()
+
 
 class EmptyReportCollector(ReportCollector):
     def collect_report(self, step: Step, status: Optional[str] = None, message: Optional[str] = None):
         logger.info(f"collect report for step: {str(step)}, status: {status}, message: {message}")
+
+    def collected_report(self, step: Step) -> Any | None:
+        return None
 
 
 class SqlCleaner:
