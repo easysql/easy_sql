@@ -80,6 +80,7 @@ class SparkBackend(Backend):
 
         self.spark: SparkSession = spark
         self.scala_udf_initializer = scala_udf_initializer
+        self.save_table_start_hooks: List[Callable[[SparkBackend, TableMeta, TableMeta], None]] = []
         self.save_table_end_hooks: List[Callable[[SparkBackend, TableMeta], None]] = []
 
     def reset(self):
@@ -218,8 +219,20 @@ class SparkBackend(Backend):
                 "Verify schema passed. Source table has all columns in target table and their types are the same."
             )
 
+    def register_save_table_start_hooks(self, hooks: List[Callable[[SparkBackend, TableMeta, TableMeta], None]]):
+        self.save_table_start_hooks.extend(hooks)
+
     def register_save_table_end_hooks(self, hooks: List[Callable[[SparkBackend, TableMeta], None]]):
         self.save_table_end_hooks.extend(hooks)
+
+    def _call_save_table_start_hooks(self, source_table: TableMeta, target_table: TableMeta):
+        for hook in self.save_table_start_hooks:
+            start_time = time.time()
+            logger.info(f"calling save table start hook start: {hook.__name__}")
+            hook(self, source_table, target_table)
+            logger.info(
+                f"calling save table start hook end(time took {time.time() - start_time:.2f}s): {hook.__name__}"
+            )
 
     def _call_save_table_end_hooks(self, target_table: TableMeta):
         for hook in self.save_table_end_hooks:
@@ -240,6 +253,8 @@ class SparkBackend(Backend):
         create_target_table: bool,
     ):
         from pyspark.sql.functions import lit
+
+        self._call_save_table_start_hooks(source_table_meta, target_table_meta)
 
         if not self.table_exists(target_table_meta) and create_target_table:
             schema = self.spark.sql(f"select * from {source_table_meta.table_name}").limit(0).schema

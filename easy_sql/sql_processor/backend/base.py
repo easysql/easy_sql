@@ -93,6 +93,9 @@ class Backend:
     ):
         raise NotImplementedError()
 
+    def register_save_table_start_hooks(self, hooks: List[Callable[[Backend, TableMeta, TableMeta], None]]):
+        raise NotImplementedError()
+
     def register_save_table_end_hooks(self, hooks: List[Callable[[Backend, TableMeta], None]]):
         raise NotImplementedError()
 
@@ -185,6 +188,9 @@ class TableMeta:
 
     def has_partitions(self):
         return len(self.partitions) > 0
+
+    def has_static_partition(self):
+        return any(pt.value is not None for pt in self.partitions)
 
     def has_dynamic_partition(self):
         return any(pt.value is None for pt in self.partitions)
