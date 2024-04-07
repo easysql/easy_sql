@@ -67,7 +67,8 @@ class FlinkTest(unittest.TestCase):
             )
         """,
         )
-        backend.exec_native_sql(f"""
+        backend.exec_native_sql(
+            f"""
             CREATE TABLE out_put_table (
                 id INT,
                 val VARCHAR,
@@ -79,7 +80,8 @@ class FlinkTest(unittest.TestCase):
                 'username' = '{TEST_PG_JDBC_USER}',
                 'password' = '{TEST_PG_JDBC_PASSWD}',
                 'table-name' = 'out_put_table');
-        """)
+        """
+        )
 
         from pyflink.java_gateway import get_gateway
         from pyflink.table.catalog import CatalogBaseTable
@@ -112,12 +114,14 @@ class FlinkTest(unittest.TestCase):
 
         catalog_name = "hive"
         hive_conf_dir = "/ops/apache-hive/conf"
-        backend.exec_native_sql(f"""
+        backend.exec_native_sql(
+            f"""
             CREATE CATALOG testHiveCatalog WITH (
                 'type' = '{catalog_name}',
                 'hive-conf-dir' = '{hive_conf_dir}'
             );
-        """)
+        """
+        )
 
         schema = DataTypes.ROW([DataTypes.FIELD("id", DataTypes.INT()), DataTypes.FIELD("val", DataTypes.STRING())])
         table = backend.flink.from_elements([(1, "1"), (2, "2"), (3, "3")], schema=schema)
@@ -613,16 +617,14 @@ def test_generate_table_ddl(config: FlinkTablesConfig):
     assert len(ddl) == 2
 
     assert (
-        ddl[0]
-        == "create  table if not exists paimon.ods.orders (order_id STRING,\nproduct_id STRING,\ncustomer_id"
+        ddl[0] == "create  table if not exists paimon.ods.orders (order_id STRING,\nproduct_id STRING,\ncustomer_id"
         " STRING,\npurchase_timestamp TIMESTAMP_LTZ,\ndd STRING,\nhh INT,\npts as PROCTIME(),\nts as"
         " cast(purchase_timestamp as TIMESTAMP_LTZ(3)),\nWATERMARK FOR ts AS ts - INTERVAL '5' SECOND,\nPRIMARY KEY"
         " (order_id, dd, hh) NOT ENFORCED\n) partitioned by (dd, hh) with ('changelog-producer' = 'input')"
     )
 
     assert (
-        ddl[1]
-        == "create temporary table if not exists cdc_orders (order_id STRING,\nproduct_id STRING,\ncustomer_id"
+        ddl[1] == "create temporary table if not exists cdc_orders (order_id STRING,\nproduct_id STRING,\ncustomer_id"
         " STRING,\npurchase_timestamp TIMESTAMP_LTZ,\nPRIMARY KEY (order_id) NOT ENFORCED\n)  with ('connector' ="
         " 'postgres-cdc' , 'hostname' = 'postgres' , 'port' = '5432' , 'username' = 'postgres' , 'password' ="
         " 'postgres' , 'database-name' = 'postgres' , 'schema-name' = 'public' , 'decoding.plugin.name' = 'pgoutput'"

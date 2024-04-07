@@ -270,16 +270,40 @@ class TableColumnTypes:
                 return col_type, [s.strip() for s in str(col_value).strip().split("|") if s.strip()]
             if col_type.replace(" ", "") in ["array<int>", "int[]", "Array(Int)"]:
                 return col_type, [int(s.strip()) for s in str(col_value).strip().split("|") if s.strip()]
-            if col_type.replace(" ", "") == "struct<latest_value:string,first_show_time:timestamp>":
-                vals = str(col_value).strip().split("|")
-                if len(vals) < 2:
-                    raise AssertionError(
-                        f"must provide all the values of type {col_type} for {table_name}.{col_name}. Incomplete value"
-                        f" `{col_value}`"
-                    )
-                latest_value = str(vals[0]).strip()
-                first_show_time = str(vals[1]).strip() if not date_converter else date_converter(vals[1])
-                return col_type, (latest_value, first_show_time)
+            if col_type.replace(" ", "").startswith("struct<"):
+                if col_type.count(">") != 1:
+                    raise AssertionError(f"Invalid type: {col_type}")
+                inits = re.search(r"<([^>]*)>", col_type.replace(" ", "")).group(1)
+                if not inits:
+                    raise AssertionError(f"Invalid type: {col_type}")
+                else:
+                    cols_in_struct = str(inits).split(",")
+                    vals = str(col_value).strip().split("|")
+                    if len(vals) != len(cols_in_struct):
+                        raise AssertionError(
+                            f"must provide all the values of type {col_type} for {table_name}.{col_name}. Incomplete value"
+                            f"cols in struct need: {cols_in_struct}"
+                            f"you provide: `{vals}`"
+                        )
+                    else:
+                        values = ()
+                        for i in range(0, len(cols_in_struct)):
+                            try:
+                                if cols_in_struct[i].split(":")[1].lower() in ["date", "timestamp", "datetime"]:
+                                    values += (
+                                        (str(vals[i]).strip(),) if not date_converter else (date_converter(vals[i]),)
+                                    )
+                                else:
+                                    values += (str(vals[i]).strip(),)
+                            except Exception as e:
+                                raise AssertionError(
+                                    f"You need to set col type for {cols_in_struct[i]} in format 'col_name:col_type'. {e}"
+                                )
+                        logger.info(
+                            f"Your field sequence inside struct is {cols_in_struct}, your value sequence inside struct is {values}. "
+                            f"Plz make sure values and fields are in the same sequence, or will cause unpredictable error in test result."
+                        )
+                        return col_type, values
             if col_type in ["date", "timestamp", "datetime"]:
                 if not date_converter:
                     return col_type, str(col_value).strip()
