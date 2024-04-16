@@ -304,7 +304,7 @@ class Step:
             row = table.first()
             for field_name in field_names:
                 index = field_names.index(field_name)
-                field_value = "null"
+                field_value = None
                 if row[index] is not None:
                     field_value = str(row[index])
                 context.add_vars({field_name: field_value})
@@ -414,23 +414,28 @@ class Step:
             if name.lower() == "__dry_run_verify_output_schema_type__":
                 dry_run_verify_output_schema_type = value in true_values
 
+        dynamic_partition = False
         if static_partition_name is not None:
             if static_partition_value is None or str(static_partition_value).strip() == "":
-                raise SqlProcessorException(
-                    f"partition value should exist and should not be empty, found {static_partition_value}"
+                logger.info(
+                    f"partition value not exist or is empty, will do as dynamic partition for col {static_partition_name}"
                 )
+                static_partition_value = None
+                dynamic_partition = True
             target_table = Table(
                 target_table_name, partitions=[Partition(field=static_partition_name, value=static_partition_value)]
             )
-            self.collect_report(message=f"save with static partition: {static_partition_name}={static_partition_value}")
+            mode = "dynamic" if not dynamic_partition else "static"
+            self.collect_report(message=f"save with {mode} partition: {static_partition_name}={static_partition_value}")
         else:
+            dynamic_partition = True
             target_table = Table(target_table_name)
             if not dry_run and backend.table_exists(target_table):
                 backend.refresh_table_partitions(target_table)
             self.collect_report(message="save with dynamic partitions")
 
         if dry_run:
-            if static_partition_name:
+            if not dynamic_partition and static_partition_name:
                 if backend.is_spark_backend:
                     from pyspark.sql.functions import lit
 
