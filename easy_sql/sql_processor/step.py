@@ -425,7 +425,7 @@ class Step:
             target_table = Table(
                 target_table_name, partitions=[Partition(field=static_partition_name, value=static_partition_value)]
             )
-            mode = "dynamic" if not dynamic_partition else "static"
+            mode = "dynamic" if dynamic_partition else "static"
             self.collect_report(message=f"save with {mode} partition: {static_partition_name}={static_partition_value}")
         else:
             dynamic_partition = True
