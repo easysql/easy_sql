@@ -172,10 +172,7 @@ class SqlProcessor:
             import traceback
 
             self.reporter.collect_report(step, status=StepStatus.FAILED, message=traceback.format_exc())
-            if (
-                "__exception_handler__" in self.variables
-                and str(self.variables["__exception_handler__"]).upper() != "NULL"
-            ):
+            if "__exception_handler__" in self.variables and self.variables["__exception_handler__"]:
                 func_name: str = self.variables["__exception_handler__"]
                 func_name = func_name.replace("{", "${")
                 self.func_runner.run_func(func_name, self.context.vars_context)(e)  # type: ignore
