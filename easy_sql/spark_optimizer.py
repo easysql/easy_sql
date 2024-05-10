@@ -27,8 +27,10 @@ class SparkDynamicConfig:
         return self
 
 
-def get_spark(app_name: str, conf: Optional[Dict] = None):
-    builder = SparkSession.builder.appName(app_name).enableHiveSupport()
+def get_spark(app_name: Optional[str] = None, conf: Optional[Dict] = None):
+    builder = SparkSession.builder.enableHiveSupport()
+    if app_name:
+        builder.config("spark.app.name", app_name)
     conf = conf or {}
     for k, v in conf.items():
         builder.config(k, v)
