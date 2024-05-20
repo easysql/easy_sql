@@ -283,17 +283,30 @@ class SparkBackend(Backend):
             ]
         partition_expr = f"partition ({','.join(fields)})" if fields else ""
 
-        # to resolve issue: pyspark.sql.utils.AnalysisException: Cannot overwrite a path that is also being read from.
-        # refer: https://stackoverflow.com/questions/38746773/read-from-a-hive-table-and-write-back-to-it-using-spark-sql
-        temp_res = self.spark.createDataFrame(temp_res.rdd, temp_res.schema)
-        temp_res_name = f"{source_table_meta.pure_table_name}__result__{id(temp_res)}"
-        temp_res.createOrReplaceTempView(temp_res_name)
+        def __save_data(temp_res: DataFrame):
+            temp_res_name = f"{source_table_meta.pure_table_name}__result__{id(temp_res)}"
+            temp_res.createOrReplaceTempView(temp_res_name)
+            save_sql = (
+                f"insert {'into' if save_mode == SaveMode.append else save_mode.name} table"
+                f" {target_table_meta.table_name} {partition_expr} select * from {temp_res_name}"
+            )
+            self.exec_native_sql(save_sql)
 
-        save_sql = (
-            f"insert {'into' if save_mode == SaveMode.append else save_mode.name} table"
-            f" {target_table_meta.table_name} {partition_expr} select * from {temp_res_name}"
-        )
-        self.exec_native_sql(save_sql)
+        try:
+            __save_data(temp_res)
+        except Exception as e:
+            if str(e).strip() == "Cannot overwrite a path that is also being read from.":
+                # to resolve issue: pyspark.sql.utils.AnalysisException: Cannot overwrite a path that is also being read from.
+                # refer: https://stackoverflow.com/questions/38746773/read-from-a-hive-table-and-write-back-to-it-using-spark-sql
+                logger.info(
+                    f"Save data failed (from {source_table_meta.pure_table_name} to {target_table_meta.table_name}) because of "
+                    '"Cannot overwrite a path that is also being read from.". Will try create a dataframe from rdd to avoid this. '
+                    "This will break the dataframe connection and might cause issue in spark ui."
+                )
+                temp_res = self.spark.createDataFrame(temp_res.rdd, temp_res.schema)
+                __save_data(temp_res)
+            else:
+                raise e
         self._call_save_table_end_hooks(target_table_meta)
 
     def refresh_table_partitions(self, table: TableMeta):
