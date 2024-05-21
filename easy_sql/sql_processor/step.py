@@ -220,6 +220,12 @@ class SimpleExecutedSqlTransformer(ExecutedSqlTransformer):
         return f"insert overwrite {table_name} \n{clean_sql}\n;"
 
 
+class OutputTableNamer:
+
+    def output_table_name(self, table_name: str) -> str:
+        return table_name
+
+
 class Step:
     def __init__(
         self,
@@ -231,6 +237,7 @@ class Step:
         debug_var_tmpl_replace: bool = False,
         *,
         executed_sql_transformer: Optional[ExecutedSqlTransformer] = None,
+        output_table_namer: Optional[OutputTableNamer] = None,
     ):
         self.id = id
         self.target_config = target_config
@@ -240,6 +247,7 @@ class Step:
         self.func_runner = func_runner
         self.executed_sql: Optional[str] = None
         self.executed_sql_transformer = executed_sql_transformer or SimpleExecutedSqlTransformer()
+        self.output_table_namer = output_table_namer or OutputTableNamer()
 
     def __str__(self):
         return str(self.target_config).replace("StepConfig(", "Step(", 1)
@@ -387,7 +395,7 @@ class Step:
         backend.create_temp_table(table, temp_table_name)
 
         source_table = Table(temp_table_name)
-        target_table_name = f"{self.target_config.name}"
+        target_table_name = self.output_table_namer.output_table_name(f"{self.target_config.name}")
 
         static_partition_name, static_partition_value, create_output_table, save_mode = (
             None,
@@ -549,10 +557,12 @@ class StepFactory:
         executed_sql_transformer: Optional[ExecutedSqlTransformer] = None,
         base_dir: Optional[str] = None,
         skip_duplicate_include: bool = False,
+        output_table_namer: Optional[OutputTableNamer] = None,
     ):
         self.reporter = reporter
         self.func_runner = func_runner
         self.executed_sql_transformer = executed_sql_transformer
+        self.output_table_namer = output_table_namer
         self.base_dir = base_dir
         self.skip_duplicate_include = skip_duplicate_include
         self.resolved_sql = ""
@@ -572,6 +582,7 @@ class StepFactory:
             self.reporter,
             self.func_runner,
             executed_sql_transformer=self.executed_sql_transformer,
+            output_table_namer=self.output_table_namer,
         )
         while index < len(lines):
             line = remove_semicolon_from_line(lines[index])
@@ -586,6 +597,7 @@ class StepFactory:
                     self.reporter,
                     self.func_runner,
                     executed_sql_transformer=self.executed_sql_transformer,
+                    output_table_namer=self.output_table_namer,
                 )
                 sql_parts = []
                 target_config = StepConfig.from_config_line(line_stripped, index + 1)

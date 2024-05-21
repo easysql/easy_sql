@@ -8,7 +8,7 @@ from .backend import Backend, SparkBackend
 from .context import ProcessorContext, TemplatesContext, VarsContext
 from .funcs import FuncRunner
 from .report import SqlProcessorReporter, StepStatus
-from .step import ExecutedSqlTransformer, Step, StepFactory
+from .step import ExecutedSqlTransformer, OutputTableNamer, Step, StepFactory
 
 if TYPE_CHECKING:
     from pyspark.sql import SparkSession
@@ -65,6 +65,7 @@ class SqlProcessor:
         executed_sql_transformer: Optional[ExecutedSqlTransformer] = None,
         base_dir: Optional[str] = None,
         skip_duplicate_include: bool = False,
+        output_table_namer: Optional[OutputTableNamer] = None,
     ):
         backend = backend if isinstance(backend, (Backend,)) else SparkBackend(spark=backend)
         self.backend = backend
@@ -90,6 +91,7 @@ class SqlProcessor:
             executed_sql_transformer=executed_sql_transformer,
             base_dir=base_dir,
             skip_duplicate_include=skip_duplicate_include,
+            output_table_namer=output_table_namer,
         )
 
         self.step_list = self.step_factory.create_from_sql(self.sql, includes)
@@ -99,6 +101,7 @@ class SqlProcessor:
         self.sql_collector = SqlCollector()
         self.base_dir = base_dir
         self.skip_duplicate_include = skip_duplicate_include
+        self.output_table_namer = output_table_namer
 
         SqlProcessor._current_context = self.context
         SqlProcessor._current_backend = self.backend
