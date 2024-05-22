@@ -61,15 +61,12 @@ class VarsContext(VarsReplacer):
                 var_name = var_name[: var_name.index(":")].strip()
                 default_value = var_name[var_name.index(":") + 1 :].strip()
             result = self.vars.get(var_name, self.vars.get(var_name.lower(), default_value))
-            if result is not None:
-                result_text = str(result)
-                if "${" in result_text:
-                    return self._replace_variables(
-                        result_text, include_funcs=include_funcs, comment_substituted=comment_substituted
-                    )
-                else:
-                    return result
-            return result
+            if isinstance(result, str) and "${" in result:
+                return self._replace_variables(
+                    result, include_funcs=include_funcs, comment_substituted=comment_substituted
+                )
+            else:
+                return result
 
         if not comment_substituted:
             comment_substitutor = CommentSubstitutor()
