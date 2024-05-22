@@ -52,15 +52,39 @@ class TemplateContextTest(unittest.TestCase):
 class VarsContextTest(unittest.TestCase):
     def test_should_replace_vars(self):
         vc = VarsContext(vars={"a": "##A##", "aa": "##${a}##"}, debug_log=True)
-        self.assertEqual("-##A##, ===####A####===", vc.replace_variables("-${a}, ===${aa}==="))
-        # if this is a comment, do not replace
-        self.assertEqual("-- -${a}, ===${aa}===", vc.replace_variables("-- -${a}, ===${aa}==="))
-        self.assertEqual("-##A##, ==-- =${aa}===", vc.replace_variables("-${a}, ==-- =${aa}==="))
-        self.assertEqual("-\\##A##, ===####A####===", vc.replace_variables("-\\${a}, ===${aa}==="))
+        self.assertEqual("-##A##, ===####A####===", vc.replace_variables("-${a}, ===${aa}==="), "should replace all")
+        self.assertEqual(
+            "-- -${a}, ===${aa}===", vc.replace_variables("-- -${a}, ===${aa}==="), "do not replace comment"
+        )
+        self.assertEqual(
+            "-##A##, ==-- =${aa}===", vc.replace_variables("-${a}, ==-- =${aa}==="), "do not replace comment"
+        )
+        self.assertEqual("-\\##A##, ===####A####===", vc.replace_variables("-\\${a}, ===${aa}==="), "ignore escaping")
+
+        vc = VarsContext(vars={"a": "##A##", "b": "##${a}##", "aa": "##${b}##"}, debug_log=True)
+        self.assertEqual(
+            "-##A##, -####A####, ===######A######===",
+            vc.replace_variables("-${a}, -${b}, ===${aa}==="),
+            "replace vars recursively",
+        )
 
         vc = VarsContext(vars={"a": "##A##", "aa": "##${a}##", "b": "1"}, debug_log=True)
         vc.init(func_runner=FuncRunner({"f": lambda x: int(x) + 1}))
-        self.assertEqual("-6, ===####A####===", vc.replace_variables("-${f(5)}, ===${aa}==="))
-        self.assertEqual("-2, ===####A####===", vc.replace_variables("-${f(${b})}, ===${aa}==="))
+        self.assertEqual("-6, ===####A####===", vc.replace_variables("-${f(5)}, ===${aa}==="), "func call in vars")
+        self.assertEqual(
+            "-2, ===####A####===", vc.replace_variables("-${f(${b})}, ===${aa}==="), "vars as args in func call"
+        )
+        self.assertEqual(
+            "-4, ===####A####===",
+            vc.replace_variables("-${f(${c:3})}, ===${aa}==="),
+            "vars with default value as args in func call",
+        )
+
+        vc = VarsContext(vars={"a": "##A##", "b": "##${a}##", "aa": "##${b}##"}, debug_log=True)
+        self.assertEqual(
+            "-1, -####A####, ===######A######===",
+            vc.replace_variables("-${a1:1}, -${b}, ===${aa:b?x}==="),
+            "vars with default value",
+        )
 
         # TODO: support for confliction detection

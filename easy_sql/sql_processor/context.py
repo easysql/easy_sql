@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import os
 import re
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
@@ -33,32 +34,55 @@ class VarsContext(VarsReplacer):
         self.func_runner = func_runner
 
     def _get_var_value(self, var_name: str, original_text: str) -> Any:
+        var_name, default_value = (
+            (var_name[: var_name.index(":")], var_name[var_name.index(":") + 1 :])
+            if ":" in var_name
+            else (var_name, None)
+        )
         variables = self.vars
-        if var_name in variables:
-            return variables[var_name]
-        elif var_name.upper() in variables:
-            return variables[var_name.upper()]
+        if var_name.lower() in variables:
+            return variables[var_name.lower()]
+        elif default_value is not None:
+            return default_value
         else:
             raise SqlProcessorException(f"unknown variable `{var_name}`. text={original_text}, known_vars={variables}")
 
     def replace_variables(self, text: str, include_funcs: bool = True) -> str:
+        return self._replace_variables(text, include_funcs=include_funcs)
+
+    def _replace_variables(self, text: str, include_funcs: bool = True, comment_substituted: bool = False) -> str:
+        original_text = text
+
         m = re.match(r"^\${([^}]+)}$", text.strip())
         if m:
-            return self.vars.get(m.group(1).strip(), self.vars.get(m.group(1).strip().lower()))
+            var_name = m.group(1).strip()
+            default_value = None
+            if ":" in var_name:
+                var_name = var_name[: var_name.index(":")].strip()
+                default_value = var_name[var_name.index(":") + 1 :].strip()
+            result = self.vars.get(var_name, self.vars.get(var_name.lower(), default_value))
+            if result is not None:
+                result_text = str(result)
+                if "${" in result_text:
+                    return self._replace_variables(
+                        result_text, include_funcs=include_funcs, comment_substituted=comment_substituted
+                    )
+                else:
+                    return result
+            return result
 
-        original_text = text
-        comment_substitutor = CommentSubstitutor()
-        text = comment_substitutor.substitute(text)
+        if not comment_substituted:
+            comment_substitutor = CommentSubstitutor()
+            text = comment_substitutor.substitute(text)
 
-        variables = self.vars
-        for key in variables.keys():
-            text = re.sub(re.escape(f"${{{key}}}"), str(variables.get(key)), text, flags=re.IGNORECASE)
-        self._log_replace_process(f"after direct variable replaced: {text}")
+        if include_funcs:
+            # skip funcs first, and then handle funcs to support to vars in func call, e.g: ${f(${a}, xx${${b}})}
+            # fix comment_substituted to True, since text is either comment_substituted already
+            #   or be comment_substituted at an earlier step
+            text = self._replace_variables(text, False, comment_substituted=True)
+            self._log_replace_process(f"after vars replaced with out func calls: {text}")
 
-        if not include_funcs:
-            return comment_substitutor.recover(text)
-
-        var_rex = re.compile(r"\${([^}]+)}")
+        var_rex = re.compile(r"\${([^}]+)}") if include_funcs else re.compile(r"\${[a-zA-Z_0-9]+(:[^}]+)?}")
         text_parts = []
         match = None
         while True:
@@ -69,8 +93,8 @@ class VarsContext(VarsReplacer):
                 break
 
             text_parts.append(text[start : match.start()])
-            var_name = var_rex.match(match.group()).groups()[0]  # type: ignore
-            var_name_is_func = "(" in var_name
+            var_name = match.string[match.start() : match.end()][2:-1]
+            var_name_is_func = "(" in var_name and ":" not in var_name[: var_name.index("(")]
             self._log_replace_process(f"variable matched: var_name={var_name}, is_func={var_name_is_func}")
             if var_name_is_func:
                 assert self.func_runner is not None
@@ -82,13 +106,20 @@ class VarsContext(VarsReplacer):
             self._log_replace_process(f"var_value: {var_value}")
 
         text = "".join(text_parts)
-        text = comment_substitutor.recover(text)
+        if not comment_substituted:
+            text = comment_substitutor.recover(text)
         self._log_replace_process(f"after variable replaced: text={text}")
-        return text
+
+        if original_text == text:
+            return text
+        return self._replace_variables(text, include_funcs=include_funcs, comment_substituted=comment_substituted)
 
     def _log_replace_process(self, message: str):
         if self.debug_log:
-            logger.debug(message)
+            import traceback
+
+            f = traceback.extract_stack()[-2]
+            logger.debug(f"({os.path.basename(f.filename)}:{f.lineno}) {message}")
 
     def add_vars(self, vars: Dict[str, str]):
         vars = {k.lower(): v for k, v in vars.items()}
