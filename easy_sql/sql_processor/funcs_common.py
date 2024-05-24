@@ -349,6 +349,8 @@ class AnalyticsFuncs:
         max_count: str = "50000",
         include_correlations: str = "true",
         types: Union[str, List[str]] = "html",
+        *,
+        file_name: str | None = None,
     ):
         try:
             from ydata_profiling import ProfileReport
@@ -394,9 +396,11 @@ class AnalyticsFuncs:
 
         if "." in table:
             db, table = tuple(table.split("."))
-            profiling_file = f"{output_folder}/{db}/{table}.html"
+            profiling_file = (
+                f"{output_folder}/{db}/{table}.html" if not file_name else f"{output_folder}/{file_name}.html"
+            )
         else:
-            profiling_file = f"{output_folder}/{table}.html"
+            profiling_file = f"{output_folder}/{table}.html" if not file_name else f"{output_folder}/{file_name}.html"
         os.makedirs(os.path.dirname(profiling_file), exist_ok=True)
 
         if "html" in types:
