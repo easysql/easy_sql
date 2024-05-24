@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 import os
 import re
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
@@ -24,11 +23,11 @@ class VarsContext(VarsReplacer):
         list_vars: Optional[Dict[str, List]] = None,
         debug_log: bool = False,
     ):
-        vars = vars or {}
-        self.vars = copy.deepcopy(vars)
+        self.vars = {}
         self.list_vars = list_vars or {}
         self.func_runner = None
         self.debug_log = debug_log
+        self.add_vars(vars or {})
 
     def init(self, func_runner: FuncRunner):
         self.func_runner = func_runner
