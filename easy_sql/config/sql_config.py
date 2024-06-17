@@ -247,11 +247,13 @@ class EasySqlConfig:
         return resolve_file(file_path, abs_path=True, prefix=prefix, relative_to=self.abs_sql_file_path)
 
     def _resolve_files(self, file_path: str, *, prefix: str = "") -> str:
-        return ",".join([
-            resolve_file(f, abs_path=True, prefix=prefix, relative_to=self.abs_sql_file_path)
-            for f in file_path.split(",")
-            if f
-        ])
+        return ",".join(
+            [
+                resolve_file(f, abs_path=True, prefix=prefix, relative_to=self.abs_sql_file_path)
+                for f in file_path.split(",")
+                if f
+            ]
+        )
 
     def _build_conf_command_args(
         self,
@@ -351,18 +353,22 @@ class FlinkBackendConfig:
     def flink_configurations(self) -> Dict[str, str]:
         # refer: https://nightlies.apache.org/flink/flink-docs-master/docs/dev/python/python_config/
         # refer: https://nightlies.apache.org/flink/flink-docs-master/docs/deployment/config/
-        configs = dict([
-            KV.from_config(config).as_tuple()
-            for config in self.user_default_conf or []
-            if config and not config.startswith("-")
-        ])
-        configs.update({
-            get_value_by_splitter_and_strip(
-                get_key_by_splitter_and_strip(arg), "flink."
-            ): get_value_by_splitter_and_strip(arg)
-            for arg in self.config.customized_backend_conf
-            if arg.startswith("flink.") and not arg.startswith("flink.cmd")
-        })
+        configs = dict(
+            [
+                KV.from_config(config).as_tuple()
+                for config in self.user_default_conf or []
+                if config and not config.startswith("-")
+            ]
+        )
+        configs.update(
+            {
+                get_value_by_splitter_and_strip(
+                    get_key_by_splitter_and_strip(arg), "flink."
+                ): get_value_by_splitter_and_strip(arg)
+                for arg in self.config.customized_backend_conf
+                if arg.startswith("flink.") and not arg.startswith("flink.cmd")
+            }
+        )
 
         file_keys = ["python.archives", "python.files", "python.requirements", "pipeline.jars"]
         for k in file_keys:

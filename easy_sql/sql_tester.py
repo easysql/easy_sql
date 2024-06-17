@@ -345,10 +345,12 @@ class TestCase:
             for attr in dir(self)
             if not attr.startswith("_") and not callable(getattr(self, attr))
         }
-        data.update({
-            "inputs": [table_data.as_dict() for table_data in self.inputs],
-            "outputs": [table_data.as_dict() for table_data in self.outputs],
-        })
+        data.update(
+            {
+                "inputs": [table_data.as_dict() for table_data in self.inputs],
+                "outputs": [table_data.as_dict() for table_data in self.outputs],
+            }
+        )
         return data
 
     @staticmethod
@@ -1019,8 +1021,9 @@ class SqlTester:
         import jinja2
 
         env = jinja2.Environment(
-            loader=jinja2.DictLoader({
-                "py_file_tpl": f"""import os
+            loader=jinja2.DictLoader(
+                {
+                    "py_file_tpl": f"""import os
 import unittest
 import sys
 import importlib
@@ -1052,7 +1055,8 @@ class SqlTest(unittest.TestCase):
 if __name__ == '__main__':
     unittest.main()
 """
-            })
+                }
+            )
         )
         with open(py_file, "wb") as f:
             env.get_template("py_file_tpl").stream(cases=cases).dump(f, encoding="utf8")
