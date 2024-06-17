@@ -387,11 +387,13 @@ class FuncRunnerTest(unittest.TestCase):
             ["id", "fk1", "fk2", "pt"],
         ).write.mode("overwrite").partitionBy("pt").saveAsTable("data_table")
         spark.createDataFrame(
-            [(
-                1,
-                "1",
-                20210101,
-            )],
+            [
+                (
+                    1,
+                    "1",
+                    20210101,
+                )
+            ],
             ["id", "fk", "pt"],
         ).write.mode("overwrite").partitionBy(
             "pt"
@@ -474,10 +476,12 @@ class FuncRunnerTest(unittest.TestCase):
             [], StructType([StructField("id", IntegerType()), StructField("pt", IntegerType())])
         ).write.mode("overwrite").partitionBy("pt").saveAsTable("empty_table")
         spark.createDataFrame(
-            [(
-                1,
-                20210101,
-            )],
+            [
+                (
+                    1,
+                    20210101,
+                )
+            ],
             ["id", "pt"],
         ).write.mode("overwrite").partitionBy(
             "pt"
