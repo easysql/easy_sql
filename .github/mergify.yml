@@ -1,6 +1,6 @@
 queue_rules:
   - name: shared_queue
-    conditions:
+    merge_conditions:
       - check-success=unit-test
       - check-success=e2e-test-spark
       - check-success=e2e-test-postgres
@@ -8,24 +8,19 @@ queue_rules:
       - check-success=test-coverage-all
 
 pull_request_rules:
-  - name: delete head branch after merge
-    conditions:
-      - merged
-    actions:
-      delete_head_branch:
 
   # Push PR into queue when it passes all checks
   - name: put approved pr to queue
     conditions:
       - or:
-        - and:
-          - "#approved-reviews-by>=1"
-          - -draft
-          - check-success=test-coverage-all
-        - and:
-          - label=can-merge
-          - -draft
-          - check-success=test-coverage-all
+          - and:
+              - "#approved-reviews-by>=1"
+              - -draft
+              - check-success=test-coverage-all
+          - and:
+              - label=can-merge
+              - -draft
+              - check-success=test-coverage-all
     actions:
       queue:
         name: shared_queue
