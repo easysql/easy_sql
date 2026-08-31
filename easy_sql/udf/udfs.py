@@ -98,9 +98,7 @@ create or replace function sha1(value text) returns text
     LANGUAGE SQL
     IMMUTABLE
     RETURNS NULL ON NULL INPUT
-""".split(
-            ";"
-        )
+""".split(";")
 
 
 class ChUdfs:
