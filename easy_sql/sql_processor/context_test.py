@@ -93,9 +93,7 @@ class VarsContextTest(unittest.TestCase):
         vc = VarsContext(vars={"a": "##A##"})
         self.assertEqual("1", vc.replace_variables("${a1:1}"), "default value when the whole text is a var reference")
         self.assertEqual("##A##", vc.replace_variables("${a:1}"), "existing var value takes precedence over default")
-        self.assertEqual(
-            "http://x", vc.replace_variables("${url:http://x}"), "default value may contain a colon"
-        )
+        self.assertEqual("http://x", vc.replace_variables("${url:http://x}"), "default value may contain a colon")
 
         vc = VarsContext(vars={"b": "${a1:1}"})
         self.assertEqual("1", vc.replace_variables("${b}"), "chained bare var reference with default value")
