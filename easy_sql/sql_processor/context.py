@@ -57,8 +57,9 @@ class VarsContext(VarsReplacer):
             var_name = m.group(1).strip()
             default_value = None
             if ":" in var_name:
-                var_name = var_name[: var_name.index(":")].strip()
-                default_value = var_name[var_name.index(":") + 1 :].strip()
+                var_name, default_value = var_name.split(":", 1)
+                var_name = var_name.strip()
+                default_value = default_value.strip()
             result = self.vars.get(var_name, self.vars.get(var_name.lower(), default_value))
             if isinstance(result, str) and "${" in result:
                 return self._replace_variables(

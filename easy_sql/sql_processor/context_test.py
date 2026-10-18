@@ -88,3 +88,20 @@ class VarsContextTest(unittest.TestCase):
         )
 
         # TODO: support for confliction detection
+
+    def test_should_replace_vars_with_default_value_as_whole_text(self):
+        vc = VarsContext(vars={"a": "##A##"})
+        self.assertEqual("1", vc.replace_variables("${a1:1}"), "default value when the whole text is a var reference")
+        self.assertEqual("##A##", vc.replace_variables("${a:1}"), "existing var value takes precedence over default")
+        self.assertEqual("http://x", vc.replace_variables("${url:http://x}"), "default value may contain a colon")
+
+        vc = VarsContext(vars={"b": "${a1:1}"})
+        self.assertEqual("1", vc.replace_variables("${b}"), "chained bare var reference with default value")
+
+        vc = VarsContext(vars={})
+        func_runner = FuncRunner({"cond": lambda x: x})
+        self.assertEqual(
+            "cond(1)",
+            func_runner.render_func_call("cond(${a1:1})", vc),
+            "default value as a func call arg",
+        )
