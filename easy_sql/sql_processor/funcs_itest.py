@@ -21,9 +21,9 @@ from easy_sql.sql_processor.funcs_common import (
     AlertFunc,
     AnalyticsFuncs,
     ColumnFuncs,
+    TableFuncs,
 )
 from easy_sql.sql_processor.funcs_common import IOFuncs as CommonIOFuncs
-from easy_sql.sql_processor.funcs_common import TableFuncs
 from easy_sql.sql_processor.funcs_rdb import PartitionFuncs
 from easy_sql.sql_processor.funcs_spark import CacheFuncs, IOFuncs, ParallelismFuncs
 from easy_sql.sql_processor.funcs_spark import PartitionFuncs as SparkPartitionFuncs

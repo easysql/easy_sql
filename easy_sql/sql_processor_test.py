@@ -387,15 +387,15 @@ class FuncRunnerTest(unittest.TestCase):
             ["id", "fk1", "fk2", "pt"],
         ).write.mode("overwrite").partitionBy("pt").saveAsTable("data_table")
         spark.createDataFrame(
-            [(
-                1,
-                "1",
-                20210101,
-            )],
+            [
+                (
+                    1,
+                    "1",
+                    20210101,
+                )
+            ],
             ["id", "fk", "pt"],
-        ).write.mode("overwrite").partitionBy(
-            "pt"
-        ).saveAsTable("data_table1")
+        ).write.mode("overwrite").partitionBy("pt").saveAsTable("data_table1")
         # failure case1: 被检测表是空的
         processor = SqlProcessor(
             spark, "-- target=check.ensure_dwd_partition_exists(${__step__}, empty_table, 20210101)", [], {}
@@ -474,14 +474,14 @@ class FuncRunnerTest(unittest.TestCase):
             [], StructType([StructField("id", IntegerType()), StructField("pt", IntegerType())])
         ).write.mode("overwrite").partitionBy("pt").saveAsTable("empty_table")
         spark.createDataFrame(
-            [(
-                1,
-                20210101,
-            )],
+            [
+                (
+                    1,
+                    20210101,
+                )
+            ],
             ["id", "pt"],
-        ).write.mode("overwrite").partitionBy(
-            "pt"
-        ).saveAsTable("data_table")
+        ).write.mode("overwrite").partitionBy("pt").saveAsTable("data_table")
         # failure case1: 被检测表是空的
         processor = SqlProcessor(
             spark,

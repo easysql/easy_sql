@@ -19,13 +19,11 @@ class FlinkFuncsTest(unittest.TestCase):
             True,
             FlinkTablesConfig(
                 connectors={
-                    "jdbc": FlinkTablesConfig.Connector(
-                        f"""
+                    "jdbc": FlinkTablesConfig.Connector(f"""
                                     'url' = '{TEST_PG_JDBC_URL}',
                                     'username' = '{TEST_PG_JDBC_USER}',
                                     'password' = '{TEST_PG_JDBC_PASSWD}'
-                    """
-                    ),
+                    """),
                 },
                 catalogs={},
             ),
@@ -40,8 +38,7 @@ class FlinkFuncsTest(unittest.TestCase):
         fb = self.create_flink_backend()
         tf = TestFuncs(fb)
         with open("/tmp/flink_func_test__test_run_etl.sql", "w") as f:
-            f.write(
-                """
+            f.write("""
 -- backend: flink
 -- config: easy_sql.etl_type=streaming
 -- config: flink.cmd=-pyexec python3
@@ -50,8 +47,7 @@ class FlinkFuncsTest(unittest.TestCase):
 -- target=variables
 select
     'append'           as __save_mode__
-            """
-            )
+            """)
         fm = FlinkTestClusterManager()
         if fm.is_not_started():
             fm.start_cluster()
@@ -66,8 +62,7 @@ select
         fb = self.create_flink_backend()
         tf = TestFuncs(fb)
         with open("/tmp/flink_func_test__test_run_etl.sql", "w") as f:
-            f.write(
-                """
+            f.write("""
 -- backend: flink
 -- config: easy_sql.etl_type=batch
 -- config: flink.cmd=-pyexec python3
@@ -76,8 +71,7 @@ select
 -- target=variables
 select
     'append'           as __save_mode__
-            """
-            )
+            """)
         tf.test_run_etl(
             EasySqlConfig.from_sql(sql_file="/tmp/flink_func_test__test_run_etl.sql"),
             "/tmp/flink_func_test__test_run_etl.sql",
