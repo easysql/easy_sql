@@ -6,10 +6,9 @@ from typing import TYPE_CHECKING, Dict, List, Union
 
 from .backend import SparkBackend
 from .common import SqlProcessorAssertionError, _exec_sql, is_int_type
-from .funcs_common import AlertFunc, AnalyticsFuncs, ColumnFuncs
+from .funcs_common import AlertFunc, AnalyticsFuncs, ColumnFuncs, TableFuncs, TestFuncs
 from .funcs_common import IOFuncs as CommonIOFuncs
 from .funcs_common import PartitionFuncs as PartitionFuncsBase
-from .funcs_common import TableFuncs, TestFuncs
 
 if TYPE_CHECKING:
     from pyspark.sql import DataFrame, SparkSession
