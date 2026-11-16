@@ -11,9 +11,15 @@ if typing.TYPE_CHECKING:
 from ..logger import logger
 from .backend.rdb import RdbBackend
 from .common import is_int_type
-from .funcs_common import AlertFunc, AnalyticsFuncs, ColumnFuncs, IOFuncs
+from .funcs_common import (
+    AlertFunc,
+    AnalyticsFuncs,
+    ColumnFuncs,
+    IOFuncs,
+    TableFuncs,
+    TestFuncs,
+)
 from .funcs_common import PartitionFuncs as PartitionFuncsBase
-from .funcs_common import TableFuncs, TestFuncs
 
 __all__ = [
     "PartitionFuncs",
@@ -169,10 +175,12 @@ class ModelFuncs:
 
     def __get_ddl_by_backend(self, data_type_map, output_table_name, id_col, output_dtypes) -> str:
         if self.backend.is_postgres_backend:
-            columns_def = ", ".join([
-                f'{col} {data_type_map[col_type]} {"PRIMARY KEY" if col == id_col else ""}'
-                for col, col_type in output_dtypes
-            ])
+            columns_def = ", ".join(
+                [
+                    f'{col} {data_type_map[col_type]} {"PRIMARY KEY" if col == id_col else ""}'
+                    for col, col_type in output_dtypes
+                ]
+            )
             return f"CREATE TABLE IF NOT EXISTS {output_table_name} ({columns_def})"
         elif self.backend.is_clickhouse_backend:
             columns_def = ", ".join([f"{col} {data_type_map[col_type]}" for col, col_type in output_dtypes])
